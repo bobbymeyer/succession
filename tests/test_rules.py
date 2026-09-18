@@ -59,6 +59,14 @@ def fresh(**overrides) -> GameState:
     return state
 
 
+def fresh_like(state: GameState) -> GameState:
+    """The same board, judged under the default (unflagged) rules."""
+
+    twin = state.clone()
+    twin.config = Config(players=state.config.players)
+    return twin
+
+
 def uid(state: GameState, name: str) -> int:
     for i, card in enumerate(state.cards):
         if card.name == name:
@@ -439,14 +447,35 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
 
 
 class TestWinConditions(unittest.TestCase):
-    def test_house_rising_needs_four_seats(self):
+    def test_house_rising_needs_three_seats(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["house_amonides"]
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
-        seat(state, "Hand of the Oracle", Seat.ORACLE)
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
         self.assertFalse(satisfied(state, agenda))
-        seat(state, "Speaker of the Old Words", Seat.PRAETORIAN_CHIEF)
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)
+        self.assertTrue(satisfied(state, agenda))
+
+    def test_house_rising_counts_only_the_named_family(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["house_amonides"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        seat(state, "Initiate of the Seven Veils", Seat.ORACLE)   # Mitreas
+        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)          # Argaian
+        self.assertFalse(satisfied(state, agenda))
+
+    def test_house_rising_estate_pair_variant(self):
+        state = fresh(house_rising_requires_estate_pair=True)
+        agenda = AGENDAS_BY_KEY["house_amonides"]
+        # Three seats spread one-per-estate: enough by default, not with the flag.
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)     # Church
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)  # Military
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)           # Merchant
+        self.assertFalse(satisfied(state, agenda))
+        self.assertTrue(satisfied(fresh_like(state), agenda))
+        # Doubling up on the Church seats satisfies the strict reading.
+        state.seats[Seat.FIELD_GENERAL] = None
+        seat(state, "Hand of the Oracle", Seat.ORACLE)
         self.assertTrue(satisfied(state, agenda))
 
     def test_faith_ascendant_needs_four_seats(self):
@@ -458,24 +487,46 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_conquest_needs_barbarians_and_both_military_seats(self):
+    def test_conquest_needs_three_barbarians_in_the_inner_circle(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["conquest"]
+        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
+        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
+        self.assertFalse(satisfied(state, agenda))  # only two barbarians seated
+        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
+        self.assertTrue(satisfied(state, agenda))
+
+    def test_conquest_ignores_barbarians_in_the_outer_circle(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["conquest"]
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
         seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
-        self.assertFalse(satisfied(state, agenda))
         outer(state, "Master Mason", "Priest of the Two-Horned God", "Hundred-Kill Rider")
+        self.assertFalse(satisfied(state, agenda))
+
+    def test_conquest_still_needs_both_military_seats(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["conquest"]
+        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
+        seat(state, "Master Mason", Seat.GUILDMASTER)
+        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
+        self.assertFalse(satisfied(state, agenda))  # Praetorian Chief still empty
+        seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))
 
     def test_strict_conquest_requires_barbarian_generals(self):
         state = fresh(conquest_requires_barbarian_generals=True)
         agenda = AGENDAS_BY_KEY["conquest"]
+        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
+        seat(state, "Master Mason", Seat.GUILDMASTER)
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
         seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
-        outer(state, "Master Mason", "Priest of the Two-Horned God", "Hundred-Kill Rider")
         self.assertFalse(satisfied(state, agenda))
-        state.seats[Seat.FIELD_GENERAL] = uid(state, "Cataphract of the Iron Bridge")
-        state.seats[Seat.PRAETORIAN_CHIEF] = uid(state, "Warlord of the Iron Grove")
+        self.assertTrue(satisfied(fresh_like(state), agenda))
+        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
+        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))
 
     def test_balance_needs_every_family_both_faiths_and_a_barbarian(self):

@@ -47,6 +47,7 @@ def build_config(args: argparse.Namespace) -> Config:
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
         defense_requires_matching_target=args.defense_matches_target,
         conquest_requires_barbarian_generals=args.strict_conquest,
+        house_rising_requires_estate_pair=args.house_estate_pair,
     )
 
 
@@ -134,7 +135,8 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
-    parser.add_argument("--strict-conquest", action="store_true", help="Conquest needs both Military seats held by barbarians")
+    parser.add_argument("--strict-conquest", action="store_true", help="Conquest needs both Military seats held by barbarians, not merely occupied")
+    parser.add_argument("--house-estate-pair", action="store_true", help="a House Rising trio must include two seats of a single estate")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -69,56 +69,73 @@ works: run one batch with a strategic seat and one without, then pool them.
 4,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 49.1 player-turns (12.6 rounds), median 44, max 236
-Double wins: 3.2%          Timeouts: 0%
+Game length: mean 48.6 player-turns (12.5 rounds), median 44, max 260
+Double wins: 6.2%          Timeouts: 0%
 
-Win rate by tier      naive 15.6%   greedy 23.2%   strategic 48.9%
+Win rate by tier      naive 12.5%   greedy 24.2%   strategic 57.0%
 
-Win rate by agenda    Conquest                        53.3%
+Win rate by agenda    Balance                         39.9%
                       Faith Ascendant: Old Gods       39.8%
-                      Balance                         38.9%
-                      Faith Ascendant: Mystery Cults  38.2%
-                      House Rising: Amonides           2.4%
-                      House Rising: Argaian            2.3%
-                      House Rising: Mitreas            1.9%
+                      Faith Ascendant: Mystery Cults  39.4%
+                      Conquest                        23.1%
+                      House Rising: Amonides          14.5%
+                      House Rising: Mitreas           14.1%
+                      House Rising: Argaian           13.4%
 ```
 
-Three things fall out of that, all worth a design conversation:
+1. **The agendas are in a playable band now** — 13% to 40%, against 2% to 53%
+   under the first draft of the rules. Balance and the two faiths sit together
+   at ~40%, which makes sense: they are all "get four-ish of the six seats to
+   look a certain way" and they can be built incidentally.
 
-1. **House Rising is close to unwinnable — ~2% against ~40% for the others.**
-   It is the only agenda needing four *specific* courtiers seated at once, and
-   estate coverage makes even that hard: each house has 2 Church, 2 Military
-   and 2 Merchant courtiers and *no* commoner, so it can reach at most five of
-   the six seats, and every rival can undo a seat with one card. Options: drop
-   the threshold to 3 seats, count a house's outer-circle courtiers, or let a
-   house claim the Guildmaster seat.
+2. **Conquest is now the second-hardest, not the easiest.** Requiring the three
+   barbarians *in the inner circle* is a much sharper constraint than it looks:
+   of the eight barbarians, only one is Church, one Merchant and two Commons,
+   so at most five could ever be seated at once, and the two Military seats are
+   the most-contested on the board. It dropped from 53% to 23%. If that reads
+   as too harsh, the cheapest dial is to let the two generals count toward the
+   three rather than requiring a third barbarian elsewhere.
 
-2. **Conquest is the easiest agenda, and it is the "anywhere in play" clause
-   doing it** — three barbarians merely need to be on the table, including in
-   the outer circle, and the two Military seats fill up on their own. Running
-   with `--strict-conquest` (both Military seats held *by barbarians*) over
-   3,000 games moves it from 53% to 24% and puts it below the two faith
-   agendas, which looks much healthier.
+3. **House Rising at three seats works** — ~14% each, and the three houses are
+   within a point of each other, which is what you want from three copies of
+   the same agenda. It is still the hardest agenda, because it is the only one
+   that needs three *specific* courtiers of a six-card subset seated at the
+   same time.
 
-3. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 15.6% → 23.2% → 48.9%. A strategic bot at the table
+4. **The tiers separate cleanly**, which is the sanity check that the bots are
+   really playing the game: 12.5% → 24.2% → 57.0%. A strategic bot at the table
    also suppresses everyone else. Swapping exactly one greedy seat for a
    strategic seat (4,000 games each, everything else held fixed):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 25.9% | 33.4 turns |
-   | with a strategic bot | 18.1% | 49.1 turns |
+   | without a strategic bot | 26.7% | 35.2 turns |
+   | with a strategic bot | 16.4% | 48.6 turns |
 
-   It takes about a third of the other players' equity and makes games ~47%
+   It takes almost 40% of the other players' equity and makes games ~40%
    longer — it is genuinely denying wins, not just winning faster.
 
-Games always resolve: no timeouts in 15,000 games at the 600-turn cap.
+Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
+
+### Variant already wired up
+
+`--house-estate-pair` (a House Rising trio must include two seats of one
+estate) over 4,000 games takes the houses from ~14% to ~9% and leaves
+everything else roughly where it was. See the open question in `docs/RULES.md`
+about which reading you meant.
 
 ## What still needs you
 
-`docs/RULES.md` ends with the open questions. The big one is the **event
-effects**: the brief called out that the source document's effects were written
+`docs/RULES.md` ends with the open questions. Two of them matter.
+
+**House Rising's estate pair.** "Each family preferring 2 seats in one estate"
+is implemented as the soft reading (any three seats win) with the strict
+reading behind `--house-estate-pair`. Worth knowing before you choose: only
+Church and Military have two inner seats, so a *per-family* preferred estate
+(Amonides/Church, Mitreas/Merchant, Argaian/Military) cannot be a hard
+requirement for Mitreas — there is only one Merchant seat to take.
+
+**Event effects.** The bigger one: the brief called out that the source document's effects were written
 for the board-wide version and do not map onto single-target. The ten events
 currently use a playable placeholder table (all in one place in `cards.py`),
 but three of them duplicate "target leaves play", and `Treasure Fleet` is

@@ -71,10 +71,17 @@ state, **both** players win and the game is logged as a double win.
 
 | Agenda | Copies | Condition |
 |---|---|---|
-| House Rising | 3 (one per family) | That family holds 4+ of the 6 inner seats |
+| House Rising | 3 (one per family) | That family holds **3+** of the 6 inner seats |
 | Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 6 inner seats |
-| Conquest | 1 | 3 barbarians anywhere in play **and** both Military seats held |
+| Conquest | 1 | **3 barbarians in the inner circle** and both Military seats held |
 | Balance | 1 | Inner circle simultaneously shows all three families, both faiths, and a barbarian |
+
+Each family fields exactly two Church, two Military and two Merchant courtiers
+and no commoner, so a House Rising trio normally comes from doubling up on one
+of the two-seat estates (both Church seats or both Military seats) plus a
+third seat elsewhere. Whether that doubling-up is *required* or merely the
+natural path is the one open question below; the default treats any three
+seats as a win, and `--house-estate-pair` enforces the pair.
 
 Four of the seven agendas are dealt out; the other three stay in fog and are
 the pool `Schismatic Event` draws from.
@@ -95,7 +102,8 @@ first; the flag flips it.
 | # | Decision | Default | Flag |
 |---|---|---|---|
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
-| 2 | **Conquest's Military seats need only be occupied**, by anyone. | any occupants | `--strict-conquest` requires barbarian generals |
+| 2 | **Conquest's Military seats need only be occupied**, by anyone -- the three barbarians it needs are counted in the inner circle, so the two generals need not themselves be barbarians. | any occupants | `--strict-conquest` requires barbarian generals |
+| 2b | **A House Rising trio may be any three seats**, in any estates. | any three | `--house-estate-pair` requires two seats of one estate |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
@@ -138,3 +146,24 @@ Open questions behind that table:
    save the same across all minor events, or per-card?
 5. **Does a Defense really never stop an Event?** Implemented exactly as
    written; worth confirming, because it makes majors unanswerable.
+
+# Open question: House Rising and its estate pair
+
+"House Rising should be 3 seats, with each family preferring 2 seats in one
+estate (Church, Military, Merchant)" reads two ways, and the two differ by
+about five points of win rate:
+
+* **Soft (default)** -- the parenthetical describes the roster: each family has
+  two courtiers in each of those three estates, so doubling up on the Church or
+  Military seats is simply the easiest route to three. Any three seats win.
+  House win rate: ~14%.
+* **Strict (`--house-estate-pair`)** -- the trio must *contain* two seats of a
+  single estate, so one Church + one Military + the Exchequer does not win.
+  House win rate: ~9%.
+
+Note that only Church and Military have two inner seats; Merchant and Commons
+have one each. So a "preferred estate" per family (Amonides/Church,
+Mitreas/Merchant, Argaian/Military) cannot be a hard requirement for Mitreas --
+there is only one Merchant seat to take. If you meant a per-family preferred
+estate rather than "any doubled-up estate", that needs either a second Merchant
+seat or a different rule for Mitreas.

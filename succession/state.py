@@ -46,6 +46,9 @@ class Config:
     #: Require Conquest's two Military seats to be held by barbarians, rather
     #: than merely occupied.
     conquest_requires_barbarian_generals: bool = False
+    #: Require a House Rising trio to include two seats of a single estate
+    #: (the strict reading of "each family prefers two seats in one estate").
+    house_rising_requires_estate_pair: bool = False
 
     @property
     def num_players(self) -> int:

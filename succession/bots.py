@@ -25,6 +25,7 @@ from .agendas import (
     AGENDAS_BY_KEY,
     count_board,
     progress_counts,
+    rules_for,
     satisfied_counts,
 )
 from .enums import CardKind
@@ -159,9 +160,9 @@ class ThinkingBot(Bot):
         if not state.unused_agendas:
             return -1.0
         counts = count_board(state)
-        strict = state.config.conquest_requires_barbarian_generals
+        rules = rules_for(state)
         expected = sum(
-            progress_counts(counts, AGENDAS_BY_KEY[k], strict_conquest=strict)
+            progress_counts(counts, AGENDAS_BY_KEY[k], rules)
             for k in state.unused_agendas
         ) / len(state.unused_agendas)
         # Only worth the turn if the grass is meaningfully greener.
@@ -169,8 +170,7 @@ class ThinkingBot(Bot):
 
     def choose(self, state: GameState, player: int, actions: Sequence[Action]) -> Action:
         agenda = self.my_agenda(state, player)
-        strict = state.config.conquest_requires_barbarian_generals
-        current = progress_counts(count_board(state), agenda, strict_conquest=strict)
+        current = progress_counts(count_board(state), agenda, rules_for(state))
 
         best: Optional[Action] = None
         best_score = float("-inf")
@@ -199,11 +199,11 @@ class GreedyBot(ThinkingBot):
 
     def score(self, after: GameState, before: GameState, player: int, action: Action) -> float:
         agenda = self.my_agenda(before, player)
-        strict = before.config.conquest_requires_barbarian_generals
+        rules = rules_for(before)
         counts = count_board(after)
-        if satisfied_counts(counts, agenda, strict_conquest=strict):
+        if satisfied_counts(counts, agenda, rules):
             return 100.0  # this action wins the game outright
-        return progress_counts(counts, agenda, strict_conquest=strict)
+        return progress_counts(counts, agenda, rules)
 
 
 class StrategicBot(ThinkingBot):
@@ -246,18 +246,18 @@ class StrategicBot(ThinkingBot):
     def score(self, after: GameState, before: GameState, player: int, action: Action) -> float:
         mine = before.agendas[player]
         agenda = AGENDAS_BY_KEY[mine]
-        strict = before.config.conquest_requires_barbarian_generals
+        rules = rules_for(before)
         counts = count_board(after)
 
-        if satisfied_counts(counts, agenda, strict_conquest=strict):
+        if satisfied_counts(counts, agenda, rules):
             return 100.0
 
-        own = progress_counts(counts, agenda, strict_conquest=strict)
+        own = progress_counts(counts, agenda, rules)
         threat = 0.0
         for rival in AGENDAS:
             if rival.key == mine:
                 continue
-            rival_progress = progress_counts(counts, rival, strict_conquest=strict)
+            rival_progress = progress_counts(counts, rival, rules)
             weight = self.threat_weight(rival.key)
             if rival_progress >= 1.0:
                 # Handing an opponent the win is the worst thing we can do.
@@ -274,15 +274,11 @@ class StrategicBot(ThinkingBot):
                 # Stall whichever opponent looks closest to their agenda.
                 beliefs = self.belief.get(action.player, {})
                 total = sum(beliefs.values()) or 1.0
+                counts = count_board(state)
+                rules = rules_for(state)
                 lead = max(
                     (
-                        beliefs.get(a.key, 0.0)
-                        / total
-                        * progress_counts(
-                            count_board(state),
-                            a,
-                            strict_conquest=state.config.conquest_requires_barbarian_generals,
-                        )
+                        beliefs.get(a.key, 0.0) / total * progress_counts(counts, a, rules)
                         for a in AGENDAS
                         if a.key != state.agendas[player]
                     ),

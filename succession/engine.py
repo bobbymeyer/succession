@@ -13,6 +13,7 @@ from .agendas import (
     BoardCounts,
     count_board,
     progress_vector,
+    rules_for,
     satisfied_counts,
 )
 from .cards import (
@@ -340,11 +341,11 @@ def check_winners(state: GameState) -> list[int]:
     """Players whose agenda the board satisfies right now (ties: everyone wins)."""
 
     counts = count_board(state)
-    strict = state.config.conquest_requires_barbarian_generals
+    rules = rules_for(state)
     return [
         p
         for p in range(state.config.num_players)
-        if satisfied_counts(counts, AGENDAS_BY_KEY[state.agendas[p]], strict_conquest=strict)
+        if satisfied_counts(counts, AGENDAS_BY_KEY[state.agendas[p]], rules)
     ]
 
 
