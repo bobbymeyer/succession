@@ -59,11 +59,11 @@ def fresh(**overrides) -> GameState:
     return state
 
 
-def fresh_like(state: GameState) -> GameState:
-    """The same board, judged under the default (unflagged) rules."""
+def judged_as(state: GameState, **overrides) -> GameState:
+    """The same board, judged under a different set of rule options."""
 
     twin = state.clone()
-    twin.config = Config(players=state.config.players)
+    twin.config = Config(players=state.config.players, **overrides)
     return twin
 
 
@@ -447,14 +447,26 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
 
 
 class TestWinConditions(unittest.TestCase):
-    def test_house_rising_needs_three_seats(self):
+    def test_house_rising_needs_three_seats_with_a_pair(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["house_amonides"]
-        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
-        self.assertFalse(satisfied(state, agenda))
-        seat(state, "Weigher of Grain", Seat.EXCHEQUER)
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)   # Church
+        seat(state, "Hand of the Oracle", Seat.ORACLE)          # Church
+        self.assertFalse(satisfied(state, agenda))  # the pair alone is not enough
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)         # Merchant
         self.assertTrue(satisfied(state, agenda))
+
+    def test_house_rising_rejects_three_seats_spread_across_estates(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["house_amonides"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)      # Church
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)  # Military
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)            # Merchant
+        self.assertFalse(satisfied(state, agenda))
+        # ...but three spread seats do win under --house-any-three.
+        self.assertTrue(
+            satisfied(judged_as(state, house_rising_requires_estate_pair=False), agenda)
+        )
 
     def test_house_rising_counts_only_the_named_family(self):
         state = fresh()
@@ -464,19 +476,45 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)          # Argaian
         self.assertFalse(satisfied(state, agenda))
 
-    def test_house_rising_estate_pair_variant(self):
-        state = fresh(house_rising_requires_estate_pair=True)
-        agenda = AGENDAS_BY_KEY["house_amonides"]
-        # Three seats spread one-per-estate: enough by default, not with the flag.
-        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)     # Church
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)  # Military
-        seat(state, "Weigher of Grain", Seat.EXCHEQUER)           # Merchant
-        self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(satisfied(fresh_like(state), agenda))
-        # Doubling up on the Church seats satisfies the strict reading.
-        state.seats[Seat.FIELD_GENERAL] = None
-        seat(state, "Hand of the Oracle", Seat.ORACLE)
+    def test_the_pair_may_be_military_instead_of_church(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["house_argaian"]
+        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)          # Military
+        seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)  # Military
+        seat(state, "Founder of Markets", Seat.EXCHEQUER)         # Merchant
         self.assertTrue(satisfied(state, agenda))
+
+    def test_a_fixed_preferred_estate_only_counts_that_estate(self):
+        amonides_church = (("Amonides", "Church"),)
+        state = fresh(house_preferred_estates=amonides_church)
+        agenda = AGENDAS_BY_KEY["house_amonides"]
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)   # Military
+        seat(state, "Speaker of the Old Words", Seat.PRAETORIAN_CHIEF)  # Military
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)               # Merchant
+        # A Military pair does not satisfy a family whose estate is fixed to Church.
+        self.assertFalse(satisfied(state, agenda))
+        self.assertTrue(satisfied(judged_as(state), agenda))  # emergent pair: fine
+        state.seats[Seat.PRAETORIAN_CHIEF] = None
+        seat(state, "Hand of the Oracle", Seat.ORACLE)
+        self.assertFalse(satisfied(state, agenda))  # one Church seat, not two
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        self.assertTrue(satisfied(state, agenda))
+
+    def test_a_single_seat_estate_cannot_supply_a_pair(self):
+        """Merchant has one inner seat, so Mitreas can never pair there."""
+
+        state = fresh(house_preferred_estates=(("Mitreas", "Merchant"),))
+        agenda = AGENDAS_BY_KEY["house_mitreas"]
+        seat(state, "Golden Thumb", Seat.EXCHEQUER)  # the only Merchant seat
+        seat(state, "Initiate of the Seven Veils", Seat.CHIEF_PRIEST)
+        seat(state, "Whisperer to the Serpent", Seat.ORACLE)
+        seat(state, "Crosser of Rivers", Seat.FIELD_GENERAL)
+        seat(state, "Rider of the Long Road", Seat.PRAETORIAN_CHIEF)
+        # Mitreas holds every seat it could ever legally hold -- it has no
+        # commoner for the Guildmaster -- and still cannot pair in Merchant.
+        self.assertEqual(len(state.inner_uids()), 5)
+        self.assertFalse(satisfied(state, agenda))
+        self.assertTrue(satisfied(judged_as(state), agenda))
 
     def test_faith_ascendant_needs_four_seats(self):
         state = fresh()
@@ -524,7 +562,11 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
         seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
         self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(satisfied(fresh_like(state), agenda))
+        self.assertTrue(
+            satisfied(
+                judged_as(state, conquest_requires_barbarian_generals=False), agenda
+            )
+        )
         seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))

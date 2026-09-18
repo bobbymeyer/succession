@@ -19,11 +19,35 @@ from typing import Iterator
 from .agendas import AGENDAS
 from .analysis import format_summary, summarize
 from .bots import BOT_TIERS, make_bot
+from .enums import FAMILIES, Estate
 from .engine import GameResult, play_game
 from .logsink import open_sink, read_rows, row
 from .state import Config
 
 DEFAULT_PLAYERS = "naive,greedy,strategic,naive"
+
+
+def parse_preferred_estates(spec: str) -> tuple[tuple[str, str], ...]:
+    """Parse ``amonides=church,argaian=military`` into a family->estate mapping."""
+
+    if not spec:
+        return ()
+    families = {f.value.lower(): f.value for f in FAMILIES}
+    estates = {e.value.lower(): e.value for e in Estate}
+    pairs: list[tuple[str, str]] = []
+    for item in spec.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise SystemExit(f"--house-preferred-estates: expected family=estate, got {item!r}")
+        family, estate = (part.strip().lower() for part in item.split("=", 1))
+        if family not in families:
+            raise SystemExit(f"unknown family {family!r} (have: {', '.join(sorted(families))})")
+        if estate not in estates:
+            raise SystemExit(f"unknown estate {estate!r} (have: {', '.join(sorted(estates))})")
+        pairs.append((families[family], estates[estate]))
+    return tuple(pairs)
 
 
 def build_config(args: argparse.Namespace) -> Config:
@@ -47,7 +71,8 @@ def build_config(args: argparse.Namespace) -> Config:
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
         defense_requires_matching_target=args.defense_matches_target,
         conquest_requires_barbarian_generals=args.strict_conquest,
-        house_rising_requires_estate_pair=args.house_estate_pair,
+        house_rising_requires_estate_pair=not args.house_any_three,
+        house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
     )
 
 
@@ -136,7 +161,8 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
     parser.add_argument("--strict-conquest", action="store_true", help="Conquest needs both Military seats held by barbarians, not merely occupied")
-    parser.add_argument("--house-estate-pair", action="store_true", help="a House Rising trio must include two seats of a single estate")
+    parser.add_argument("--house-any-three", action="store_true", help="drop the estate-pair requirement: any three seats of a family win")
+    parser.add_argument("--house-preferred-estates", default="", metavar="SPEC", help="fix each family's preferred estate, e.g. amonides=church,argaian=military (default: whichever estate the family doubles up in)")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -71,17 +71,22 @@ state, **both** players win and the game is logged as a double win.
 
 | Agenda | Copies | Condition |
 |---|---|---|
-| House Rising | 3 (one per family) | That family holds **3+** of the 6 inner seats |
+| House Rising | 3 (one per family) | That family holds **3+** of the 6 inner seats, **two of them in a single estate** |
 | Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 6 inner seats |
 | Conquest | 1 | **3 barbarians in the inner circle** and both Military seats held |
 | Balance | 1 | Inner circle simultaneously shows all three families, both faiths, and a barbarian |
 
 Each family fields exactly two Church, two Military and two Merchant courtiers
-and no commoner, so a House Rising trio normally comes from doubling up on one
-of the two-seat estates (both Church seats or both Military seats) plus a
-third seat elsewhere. Whether that doubling-up is *required* or merely the
-natural path is the one open question below; the default treats any three
-seats as a win, and `--house-estate-pair` enforces the pair.
+and no commoner. The pair therefore has to come from one of the two-seat
+estates -- both Church seats or both Military seats -- plus a third seat
+anywhere. One Church + one Military + the Exchequer is three seats but no
+pair, and does not win.
+
+By default a family's preferred estate is *emergent*: whichever estate it
+manages to double up in. `--house-preferred-estates amonides=church,...` fixes
+it per family instead, and then only that estate's seats count toward the
+pair. See the open question below before using it -- Merchant has a single
+inner seat, so a family fixed to Merchant can never win.
 
 Four of the seven agendas are dealt out; the other three stay in fog and are
 the pool `Schismatic Event` draws from.
@@ -103,7 +108,7 @@ first; the flag flips it.
 |---|---|---|---|
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
 | 2 | **Conquest's Military seats need only be occupied**, by anyone -- the three barbarians it needs are counted in the inner circle, so the two generals need not themselves be barbarians. | any occupants | `--strict-conquest` requires barbarian generals |
-| 2b | **A House Rising trio may be any three seats**, in any estates. | any three | `--house-estate-pair` requires two seats of one estate |
+| 2b | **A family's preferred estate is emergent** -- whichever of the two-seat estates it doubles up in. | emergent | `--house-preferred-estates` fixes it per family; `--house-any-three` drops the pair requirement entirely |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
@@ -147,23 +152,39 @@ Open questions behind that table:
 5. **Does a Defense really never stop an Event?** Implemented exactly as
    written; worth confirming, because it makes majors unanswerable.
 
-# Open question: House Rising and its estate pair
+# Open question: which estate does each family prefer?
 
-"House Rising should be 3 seats, with each family preferring 2 seats in one
-estate (Church, Military, Merchant)" reads two ways, and the two differ by
-about five points of win rate:
+House Rising is three seats with two of them in one estate. What is still open
+is whether each family has a *fixed* preferred estate or simply doubles up
+wherever it can.
 
-* **Soft (default)** -- the parenthetical describes the roster: each family has
-  two courtiers in each of those three estates, so doubling up on the Church or
-  Military seats is simply the easiest route to three. Any three seats win.
-  House win rate: ~14%.
-* **Strict (`--house-estate-pair`)** -- the trio must *contain* two seats of a
-  single estate, so one Church + one Military + the Exchequer does not win.
-  House win rate: ~9%.
+The board makes a fixed mapping awkward: **only Church and Military have two
+inner seats.** Merchant (Master of the Exchequer) and Commons (Guildmaster)
+have one each. So the affiliations from the source document --
+Amonides/Church, Mitreas/Merchant, Argaian/Military -- cannot all work: a
+family fixed to Merchant has only one seat to pair in.
 
-Note that only Church and Military have two inner seats; Merchant and Commons
-have one each. So a "preferred estate" per family (Amonides/Church,
-Mitreas/Merchant, Argaian/Military) cannot be a hard requirement for Mitreas --
-there is only one Merchant seat to take. If you meant a per-family preferred
-estate rather than "any doubled-up estate", that needs either a second Merchant
-seat or a different rule for Mitreas.
+Simulated (2,000 games, `--house-preferred-estates
+amonides=church,mitreas=merchant,argaian=military`):
+
+| Agenda | Fixed mapping | Emergent (default) |
+|---|---|---|
+| House Rising: Amonides | 5.6% | 9.4% |
+| House Rising: Argaian | 5.6% | 8.7% |
+| House Rising: Mitreas | **0.0%** (0 of 1,086) | 9.0% |
+
+Mitreas did not win a single game, and cannot: it can hold every seat it is
+able to hold -- five of six, since it has no commoner for the Guildmaster --
+and still never pair in Merchant.
+
+Three ways out, if you want fixed affiliations:
+
+1. **Leave it emergent** (the default today). Houses land at ~9% each and the
+   three are within a point of each other, which is what you want from three
+   copies of one agenda.
+2. **Give Mitreas a two-seat estate.** Amonides/Church and Argaian/Military
+   are natural; Mitreas would need Church or Military too, which muddies the
+   three-way identity.
+3. **Add a second Merchant seat** (or make the Guildmaster seat Merchant-or-
+   Commons), so all three affiliated estates have a pair to take. This is the
+   only option that keeps Mitreas commercial, and it changes the board.

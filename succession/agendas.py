@@ -15,7 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .enums import FAITHS, FAMILIES, MILITARY_SEATS, Faith, Family, Origin
+from .enums import FAITHS, FAMILIES, MILITARY_SEATS, SEAT_ESTATE, Faith, Family, Origin
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from .state import GameState
@@ -53,18 +53,28 @@ HOUSE_SEATS = 3
 FAITH_SEATS = 4
 #: Conquest needs this many barbarians *in the inner circle*.
 CONQUEST_BARBARIANS = 3
-#: The strict House Rising variant wants this many seats of one estate.
+#: Two of a House Rising trio must sit in the family's preferred estate.
 HOUSE_ESTATE_PAIR = 2
 
 
 @dataclass(frozen=True, slots=True)
 class AgendaRules:
-    """The agenda variants the brief left open; see docs/RULES.md."""
+    """The agenda variants; see docs/RULES.md."""
 
     #: Conquest's two Military seats must be held *by barbarians*.
     strict_conquest: bool = False
-    #: A House Rising trio must include two seats of a single estate.
-    house_estate_pair: bool = False
+    #: Two of the three House Rising seats must share an estate.
+    house_estate_pair: bool = True
+    #: Optional fixed family -> estate mapping. When empty, a family's
+    #: preferred estate is whichever one it has doubled up in; when set, only
+    #: that estate's seats count toward the pair.
+    house_preferred_estate: tuple[tuple[str, str], ...] = ()
+
+    def preferred_estate(self, family: str) -> str | None:
+        for name, estate in self.house_preferred_estate:
+            if name == family:
+                return estate
+        return None
 
 
 DEFAULT_RULES = AgendaRules()
@@ -75,6 +85,7 @@ def rules_for(state: "GameState") -> AgendaRules:
     return AgendaRules(
         strict_conquest=config.conquest_requires_barbarian_generals,
         house_estate_pair=config.house_rising_requires_estate_pair,
+        house_preferred_estate=config.house_preferred_estates,
     )
 
 
@@ -86,7 +97,7 @@ class BoardCounts:
     inner_faith: dict[str, int]
     outer_family: dict[str, int]
     outer_faith: dict[str, int]
-    #: family -> estate -> seats held, for the estate-pair House Rising variant
+    #: family -> seat estate -> seats held, for House Rising's estate pair
     inner_family_estate: dict[str, dict[str, int]]
     inner_barbarians: int
     barbarians_in_play: int
@@ -113,15 +124,18 @@ def count_board(state: "GameState") -> BoardCounts:
             if cstate[uid].origin is Origin.BARBARIAN:
                 military_barbarian += 1
 
-    for uid in state.seats.values():
+    for seat, uid in state.seats.items():
         if uid is None:
             continue
         c = cstate[uid]
         family = c.family.value
         inner_family[family] = inner_family.get(family, 0) + 1
         inner_faith[c.faith.value] = inner_faith.get(c.faith.value, 0) + 1
+        # Keyed on the seat's estate, which is what "two seats in one estate"
+        # means -- identical to the occupant's estate in any legal position.
         estates = inner_family_estate.setdefault(family, {})
-        estates[c.estate.value] = estates.get(c.estate.value, 0) + 1
+        estate = SEAT_ESTATE[seat].value
+        estates[estate] = estates.get(estate, 0) + 1
         if c.origin is Origin.BARBARIAN:
             inner_barbarians += 1
             barbarians += 1
@@ -146,11 +160,20 @@ def count_board(state: "GameState") -> BoardCounts:
     )
 
 
-def _best_estate_block(counts: BoardCounts, family: str) -> int:
-    """How many seats of a single estate this family holds."""
+def _estate_block(counts: BoardCounts, family: str, rules: AgendaRules) -> int:
+    """Seats this family holds in its preferred estate.
+
+    With no fixed mapping the preferred estate is emergent -- whichever estate
+    the family has most seats in.
+    """
 
     estates = counts.inner_family_estate.get(family)
-    return max(estates.values()) if estates else 0
+    if not estates:
+        return 0
+    preferred = rules.preferred_estate(family)
+    if preferred is not None:
+        return estates.get(preferred, 0)
+    return max(estates.values())
 
 
 def satisfied_counts(
@@ -161,7 +184,7 @@ def satisfied_counts(
         if counts.inner_family.get(agenda.param, 0) < HOUSE_SEATS:
             return False
         if rules.house_estate_pair:
-            return _best_estate_block(counts, agenda.param) >= HOUSE_ESTATE_PAIR
+            return _estate_block(counts, agenda.param, rules) >= HOUSE_ESTATE_PAIR
         return True
     if kind == FAITH_ASCENDANT:
         return counts.inner_faith.get(agenda.param, 0) >= FAITH_SEATS
@@ -201,7 +224,7 @@ def progress_counts(
         seated = counts.inner_family.get(agenda.param, 0)
         core = min(seated, HOUSE_SEATS) / HOUSE_SEATS
         if rules.house_estate_pair:
-            block = min(_best_estate_block(counts, agenda.param), HOUSE_ESTATE_PAIR)
+            block = min(_estate_block(counts, agenda.param, rules), HOUSE_ESTATE_PAIR)
             core = 0.6 * core + 0.4 * block / HOUSE_ESTATE_PAIR
         bench = min(counts.outer_family.get(agenda.param, 0), HOUSE_SEATS) / HOUSE_SEATS
     elif kind == FAITH_ASCENDANT:
