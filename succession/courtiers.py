@@ -1,0 +1,86 @@
+"""The 34-courtier table.
+
+Courtiers are identified by epithet only. A courtier killed during play may be
+reshuffled back into the deck as a *new* person bearing the same reputation --
+they re-enter with their printed (base) attributes, never with whatever
+mutations or strips the dead one had accumulated.
+
+`house` is thematic flavour (which house a courtier is drawn from); `family` is
+the mechanical attribute agendas care about. For commoners and barbarians the
+two coincide as "no family".
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .enums import Estate, Faith, Family, Origin, People
+
+
+@dataclass(frozen=True, slots=True)
+class CourtierDef:
+    """Printed (base) attributes of one courtier card."""
+
+    name: str
+    estate: Estate
+    faith: Faith
+    family: Family
+    origin: Origin
+    people: People = People.NONE
+
+    @property
+    def house(self) -> str:
+        if self.family is not Family.NONE:
+            return self.family.value
+        return "Barbarian" if self.origin is Origin.BARBARIAN else "Commoner"
+
+
+_E, _C, _M, _K = Estate.MILITARY, Estate.CHURCH, Estate.MERCHANT, Estate.COMMONS
+_OG, _MC = Faith.OLD_GODS, Faith.MYSTERY_CULTS
+_AM, _MI, _AR, _NF = Family.AMONIDES, Family.MITREAS, Family.ARGAIAN, Family.NONE
+_IMP, _BAR = Origin.IMPERIAL, Origin.BARBARIAN
+
+
+COURTIERS: tuple[CourtierDef, ...] = (
+    # --- House Amonides (Old Gods, Church-affiliated) -----------------------
+    CourtierDef("Beloved of the Gods", _C, _OG, _AM, _IMP),
+    CourtierDef("Keeper of the Long Peace", _E, _OG, _AM, _IMP),
+    CourtierDef("Hand of the Oracle", _C, _OG, _AM, _IMP),
+    CourtierDef("Weigher of Grain", _M, _OG, _AM, _IMP),
+    CourtierDef("Speaker of the Old Words", _E, _OG, _AM, _IMP),
+    CourtierDef("Wearer of the Golden Diadem", _M, _OG, _AM, _IMP),
+    # --- House Mitreas (Mystery Cults, Merchant-affiliated) -----------------
+    CourtierDef("Golden Thumb", _M, _MC, _MI, _IMP),
+    CourtierDef("Initiate of the Seven Veils", _C, _MC, _MI, _IMP),
+    CourtierDef("Crosser of Rivers", _E, _MC, _MI, _IMP),
+    CourtierDef("Buyer of Cities", _M, _MC, _MI, _IMP),
+    CourtierDef("Whisperer to the Serpent", _C, _MC, _MI, _IMP),
+    CourtierDef("Rider of the Long Road", _E, _MC, _MI, _IMP),
+    # --- House Argaian (mixed faith, Military-affiliated) -------------------
+    CourtierDef("Horse Breaker", _E, _MC, _AR, _IMP),
+    CourtierDef("Destroyer of Walls", _E, _OG, _AR, _IMP),
+    CourtierDef("Reader of Omens", _C, _MC, _AR, _IMP),
+    CourtierDef("Sword of the Assembly", _C, _OG, _AR, _IMP),
+    CourtierDef("Founder of Markets", _M, _OG, _AR, _IMP),
+    CourtierDef("Uncrowned Victor", _M, _MC, _AR, _IMP),
+    # --- Commoners (unaffiliated, Imperial) ---------------------------------
+    CourtierDef("Silver Tongue", _K, _OG, _NF, _IMP),
+    CourtierDef("Fastest of the Games", _K, _OG, _NF, _IMP),
+    CourtierDef("Mender of Bones", _K, _OG, _NF, _IMP),
+    CourtierDef("Ten Thousand Verses", _K, _OG, _NF, _IMP),
+    CourtierDef("Builder of the Long Aqueduct", _K, _OG, _NF, _IMP),
+    CourtierDef("Risen from the Ranks", _E, _MC, _NF, _IMP),
+    CourtierDef("Coin-Counter of the Assembly", _M, _MC, _NF, _IMP),
+    CourtierDef("Widow of the Temple", _C, _OG, _NF, _IMP),
+    # --- Barbarians (unaffiliated, Barbarian origin, two per people) --------
+    CourtierDef("Priest of the Two-Horned God", _C, _MC, _NF, _BAR, People.EGYPTIAN),
+    CourtierDef("Master Mason", _K, _MC, _NF, _BAR, People.EGYPTIAN),
+    CourtierDef("Cataphract of the Iron Bridge", _E, _MC, _NF, _BAR, People.PERSIAN),
+    CourtierDef("Caravan-Lord of the Salt Road", _M, _MC, _NF, _BAR, People.PERSIAN),
+    CourtierDef("Hundred-Kill Rider", _E, _MC, _NF, _BAR, People.SCYTHIAN),
+    CourtierDef("Blade for Any Banner", _E, _MC, _NF, _BAR, People.SCYTHIAN),
+    CourtierDef("Warlord of the Iron Grove", _E, _OG, _NF, _BAR, People.GERMAN),
+    CourtierDef("Master Swordsmith", _K, _OG, _NF, _BAR, People.GERMAN),
+)
+
+COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS}
