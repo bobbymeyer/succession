@@ -55,6 +55,9 @@ HOUSE_PREFERRED_SEATS = 1
 #: Faith Ascendant needs this many of the inner seats. Four of seven is a bare
 #: majority; five is the two-thirds the rule meant when the board had six.
 FAITH_SEATS = 4
+#: Balance must hold across at least this many of the seven seats, so that a
+#: thin board cannot satisfy it by accident.
+BALANCE_SEATS = 5
 #: Barbarian Conquest: this many barbarians in the inner circle wins...
 CONQUEST_BARBARIANS = 3
 #: ...or this many barbarian generals (both Military seats) wins outright.
@@ -68,6 +71,8 @@ class AgendaRules:
     house_preferred_seat: bool = True
     #: Seats a faith must hold to win.
     faith_seats: int = FAITH_SEATS
+    #: Seats that must be filled for Balance to count.
+    balance_seats: int = BALANCE_SEATS
     #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
@@ -88,6 +93,7 @@ def rules_for(state: "GameState") -> AgendaRules:
         house_preferred_seat=config.house_rising_requires_preferred_seat,
         house_preferred_estate=config.house_preferred_estates,
         faith_seats=config.faith_seats,
+        balance_seats=config.balance_seats,
     )
 
 
@@ -101,6 +107,7 @@ class BoardCounts:
     outer_faith: dict[str, int]
     #: family -> seat estate -> seats held, for House Rising's estate pair
     inner_family_estate: dict[str, dict[str, int]]
+    inner_filled: int
     inner_barbarians: int
     barbarians_in_play: int
     military_seats_filled: int
@@ -113,6 +120,7 @@ def count_board(state: "GameState") -> BoardCounts:
     outer_family: dict[str, int] = {}
     outer_faith: dict[str, int] = {}
     inner_family_estate: dict[str, dict[str, int]] = {}
+    inner_filled = 0
     inner_barbarians = 0
     barbarians = 0
     military_filled = 0
@@ -130,6 +138,7 @@ def count_board(state: "GameState") -> BoardCounts:
         if uid is None:
             continue
         c = cstate[uid]
+        inner_filled += 1
         family = c.family.value
         inner_family[family] = inner_family.get(family, 0) + 1
         inner_faith[c.faith.value] = inner_faith.get(c.faith.value, 0) + 1
@@ -155,6 +164,7 @@ def count_board(state: "GameState") -> BoardCounts:
         outer_family,
         outer_faith,
         inner_family_estate,
+        inner_filled,
         inner_barbarians,
         barbarians,
         military_filled,
@@ -192,7 +202,8 @@ def satisfied_counts(
         )
     if kind == BALANCE:
         return (
-            all(counts.inner_family.get(f.value, 0) > 0 for f in FAMILIES)
+            counts.inner_filled >= rules.balance_seats
+            and all(counts.inner_family.get(f.value, 0) > 0 for f in FAMILIES)
             and all(counts.inner_faith.get(f.value, 0) > 0 for f in FAITHS)
             and counts.inner_barbarians > 0
         )
@@ -234,7 +245,8 @@ def progress_counts(
         met = sum(1 for f in FAMILIES if counts.inner_family.get(f.value, 0) > 0)
         met += sum(1 for f in FAITHS if counts.inner_faith.get(f.value, 0) > 0)
         met += 1 if counts.inner_barbarians else 0
-        core = met / 6.0
+        seats = min(counts.inner_filled, rules.balance_seats) / rules.balance_seats
+        core = 0.8 * met / 6.0 + 0.2 * seats
         bench = 0.0
     else:  # pragma: no cover
         raise ValueError(f"unknown agenda kind: {kind}")

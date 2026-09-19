@@ -48,7 +48,7 @@ courtier is bumped to the outer circle.
 
 | Kind | Effect |
 |---|---|
-| Courtier (37) | Enters the outer circle. |
+| Courtier (40) | Enters the outer circle. |
 | Promotion (5) | Outer courtier → an *occupied* matching seat; occupant bumped to outer. Wildcard `Promotion` works on any estate. |
 | Demotion (5) | Inner courtier → outer; seat left empty. |
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
@@ -67,18 +67,18 @@ attribute can be restored later by `Conversion` (the player picks the faith) or
 
 There are two faiths -- Old Gods and Mystery Cults -- and a **Godless** value
 that is a real position, not an absence. Only the two faiths need to be level
-with each other; the Godless have no win path, so they can be few. Three of the
-37 courtiers are born Godless:
+with each other; the Godless have no win path, so they can be few. Four of the
+40 courtiers are Godless, one per group:
 
-| Courtier | Group | Estate | Was |
-|---|---|---|---|
-| Whisperer to the Serpent | Mitreas | Church | Mystery Cults |
-| Ten Thousand Verses | Commoner | Commons | Old Gods |
-| Master Swordsmith | Barbarian | Commons | Old Gods |
+| Courtier | Group | Estate |
+|---|---|---|
+| Whisperer to the Serpent | Mitreas | Church |
+| Charioteer of the Iron Wheel | Argaian | Commons |
+| Ten Thousand Verses | Commoner | Commons |
+| Master Swordsmith | Barbarian | Commons |
 
-That leaves the roster at 17 Old Gods, 17 Mystery Cults, 3 Godless. Which two
-come out of Old Gods matters more than the count -- see the README on why they
-are taken from Commons.
+That leaves the roster at 18 Old Gods, 18 Mystery Cults, 4 Godless. Parity
+between the two faiths is about *benches*, not head count -- see the README.
 
 Godlessness has no agenda. There is no Faith Ascendant: Godless, and Balance
 still asks only for the two faiths, so **a godless courtier in an inner seat is
@@ -113,11 +113,14 @@ state, **both** players win and the game is logged as a double win.
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
 | Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
 | Barbarian Conquest | 1 | **3 barbarians in the inner circle**, *or* both Military seats held by barbarians |
-| Balance | 1 | Inner circle simultaneously shows all three families, both faiths, and a barbarian |
+| Balance | 1 | **Five of the seven seats filled**, and the inner circle simultaneously shows all three families, both faiths, and a barbarian (`--balance-seats`) |
 
 Barbarian Conquest has two routes and either one wins outright: a bloc of
 three seated barbarians anywhere in the inner circle, or both generals. Two
 barbarian generals therefore win on their own.
+
+Each house also fields one commoner -- its charioteer -- which is the only way
+a house can ever hold the Guildmaster's seat.
 
 Each house's own estate comes from the source document's affiliations and
 lives in `FAMILY_PREFERRED_ESTATE` in `succession/courtiers.py`:
@@ -128,8 +131,8 @@ lives in `FAMILY_PREFERRED_ESTATE` in `succession/courtiers.py`:
 | Mitreas | Merchant | Master of the Exchequer, Harbormaster |
 | Argaian | Military | Field General, Praetorian Chief |
 
-Every family fields **three** courtiers in its own estate and two in each of
-the other two, and every estate that a house can be affiliated with seats a
+Every family fields **three** courtiers in its own estate, two in each of the
+other two, and one charioteer, and every estate that a house can be affiliated with seats a
 pair, so no house is short of candidates for its own estate. Three seats that avoid the family's estate entirely -- two
 Military plus the Exchequer for Amonides, say -- is not a win.
 `--house-preferred-estates mitreas=church` overrides one family's estate;
@@ -140,7 +143,7 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-81 cards: 37 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
+84 cards: 40 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
 5 defenses + 2 strips + 9 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
 
@@ -159,6 +162,7 @@ first; the flag flips it.
 | 2f | **All seven agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all seven | `--drop-agendas` |
 | 2d | **Balance asks only for the two faiths**, not for a godless courtier as well, since godlessness has no agenda. | two faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
+| 2g | **Balance needs five of the seven seats filled**, so a thin board cannot satisfy it by accident. | 5 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |

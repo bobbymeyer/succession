@@ -95,23 +95,23 @@ def outer(state: GameState, *names: str) -> list[int]:
 
 class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
-        self.assertEqual(len(COURTIERS), 37)
+        self.assertEqual(len(COURTIERS), 40)
         faith = collections.Counter(c.faith for c in COURTIERS)
         # Only the two faiths need to be level with each other.
-        self.assertEqual(faith[Faith.OLD_GODS], 17)
-        self.assertEqual(faith[Faith.MYSTERY_CULTS], 17)
-        self.assertEqual(faith[Faith.GODLESS], 3)
+        self.assertEqual(faith[Faith.OLD_GODS], 18)
+        self.assertEqual(faith[Faith.MYSTERY_CULTS], 18)
+        self.assertEqual(faith[Faith.GODLESS], 4)
         origin = collections.Counter(c.origin for c in COURTIERS)
-        self.assertEqual(origin[Origin.IMPERIAL], 29)
+        self.assertEqual(origin[Origin.IMPERIAL], 32)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
         estate = collections.Counter(c.estate for c in COURTIERS)
         self.assertEqual(estate[Estate.MILITARY], 12)
         self.assertEqual(estate[Estate.CHURCH], 9)
         self.assertEqual(estate[Estate.MERCHANT], 9)
-        self.assertEqual(estate[Estate.COMMONS], 7)
+        self.assertEqual(estate[Estate.COMMONS], 10)
         family = collections.Counter(c.family for c in COURTIERS)
         for house in (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN):
-            self.assertEqual(family[house], 7)
+            self.assertEqual(family[house], 8)
 
     def test_each_house_fields_three_courtiers_in_its_own_estate(self):
         for family, estate in FAMILY_PREFERRED_ESTATE.items():
@@ -119,12 +119,12 @@ class TestData(unittest.TestCase):
                 own = [c for c in COURTIERS if c.family is family and c.estate is estate]
                 self.assertEqual(len(own), 3)
                 other = [c for c in COURTIERS if c.family is family and c.estate is not estate]
-                self.assertEqual(len(other), 4)
+                self.assertEqual(len(other), 5)
 
     def test_deck_composition(self):
         cards = build_cards(outmaneuver_copies=1)
         kinds = collections.Counter(c.kind for c in cards)
-        self.assertEqual(kinds[CardKind.COURTIER], 37)
+        self.assertEqual(kinds[CardKind.COURTIER], 40)
         self.assertEqual(kinds[CardKind.EVENT], 10)
         self.assertEqual(kinds[CardKind.PROMOTION], 5)
         self.assertEqual(kinds[CardKind.DEMOTION], 5)
@@ -134,12 +134,22 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.MUTATION], 9)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
-        self.assertEqual(len(cards), 81)
+        self.assertEqual(len(cards), 84)
 
-    def test_the_godless_come_from_three_different_groups(self):
+    def test_the_godless_come_from_different_groups(self):
         godless = [c for c in COURTIERS if c.faith is Faith.GODLESS]
-        self.assertEqual(len(godless), 3)
-        self.assertEqual(len({c.house for c in godless}), 3)
+        self.assertEqual(len(godless), 4)
+        self.assertEqual(len({c.house for c in godless}), 4)
+
+    def test_every_house_fields_one_charioteer(self):
+        """A house's charioteer is its only route to the Guildmaster's seat."""
+
+        for family in (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN):
+            commoners = [
+                c for c in COURTIERS if c.family is family and c.estate is Estate.COMMONS
+            ]
+            self.assertEqual(len(commoners), 1)
+            self.assertIn("Charioteer", commoners[0].name)
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
@@ -456,6 +466,7 @@ class TestGodlessness(unittest.TestCase):
         seat(state, "Initiate of the Seven Veils", Seat.ORACLE)      # Mitreas / Mystery
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)             # Argaian / Mystery
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)     # Barbarian
+        seat(state, "Golden Thumb", Seat.EXCHEQUER)                  # fifth seat
         self.assertTrue(satisfied(state, agenda))  # no godless courtier needed
 
 
@@ -679,7 +690,21 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)               # Argaian / Mystery
         self.assertFalse(satisfied(state, agenda))
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)       # Barbarian
+        self.assertFalse(satisfied(state, agenda))  # diverse, but only four seats
+        seat(state, "Golden Thumb", Seat.EXCHEQUER)
         self.assertTrue(satisfied(state, agenda))
+
+    def test_balance_wants_a_full_enough_board(self):
+        """Four diverse seats is a thin board, not a balanced court."""
+
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["balance"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        seat(state, "Initiate of the Seven Veils", Seat.ORACLE)
+        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)
+        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
+        self.assertFalse(satisfied(state, agenda))
+        self.assertTrue(satisfied(judged_as(state, balance_seats=4), agenda))
 
     def test_simultaneous_agendas_both_win(self):
         state = fresh()

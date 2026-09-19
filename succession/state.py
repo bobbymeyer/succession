@@ -47,6 +47,8 @@ class Config:
     house_rising_requires_preferred_seat: bool = True
     #: Inner seats a faith must hold for Faith Ascendant.
     faith_seats: int = 4
+    #: Seats that must be filled before Balance counts.
+    balance_seats: int = 5
     #: Agenda keys left out of the pool entirely -- neither dealt nor available
     #: to a Schismatic Event. For asking what the game looks like without one.
     excluded_agendas: tuple[str, ...] = ()
