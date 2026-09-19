@@ -1,8 +1,15 @@
-# Court of Succession — headless simulator
+# Court of Succession — playtest alpha
 
 A dependency-free Python simulator for the card-driven succession game: full
 card and board model, a rules engine, three tiers of bot, and a CLI that runs
 N games and logs each one to CSV or SQLite for balance analysis.
+
+**Playtest alpha.** The rules are settled enough to put in front of players:
+every agenda is winnable, the eight of them sit inside seven points of each
+other, and 24,000 simulated games resolve without a single stall. What is
+alpha about it is that none of it has been played by a human yet — the numbers
+come from bots, and the open questions in `docs/RULES.md` are the ones a table
+will answer faster than a batch run.
 
 Stdlib only, Python 3.10+. It runs the same from a terminal or from a chat
 code-execution sandbox — no install step, no packages to fetch.
