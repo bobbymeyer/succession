@@ -120,11 +120,11 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Take Vows", CardKind.MUTATION, attribute="estate", value=Estate.CHURCH.value),
     CardDef("Enter Trade", CardKind.MUTATION, attribute="estate", value=Estate.MERCHANT.value),
     CardDef("Lose Status", CardKind.MUTATION, attribute="estate", value=Estate.COMMONS.value),
-    # Conversion flips the two faiths; on an atheist or a stripped courtier
+    # Conversion flips the two faiths; on a godless or a stripped courtier
     # the player picks which faith they come to.
     CardDef("Conversion", CardKind.MUTATION, attribute="faith"),
     # Apostasy pushes a courtier out of faith altogether.
-    CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.ATHEIST.value),
+    CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.GODLESS.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
     # Adoption takes its value from the family courtier sacrificed from hand.

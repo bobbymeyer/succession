@@ -213,7 +213,7 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
             elif cs.faith is Faith.MYSTERY_CULTS:
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
             else:
-                # An atheist or a stripped courtier comes to a faith of the
+                # A godless or a stripped courtier comes to a faith of the
                 # player's choosing.
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.MYSTERY_CULTS.value))

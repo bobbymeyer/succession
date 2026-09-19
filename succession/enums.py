@@ -22,7 +22,7 @@ class Faith(str, Enum):
     #: Actively godless. A real faith value a courtier can be born with or be
     #: pushed into by Apostasy -- distinct from NONE, which is the empty slot
     #: an Excommunication leaves behind.
-    ATHEIST = "Atheist"
+    GODLESS = "Godless"
     NONE = "None"
 
 
@@ -76,8 +76,8 @@ SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
 #: Barbarian Conquest's "both generals" route reads these two seats.
 MILITARY_SEATS: tuple[Seat, ...] = (Seat.FIELD_GENERAL, Seat.PRAETORIAN_CHIEF)
 
-#: The faiths an agenda can be built on. Atheism deliberately has none: an
-#: atheist in a seat is a seat neither faith can count.
+#: The faiths an agenda can be built on. Godlessness deliberately has none: an
+#: godless in a seat is a seat neither faith can count.
 FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS)
 FAMILIES: tuple[Family, ...] = (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN)
 

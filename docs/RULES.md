@@ -63,48 +63,44 @@ Strips do **not** consume a courtier's mutation allowance, so a stripped
 attribute can be restored later by `Conversion` (the player picks the faith) or
 `Adoption`.
 
-## Faith and atheism
+## Faith and the Godless
 
-There are two faiths -- Old Gods and Mystery Cults -- and an **Atheist** value
-that is a real position, not an absence. Five of the 37 courtiers are born
-atheists, one from each house, one commoner and one barbarian:
+There are two faiths -- Old Gods and Mystery Cults -- and a **Godless** value
+that is a real position, not an absence. Only the two faiths need to be level
+with each other; the Godless have no win path, so they can be few. Three of the
+37 courtiers are born Godless:
 
 | Courtier | Group | Estate | Was |
 |---|---|---|---|
-| Speaker of the Old Words | Amonides | Military | Old Gods |
-| Buyer of Cities | Mitreas | Merchant | Mystery Cults |
-| Horse Breaker | Argaian | Military | Mystery Cults |
-| Mender of Bones | Commoner | Commons | Old Gods |
+| Whisperer to the Serpent | Mitreas | Church | Mystery Cults |
+| Ten Thousand Verses | Commoner | Commons | Old Gods |
 | Master Swordsmith | Barbarian | Commons | Old Gods |
 
-That leaves the roster at 16 Old Gods, 16 Mystery Cults, 5 atheists. Which
-three come out of Old Gods matters: see the note in the README on why they are
-taken from Commons.
+That leaves the roster at 17 Old Gods, 17 Mystery Cults, 3 Godless. Which two
+come out of Old Gods matters more than the count -- see the README on why they
+are taken from Commons.
 
-Atheism has no agenda. There is no Faith Ascendant: Atheist, and Balance still
-asks only for the two faiths, so **an atheist in an inner seat is a seat
-neither faith can count**. That makes atheism purely denial: it is the one
-attribute you push a courtier into to take something away rather than to build
-something.
+Godlessness has no agenda. There is no Faith Ascendant: Godless, and Balance
+still asks only for the two faiths, so **a godless courtier in an inner seat is
+a seat neither faith can count**. That makes godlessness purely denial: it is
+the one attribute you push a courtier into to take something away rather than
+to build something.
 
-Two cards move a courtier across that line, and each spends the courtier's
-one faith mutation, so nobody crosses it twice:
+Two cards move a courtier across that line, and each spends the courtier's one
+faith mutation, so nobody crosses it twice:
 
-* **Apostasy** (mutation) -- target's faith becomes Atheist.
-* **Conversion** (mutation) -- flips Old Gods and Mystery Cults, and brings an
-  atheist (or an excommunicated courtier) to a faith of the player's choosing.
+* **Apostasy** (mutation) -- target's faith becomes Godless.
+* **Conversion** (mutation) -- flips Old Gods and Mystery Cults, and brings a
+  godless (or an excommunicated) courtier to a faith of the player's choosing.
 
-Atheist is distinct from the `None` an `Excommunication` leaves: `None` is an
-empty slot, atheism is a conviction. Both count for no faith agenda; only the
-distinction in the log tells you which happened.
+Godless is distinct from the `None` an `Excommunication` leaves: `None` is an
+empty slot, godlessness is a conviction. Both count for no faith agenda; only
+the distinction in the log tells you which happened.
 
 Because Apostasy advances nobody's agenda, the greedy bot never plays it --
-0 of 52 draws over 4,000 games -- while the strategic bot plays 93% of the
-ones it draws. It is the first card in the deck that separates those two tiers
+0 of 52 draws over 4,000 games -- while the strategic bot plays 93% of the ones
+it draws. It is the first card in the deck that separates those two tiers
 outright.
-
-A card with no legal target cannot be played at all that turn — the engine
-never generates an action that would do nothing.
 
 ## Winning
 
@@ -160,7 +156,7 @@ first; the flag flips it.
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
 | 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
-| 2d | **Balance asks only for the two faiths**, not for an atheist as well, since atheism has no agenda. | two faiths | -- |
+| 2d | **Balance asks only for the two faiths**, not for a godless courtier as well, since godlessness has no agenda. | two faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
