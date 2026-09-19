@@ -6,7 +6,7 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .actions import DISCARD, MOVE, PASS, Action, install_seat_for, legal_actions
+from .actions import DISCARD, MOVE, PASS, Action, legal_actions, purge_targets
 from .agendas import (
     AGENDAS,
     AGENDAS_BY_KEY,
@@ -17,16 +17,13 @@ from .agendas import (
     satisfied_counts,
 )
 from .cards import (
-    EFFECT_BREAK_DEFENSE,
-    EFFECT_DEMOTE,
-    EFFECT_DEMOTE_AND_BREAK,
-    EFFECT_ERASE,
-    EFFECT_INSTALL,
-    EFFECT_RECALL,
-    EFFECT_REMOVE,
-    EFFECT_RUIN,
-    EFFECT_STRIP_FAITH,
-    EFFECT_STRIP_FAMILY,
+    EFFECT_DISCARD_ALL,
+    EFFECT_DRAW_ALL,
+    EFFECT_FREEZE_BOARD,
+    EFFECT_FREEZE_INNER,
+    EFFECT_PURGE,
+    EFFECT_REDEAL,
+    EFFECT_RESHUFFLE,
 )
 from .courtiers import COURTIERS_BY_NAME
 from .enums import DEFENDABLE, SEAT_ESTATE, CardKind, Estate, Faith, Family, Origin, Seat
@@ -109,19 +106,6 @@ def kill(state: GameState, uid: int, *, permanent: bool = False) -> None:
     state.note(f"{state.name(uid)} removed from play")
 
 
-def recall(state: GameState, uid: int, rng) -> None:
-    """Courtier leaves the court and is shuffled back into the draw deck."""
-
-    _pull_from_play(state, uid)
-    _reset(state, uid)
-    if state.deck:
-        state.deck.insert(rng.randrange(len(state.deck) + 1), uid)
-    else:
-        state.deck.append(uid)
-    state.bump("courtiers_recalled")
-    state.note(f"{state.name(uid)} recalled into the deck")
-
-
 def install(state: GameState, uid: int, seat: Seat) -> None:
     if uid in state.outer:
         state.outer.remove(uid)
@@ -175,8 +159,13 @@ def draw(state: GameState, player: int, rng, count: int = 1) -> None:
 
 
 # --- resolution -------------------------------------------------------------
-def apply_action(state: GameState, player: int, action: Action, rng) -> None:
-    """Resolve one action. The board is fully updated when this returns."""
+def apply_action(state: GameState, player: int, action: Action, rng, deciders=None) -> None:
+    """Resolve one action. The board is fully updated when this returns.
+
+    `deciders` are the players' bots, needed by the events that ask everyone at
+    the table to choose something. Lookahead passes None and gets a
+    deterministic stand-in.
+    """
 
     state.bump(f"action_{action.kind}")
 
@@ -211,11 +200,11 @@ def apply_action(state: GameState, player: int, action: Action, rng) -> None:
         state.discard.append(action.sacrifice)
         state.bump("courtiers_sacrificed")
 
-    if _resolve(state, player, action, card, rng):
+    if _resolve(state, player, action, card, rng, deciders):
         state.discard.append(action.card)
 
 
-def _resolve(state: GameState, player: int, action: Action, card, rng) -> bool:
+def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=None) -> bool:
     """Resolve a non-courtier card. Returns False if it stays on the table."""
 
     kind = card.kind
@@ -270,12 +259,8 @@ def _resolve(state: GameState, player: int, action: Action, card, rng) -> bool:
         return True
 
     if kind is CardKind.EVENT:
-        # Defenses explicitly do not cover events.
-        if card.save and save_roll(state, rng):
-            state.bump("saves_made")
-            state.note(f"{state.name(target)} saves against {card.name}")
-            return True
-        _resolve_event(state, card.effect, target, rng)
+        # Events hit the whole table, and no Defense covers one.
+        _resolve_event(state, card, player, rng, deciders)
         return True
 
     if kind is CardKind.OUTMANEUVER:
@@ -305,39 +290,96 @@ def _mutation_value(attribute: str, raw: str):
     return Origin(raw)
 
 
-def _resolve_event(state: GameState, effect: str, target: int, rng) -> None:
-    if effect == EFFECT_DEMOTE:
-        demote(state, target)
-    elif effect == EFFECT_REMOVE:
-        kill(state, target)
-    elif effect == EFFECT_ERASE:
-        kill(state, target, permanent=True)
-    elif effect == EFFECT_RECALL:
-        recall(state, target, rng)
-    elif effect == EFFECT_STRIP_FAITH:
-        state.cstate[target] = state.cstate[target].with_attribute(
-            "faith", Faith.NONE, is_mutation=False
-        )
-    elif effect == EFFECT_STRIP_FAMILY:
-        state.cstate[target] = state.cstate[target].with_attribute(
-            "family", Family.NONE, is_mutation=False
-        )
-    elif effect == EFFECT_RUIN:
-        # A disaster, not a choice: it does not spend the courtier's one
-        # estate mutation, and it unseats them if the seat no longer matches.
-        state.cstate[target] = state.cstate[target].with_attribute(
-            "estate", Estate.COMMONS, is_mutation=False
-        )
-        _enforce_seat_estate(state, target)
-    elif effect == EFFECT_BREAK_DEFENSE:
-        _detach_defense(state, target)
-    elif effect == EFFECT_DEMOTE_AND_BREAK:
-        _detach_defense(state, target)
-        demote(state, target)
-    elif effect == EFFECT_INSTALL:
-        seat = install_seat_for(state, target)
-        if seat is not None:
-            install(state, target, seat)
+class _FirstChoice:
+    """The stand-in used when nobody is there to choose -- bot lookahead, tests.
+
+    Deterministic on purpose: the same board must evaluate the same way twice.
+    """
+
+    def pick_courtier(self, state, player, candidates):
+        return candidates[0]
+
+    def pick_discard(self, state, player, hand):
+        return hand[0]
+
+
+_DEFAULT_CHOICE = _FirstChoice()
+
+
+def _chooser(deciders, player):
+    if deciders is None:
+        return _DEFAULT_CHOICE
+    return deciders[player]
+
+
+def _players_from(state: GameState, first: int):
+    """Everyone, starting with the player who played the card."""
+
+    n = state.config.num_players
+    return [(first + i) % n for i in range(n)]
+
+
+def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
+    effect = card.effect
+
+    if effect == EFFECT_FREEZE_INNER:
+        state.freeze(board=False)
+        state.bump("freezes_inner")
+        state.note(f"the inner circle is sealed until P{player}'s next turn")
+
+    elif effect == EFFECT_FREEZE_BOARD:
+        state.freeze(board=True)
+        state.bump("freezes_board")
+        state.note(f"the whole board is sealed until P{player}'s next turn")
+
+    elif effect == EFFECT_PURGE:
+        for who in _players_from(state, player):
+            candidates = purge_targets(state)
+            if not candidates:
+                break
+            victim = _chooser(deciders, who).pick_courtier(state, who, candidates)
+            if card.save and save_roll(state, rng):
+                state.bump("saves_made")
+                state.note(f"{state.name(victim)} survives P{who}'s choice")
+                continue
+            state.note(f"P{who} names {state.name(victim)}")
+            kill(state, victim)
+
+    elif effect == EFFECT_DRAW_ALL:
+        for who in _players_from(state, player):
+            draw(state, who, rng, count=card.amount)
+        state.bump("cards_given", card.amount * state.config.num_players)
+
+    elif effect == EFFECT_DISCARD_ALL:
+        for who in _players_from(state, player):
+            for _ in range(card.amount):
+                hand = state.hands[who]
+                if not hand:
+                    break
+                choice = _chooser(deciders, who).pick_discard(state, who, hand)
+                hand.remove(choice)
+                state.discard.append(choice)
+                state.bump("cards_forced_out")
+
+    elif effect == EFFECT_RESHUFFLE:
+        state.deck.extend(state.discard)
+        state.discard = []
+        rng.shuffle(state.deck)
+        state.reshuffles += 1
+        state.bump("reshuffles")
+        state.note("the discard pile is shuffled back into the deck")
+
+    elif effect == EFFECT_REDEAL:
+        sizes = [len(h) for h in state.hands]
+        for hand in state.hands:
+            state.deck.extend(hand)
+            hand.clear()
+        rng.shuffle(state.deck)
+        for who, size in enumerate(sizes):
+            draw(state, who, rng, count=size)
+        state.bump("redeals")
+        state.note("every hand is shuffled in and dealt back out")
+
     else:  # pragma: no cover
         raise ValueError(f"unknown event effect: {effect}")
 
@@ -346,7 +388,7 @@ def simulate(state: GameState, player: int, action: Action) -> GameState:
     """Apply `action` to a copy of `state` -- the bots' one-ply lookahead."""
 
     nxt = state.clone()
-    apply_action(nxt, player, action, _EVAL_RNG)
+    apply_action(nxt, player, action, _EVAL_RNG, deciders=None)
     return nxt
 
 
@@ -448,7 +490,7 @@ def play_game(
         actions = legal_actions(state, player)
         before = progress_vector(state) if watching else None
         action = bots[player].choose(state, player, actions)
-        apply_action(state, player, action, rng)
+        apply_action(state, player, action, rng, deciders=bots)
         if watching:
             after = progress_vector(state)
             for bot in bots:

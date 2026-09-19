@@ -18,18 +18,25 @@ from __future__ import annotations
 import random
 from typing import Optional, Sequence
 
-from .actions import DISCARD, MOVE, PASS, PLAY, Action
+from .actions import DISCARD, MOVE, PASS, PLAY, Action, card_actions
 from .agendas import (
     AGENDA_KEYS,
-    AGENDAS,
     AGENDAS_BY_KEY,
     count_board,
     progress_counts,
     rules_for,
     satisfied_counts,
 )
+from .cards import (
+    EFFECT_DISCARD_ALL,
+    EFFECT_DRAW_ALL,
+    EFFECT_FREEZE_BOARD,
+    EFFECT_FREEZE_INNER,
+    EFFECT_REDEAL,
+    EFFECT_RESHUFFLE,
+)
 from .enums import CardKind
-from .engine import simulate
+from .engine import kill, simulate
 from .state import GameState
 
 #: How many candidate actions a thinking bot evaluates per turn. Target-heavy
@@ -80,6 +87,17 @@ class Bot:
 
     def observe(self, actor: int, before: dict[str, float], after: dict[str, float]) -> None:
         """Called after every action with the agenda-progress delta it caused."""
+
+    # -- choices an event forces on everyone at the table -------------------
+    def pick_courtier(self, state: GameState, player: int, candidates: Sequence[int]) -> int:
+        """Name a courtier to die, when a purge asks the whole table."""
+
+        return self.rng.choice(list(candidates))
+
+    def pick_discard(self, state: GameState, player: int, hand: Sequence[int]) -> int:
+        """Choose a card to throw away when an event empties every hand."""
+
+        return self.rng.choice(list(hand))
 
 
 class NaiveBot(Bot):
@@ -141,6 +159,39 @@ class ThinkingBot(Bot):
     def my_agenda(self, state: GameState, player: int):
         return AGENDAS_BY_KEY[state.agendas[player]]
 
+    def event_bonus(self, state: GameState, player: int, card, progress: float) -> float:
+        """What an event is worth when it does not move a single courtier.
+
+        Lookahead scores boards, and four of the five event pairs touch hands
+        and the deck rather than the board, so without this they would all look
+        like doing nothing. Deliberately crude: these only need to rank an
+        event against discarding it.
+        """
+
+        effect = card.effect
+        hands = [len(h) for h in state.hands]
+        mine = hands[player]
+        theirs = (sum(hands) - mine) / max(1, len(hands) - 1)
+
+        if effect in (EFFECT_FREEZE_INNER, EFFECT_FREEZE_BOARD):
+            # Worth a turn only when there is a lead worth protecting.
+            weight = 1.0 if effect == EFFECT_FREEZE_BOARD else 0.7
+            return max(0.0, progress - 0.5) * weight
+        if effect == EFFECT_DRAW_ALL:
+            # Everyone gains equally, and we paid a card for it.
+            return 0.01 * card.amount - 0.02
+        if effect == EFFECT_DISCARD_ALL:
+            # Good when ours is the empty hand.
+            return 0.02 * card.amount * (theirs - mine) / max(1.0, state.config.hand_limit)
+        if effect == EFFECT_RESHUFFLE:
+            # Worth it when the deck is running dry.
+            return 0.03 if len(state.deck) < state.config.num_players * 2 else -0.01
+        if effect == EFFECT_REDEAL:
+            # Worth it when our own hand holds nothing playable.
+            dead = sum(1 for uid in state.hands[player] if not card_actions(state, player, uid))
+            return 0.04 * dead / max(1, mine) - 0.01
+        return 0.0
+
     def structural_bonus(self, state: GameState, player: int, action: Action) -> float:
         """Small tie-breakers that keep a bot from idling when nothing scores."""
 
@@ -154,6 +205,31 @@ class ThinkingBot(Bot):
         if action.kind == PLAY and state.card(action.card).is_courtier:
             return 0.002
         return 0.0
+
+    def pick_courtier(self, state: GameState, player: int, candidates: Sequence[int]) -> int:
+        """Kill whichever courtier leaves the board best for us."""
+
+        best, best_score = None, float("-inf")
+        for uid in candidates:
+            after = state.clone()
+            kill(after, uid)
+            score = self.score(after, state, player, Action(PASS))
+            score += self.rng.random() * 1e-6
+            if score > best_score:
+                best_score, best = score, uid
+        return best if best is not None else self.rng.choice(list(candidates))
+
+    def pick_discard(self, state: GameState, player: int, hand: Sequence[int]) -> int:
+        """Throw away the card we are least likely to want."""
+
+        def value(uid: int) -> float:
+            card = state.card(uid)
+            if card.is_courtier:
+                return 2.0 if self.is_useful_courtier(state, player, uid) else 1.0
+            # An action card with no legal use right now is the obvious pitch.
+            return 1.5 if card_actions(state, player, uid) else 0.0
+
+        return min(hand, key=lambda uid: (value(uid), self.rng.random()))
 
     def is_useful_courtier(self, state: GameState, player: int, uid: int) -> bool:
         agenda = self.my_agenda(state, player)
@@ -187,6 +263,7 @@ class ThinkingBot(Bot):
         best: Optional[Action] = None
         best_score = float("-inf")
         for action in self.candidates(state, actions):
+            card = state.card(action.card) if action.card >= 0 else None
             if _is_pivot(state, action):
                 # A pivot's new agenda is drawn at random, so lookahead cannot
                 # see it; score its expected value instead.
@@ -194,6 +271,8 @@ class ThinkingBot(Bot):
             else:
                 after = simulate(state, player, action)
                 score = self.score(after, state, player, action)
+                if card is not None and card.kind is CardKind.EVENT:
+                    score += self.event_bonus(state, player, card, current)
             score += self.structural_bonus(state, player, action)
             score += self.rng.random() * 1e-6  # break ties without bias
             if score > best_score:

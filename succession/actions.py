@@ -17,19 +17,24 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .cards import (
-    EFFECT_BREAK_DEFENSE,
-    EFFECT_DEMOTE,
-    EFFECT_DEMOTE_AND_BREAK,
-    EFFECT_ERASE,
-    EFFECT_INSTALL,
-    EFFECT_RECALL,
-    EFFECT_REMOVE,
-    EFFECT_RUIN,
-    EFFECT_STRIP_FAITH,
-    EFFECT_STRIP_FAMILY,
+    EFFECT_DISCARD_ALL,
+    EFFECT_DRAW_ALL,
+    EFFECT_PURGE,
+    EFFECT_REDEAL,
+    EFFECT_RESHUFFLE,
 )
-from .enums import FAITHS, SEAT_ESTATE, SEATS, CardKind, Estate, Faith, Family, Seat
+from .enums import FAITHS, SEAT_ESTATE, CardKind, Estate, Faith, Family, Seat
 from .state import GameState
+
+#: Kinds a Siege stops outright -- anything that moves a courtier or changes one.
+FROZEN_BY_SIEGE = frozenset({
+    CardKind.COURTIER, CardKind.PROMOTION, CardKind.DEMOTION, CardKind.REMOVAL,
+    CardKind.DEFENSE, CardKind.STRIP, CardKind.MUTATION,
+})
+#: Kinds a Quarantine stops: everything that reaches into an inner seat.
+FROZEN_BY_QUARANTINE = frozenset({
+    CardKind.PROMOTION, CardKind.DEMOTION, CardKind.DEFENSE,
+})
 
 PLAY = "play"
 MOVE = "move"
@@ -74,41 +79,40 @@ def _estate_matches(card_estate: Optional[Estate], estate: Estate) -> bool:
     return card_estate is None or card_estate is estate
 
 
-def event_targets(state: GameState, effect: str) -> list[int]:
-    """Courtiers an event of this effect can meaningfully be aimed at."""
+def event_is_playable(state: GameState, player: int, effect: str) -> bool:
+    """Events hit the whole table, so they only need something to act on."""
 
-    if effect == EFFECT_DEMOTE or effect == EFFECT_DEMOTE_AND_BREAK:
-        return state.inner_uids()
-    if effect in (EFFECT_REMOVE, EFFECT_RECALL, EFFECT_ERASE):
-        return state.uids_in_play()
-    if effect == EFFECT_STRIP_FAITH:
-        return [u for u in state.uids_in_play() if state.cstate[u].faith is not Faith.NONE]
-    if effect == EFFECT_STRIP_FAMILY:
-        return [u for u in state.uids_in_play() if state.cstate[u].family is not Family.NONE]
-    if effect == EFFECT_RUIN:
-        return [u for u in state.uids_in_play() if state.cstate[u].estate is not Estate.COMMONS]
-    if effect == EFFECT_BREAK_DEFENSE:
-        # Only worth playing against a courtier who actually has one.
-        return [u for u in state.uids_in_play() if u in state.defenses]
-    if effect == EFFECT_INSTALL:
-        empty = {SEAT_ESTATE[s] for s in state.empty_seats()}
-        return [u for u in state.outer if state.cstate[u].estate in empty]
-    raise ValueError(f"unknown event effect: {effect}")
+    if effect == EFFECT_PURGE:
+        return bool(purge_targets(state)) and not state.board_frozen
+    if effect == EFFECT_DRAW_ALL:
+        return bool(state.deck or state.discard)
+    if effect == EFFECT_DISCARD_ALL:
+        return any(state.hands)
+    if effect == EFFECT_RESHUFFLE:
+        return bool(state.discard)
+    if effect == EFFECT_REDEAL:
+        return any(state.hands)
+    return True  # the two freezes are always worth playing
 
 
-def install_seat_for(state: GameState, uid: int) -> Optional[Seat]:
-    """First empty seat matching a courtier's estate (Treasure Fleet / move)."""
+def purge_targets(state: GameState) -> list[int]:
+    """Courtiers a purge may kill: the whole board, or only the outer circle
+    while the inner one is sealed."""
 
-    estate = state.cstate[uid].estate
-    for seat in SEATS:
-        if state.seats[seat] is None and SEAT_ESTATE[seat] is estate:
-            return seat
-    return None
+    return state.outer[:] if state.inner_frozen else state.uids_in_play()
+
+
+def _touchable(state: GameState) -> list[int]:
+    """Courtiers a card may reach: not the seated ones while a freeze holds."""
+
+    return state.outer[:] if state.inner_frozen else state.uids_in_play()
 
 
 def free_moves(state: GameState) -> list[Action]:
     """Option (b): install an outer courtier into an empty matching seat."""
 
+    if state.inner_frozen:
+        return []
     out: list[Action] = []
     for seat in state.empty_seats():
         estate = SEAT_ESTATE[seat]
@@ -125,6 +129,12 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
     kind = card.kind
     hand = state.hands[player]
     out: list[Action] = []
+
+    # A siege stops every courtier in place; a quarantine seals the seats only.
+    if state.board_frozen and kind in FROZEN_BY_SIEGE:
+        return out
+    if state.inner_frozen and kind in FROZEN_BY_QUARANTINE:
+        return out
 
     if kind is CardKind.COURTIER:
         # Courtiers only ever enter the outer circle.
@@ -147,7 +157,7 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return out
 
     if kind is CardKind.REMOVAL:
-        for cand in state.uids_in_play():
+        for cand in _touchable(state):
             if _estate_matches(card.estate, state.cstate[cand].estate):
                 out.append(Action(PLAY, card=uid, courtier=cand))
         return out
@@ -176,7 +186,7 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
     if kind is CardKind.STRIP:
         attribute = card.attribute
         none_value = Family.NONE if attribute == "family" else Faith.NONE
-        for cand in state.uids_in_play():
+        for cand in _touchable(state):
             if getattr(state.cstate[cand], attribute) is not none_value:
                 out.append(Action(PLAY, card=uid, courtier=cand))
         return out
@@ -185,8 +195,8 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return _mutation_actions(state, player, uid)
 
     if kind is CardKind.EVENT:
-        for cand in event_targets(state, card.effect):
-            out.append(Action(PLAY, card=uid, courtier=cand))
+        if event_is_playable(state, player, card.effect):
+            out.append(Action(PLAY, card=uid))
         return out
 
     if kind is CardKind.OUTMANEUVER:
@@ -212,7 +222,7 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
     if attribute == "faith" and card.value is None:  # Conversion
         # Any faith but the one they already hold. A godless or excommunicated
         # courtier can be brought to any of the three.
-        for cand in state.uids_in_play():
+        for cand in _touchable(state):
             cs = state.cstate[cand]
             if cs.mutated_faith:
                 continue
@@ -229,7 +239,7 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
             and state.card(h).is_courtier
             and state.cstate[h].family is not Family.NONE
         ]
-        for cand in state.uids_in_play():
+        for cand in _touchable(state):
             cs = state.cstate[cand]
             if cs.mutated_family:
                 continue
@@ -243,7 +253,7 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return out
 
     # Estate and origin mutations have a fixed destination value.
-    for cand in state.uids_in_play():
+    for cand in _touchable(state):
         cs = state.cstate[cand]
         if cs.mutated(attribute):
             continue

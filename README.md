@@ -69,47 +69,43 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 57.3 player-turns (14.7 rounds), median 52, max 351
-Double wins: 6.1%          Timeouts: 0%
+Game length: mean 54.1 player-turns (13.9 rounds), median 48, max 254
+Double wins: 6.2%          Timeouts: 0%
 
-Win rate by tier      naive 10.5%   greedy 23.2%   strategic 62.0%
+Win rate by tier      naive 10.4%   greedy 28.7%   strategic 56.8%
 
-Win rate by agenda    Barbarian Conquest              30.1%
-                      House Rising: Mitreas           28.1%
-                      House Rising: Amonides          26.8%
-                      Faith Ascendant: The One God    26.3%
-                      House Rising: Argaian           26.2%
-                      Balance                         25.1%
-                      Faith Ascendant: Old Gods       24.9%
-                      Faith Ascendant: Mystery Cults  24.8%
+Win rate by agenda    Barbarian Conquest              30.6%
+                      House Rising: Mitreas           29.8%
+                      House Rising: Amonides          28.8%
+                      House Rising: Argaian           25.9%
+                      Balance                         25.6%
+                      Faith Ascendant: Mystery Cults  24.3%
+                      Faith Ascendant: The One God    23.8%
+                      Faith Ascendant: Old Gods       23.5%
 ```
 
-1. **All eight agendas sit inside 5.2 points**, from 24.8% to 30.1%, against
-   2–53% under the first draft of the rules. Nothing is obviously the best or
-   worst thing to be dealt.
+1. **All eight agendas sit inside 7.1 points**, from 23.5% to 30.6%, against
+   2–53% under the first draft of the rules.
 
-2. **The event rewrite tightened it further than the agenda tuning did** — 8.7
-   points to 5.2 — and lifted the faiths about two points. Replacing three
-   duplicate "target leaves play" events with attribute damage (Famine strips a
-   family, Meteor ruins an estate) means fewer courtiers get killed outright
-   (2.4 per game, down from 3.3), boards stay fuller (6.01 of 7 seats at the
-   end), and the pressure lands on what a courtier *is* rather than on whether
-   they are there at all.
+2. **Table-wide events narrowed the skill gap rather than widening it.** The
+   strategic bot came down from 62.0% to 56.8% and the greedy bot jumped from
+   23.2% to 28.7%. Events that hit everybody — a purge that kills four
+   courtiers at once, a freeze that protects whoever is ahead, a redeal that
+   throws away everyone's plans — disrupt a carefully built position as much as
+   a careless one. The single-target version they replaced rewarded the player
+   tracking the whole board; these do not.
 
-3. **The skill premium is the open worry.** The strategic bot has climbed 57.9%
-   → 60.9% → 62.0% over the last two changes, while the naive bot has fallen to
-   10.5%. Every constraint added to an agenda, and every event that damages an
-   attribute rather than clearing a seat, rewards the player tracking the whole
-   board. It is worth deciding what spread between a thinking player and a
-   careless one the game wants.
+3. **Events are played about twice a game**, down from four times when they
+   were single-target. Four of the five pairs advance nobody's agenda directly,
+   so they are held for the turn they matter rather than spent on sight.
 
    Suppression, swapping exactly one greedy seat for a strategic one (6,000
    games each):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.5% | 43.0 turns |
-   | with a strategic bot | 14.7% | 57.3 turns |
+   | without a strategic bot | 26.6% | 41.6 turns |
+   | with a strategic bot | 16.5% | 54.1 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
@@ -195,8 +191,9 @@ board and is a bare majority of seven, which is why the faiths lead the table.
 `docs/RULES.md`. It is the one threshold the seventh seat changed the meaning
 of without anyone deciding to.
 
-**Treasure Fleet is the only helpful event.** Every other event is played on
-somebody else's courtier; this one installs your own from the outer circle. A
-fleet arriving in harbour reads badly as a disaster, and a card whose target is
-a friend adds texture — but if events should be uniformly hostile it is one
-line to change. `docs/RULES.md` has the alternative.
+**How the bots value events.** Four of the five event pairs touch hands and the
+deck rather than the board, and the bots score boards, so they need a heuristic
+to rate a Caravan above discarding it. `ThinkingBot.event_bonus` supplies one —
+crude on purpose, and the first thing to revisit if the event numbers look
+wrong. `docs/RULES.md` lists the other edges the brief left open, such as how
+long a freeze runs and what Meteor deals back.

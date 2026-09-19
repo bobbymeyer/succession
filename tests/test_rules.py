@@ -311,18 +311,6 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=kill2, courtier=defended), FixedRng())
         self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])  # second one lands
 
-    def test_defense_does_not_stop_events(self):
-        state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        cost, shield, meteor = give(
-            state, 0, "Beloved of the Gods", "Sanctuary", "Meteor"
-        )
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
-        apply_action(state, 0, Action(PLAY, card=meteor, courtier=defended), FixedRng())
-        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
-
     def test_defense_costs_a_matching_estate_courtier(self):
         state = fresh()
         seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
@@ -513,143 +501,172 @@ class TestGodlessness(unittest.TestCase):
 
 
 class TestEvents(unittest.TestCase):
-    """One test per event: all ten do something none of the others do."""
+    """Events hit the whole table, in five minor/major pairs."""
 
-    def play(self, state, name, target, rolls=(1,)):
-        card = give(state, 0, name)[0]
-        apply_action(state, 0, Action(PLAY, card=card, courtier=target), FixedRng(rolls))
+    def play(self, state, name, rolls=(1,), player=0):
+        card = give(state, player, name)[0]
+        apply_action(state, player, Action(PLAY, card=card), FixedRng(rolls))
 
-    # --- minor: a save is allowed -----------------------------------------
-    def test_quarantine_demotes(self):
-        state = fresh()
-        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        self.play(state, "Quarantine", target)
-        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
-        self.assertIn(target, state.outer)
-
-    def test_minor_event_allows_a_save(self):
-        state = fresh()
-        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        self.play(state, "Quarantine", target, rolls=(2,))  # even: saved
-        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], target)
-
-    def test_poisoning_at_the_feast_kills(self):
-        state = fresh()
-        target = outer(state, "Hand of the Oracle")[0]
-        self.play(state, "Poisoning at the Feast", target)
-        self.assertNotIn(target, state.outer)
-        self.assertIn(target, state.discard)  # the epithet may come back
-
-    def test_caravan_returns_them_to_the_deck(self):
-        state = fresh()
-        target = outer(state, "Hand of the Oracle")[0]
-        self.play(state, "Caravan", target)
-        self.assertIn(target, state.deck)
-
-    def test_debasement_destroys_a_defense_and_needs_one(self):
-        state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
-        card = give(state, 0, "Debasement of the Coinage")[0]
-        self.assertEqual(
-            [a.courtier for a in card_actions(state, 0, card)], [defended]
-        )  # nobody else is worth targeting
-        apply_action(state, 0, Action(PLAY, card=card, courtier=defended), FixedRng())
-        self.assertNotIn(defended, state.defenses)
-        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], defended)  # still seated
-
-    def test_eclipse_strips_faith(self):
-        state = fresh()
-        target = outer(state, "Beloved of the Gods")[0]
-        self.play(state, "Eclipse", target)
-        self.assertIs(state.cstate[target].faith, Faith.NONE)
-        self.assertFalse(state.cstate[target].mutated_faith)  # Conversion can restore it
-
-    # --- major: no save ----------------------------------------------------
-    def test_major_event_allows_no_save(self):
-        state = fresh()
-        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        self.play(state, "Siege", target, rolls=(2,))  # an even roll saves nobody
-        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
-
-    def test_siege_demotes_and_breaks_the_defense(self):
-        state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
-        self.play(state, "Siege", defended)
-        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
-        self.assertNotIn(defended, state.defenses)
-
-    def test_plague_takes_them_out_of_the_game(self):
-        state = fresh()
-        target = outer(state, "Hand of the Oracle")[0]
-        self.play(state, "Plague", target)
-        self.assertIn(target, state.removed)
-        self.assertNotIn(target, state.discard)  # this epithet never returns
-        self.assertNotIn(target, state.deck)
-
-    def test_famine_strips_family(self):
-        state = fresh()
-        target = outer(state, "Beloved of the Gods")[0]
-        self.play(state, "Famine", target)
-        self.assertIs(state.cstate[target].family, Family.NONE)
-
-    def test_famine_only_targets_a_house(self):
-        state = fresh()
-        card = give(state, 0, "Famine")[0]
-        outer(state, "Silver Tongue")  # no family to lose
-        self.assertEqual(card_actions(state, 0, card), [])
-
-    def test_meteor_ruins_them_to_the_commons(self):
-        state = fresh()
-        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)  # Church
-        self.play(state, "Meteor", target)
-        self.assertIs(state.cstate[target].estate, Estate.COMMONS)
-        # A Church seat no longer fits, so they are unseated on the spot.
-        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
-        self.assertIn(target, state.outer)
-        self.assertFalse(state.cstate[target].mutated_estate)  # a disaster, not a choice
-
-    def test_treasure_fleet_installs_from_outer(self):
-        state = fresh()
-        target = outer(state, "Golden Thumb")[0]
-        self.play(state, "Treasure Fleet", target)
-        self.assertIn(state.seats[Seat.EXCHEQUER] or state.seats[Seat.HARBORMASTER], (target,))
-
-    def test_every_event_does_something_distinct(self):
+    def test_the_ten_events_are_five_pairs(self):
         from succession.cards import EVENT_CARDS
 
         self.assertEqual(len(EVENT_CARDS), 10)
-        self.assertEqual(len({c.effect for c in EVENT_CARDS}), 10)
-        self.assertEqual(sum(1 for c in EVENT_CARDS if c.save), 5)
-        for card in EVENT_CARDS:
-            self.assertEqual(card.save, card.tier == "minor", card.name)
+        minor = [c for c in EVENT_CARDS if c.tier == "minor"]
+        major = [c for c in EVENT_CARDS if c.tier == "major"]
+        self.assertEqual(len(minor), 5)
+        self.assertEqual(len(major), 5)
+        self.assertFalse(any(c.save for c in major))
+        # Only the purge has anything to save against, and only its minor half.
+        self.assertEqual([c.name for c in EVENT_CARDS if c.save],
+                         ["Poisoning at the Feast"])
+        # Ten distinct behaviours: five effects, told apart by amount or by
+        # whether a save is allowed.
+        self.assertEqual(len({(c.effect, c.amount, c.save) for c in EVENT_CARDS}), 10)
+        pairs = {
+            ("Quarantine", "Siege"),
+            ("Poisoning at the Feast", "Plague"),
+            ("Caravan", "Treasure Fleet"),
+            ("Debasement of the Coinage", "Famine"),
+            ("Eclipse", "Meteor"),
+        }
+        names = {c.name for c in EVENT_CARDS}
+        self.assertEqual(names, {n for pair in pairs for n in pair})
 
-    def test_recalled_courtier_returns_with_printed_attributes(self):
+    # --- Quarantine / Siege: the freezes -----------------------------------
+    def test_quarantine_seals_the_inner_circle(self):
         state = fresh()
-        mutate = give(state, 0, "Conversion")[0]
-        target = outer(state, "Crosser of Rivers")[0]  # Mystery Cults
-        apply_action(
-            state,
-            0,
-            Action(PLAY, card=mutate, courtier=target, value=Faith.OLD_GODS.value),
-            FixedRng(),
-        )
-        self.play(state, "Caravan", target)
-        self.assertIs(state.cstate[target].faith, Faith.MYSTERY_CULTS)
-        self.assertFalse(state.cstate[target].mutated_faith)
+        sitting = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        climber = outer(state, "Beloved of the Gods")[0]
+        promo, demo = give(state, 0, "Consecration", "Heresy Accusation")
+        self.assertTrue(card_actions(state, 0, promo))
+        self.play(state, "Quarantine")
 
-    def test_event_targets_must_be_in_play(self):
+        self.assertTrue(state.inner_frozen)
+        self.assertFalse(state.board_frozen)
+        self.assertEqual(card_actions(state, 0, promo), [])
+        self.assertEqual(card_actions(state, 0, demo), [])
+        self.assertEqual([a for a in legal_actions(state, 1) if a.kind == MOVE], [])
+        # The outer circle carries on as normal.
+        courtier = give(state, 1, "Crosser of Rivers")[0]
+        self.assertEqual(card_actions(state, 1, courtier), [Action(PLAY, card=courtier)])
+        self.assertIn(sitting, state.seats.values())
+        self.assertIn(climber, state.outer)
+
+    def test_a_freeze_lasts_one_round(self):
+        state = fresh()
+        self.play(state, "Quarantine")
+        self.assertTrue(state.inner_frozen)
+        state.turn += state.config.num_players - 1   # the other players' turns
+        self.assertTrue(state.inner_frozen)
+        state.turn += 1                              # back round to the caster
+        self.assertFalse(state.inner_frozen)
+
+    def test_siege_seals_the_whole_board(self):
+        state = fresh()
+        seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        outer(state, "Beloved of the Gods")
+        self.play(state, "Siege")
+
+        self.assertTrue(state.board_frozen)
+        self.assertTrue(state.inner_frozen)
+        for name in ("Crosser of Rivers", "Assassination", "Conversion", "Consecration"):
+            card = give(state, 1, name)[0]
+            self.assertEqual(card_actions(state, 1, card), [], name)
+        # Cards that never touch a courtier still work.
+        for name in ("Outmaneuver", "Caravan"):
+            card = give(state, 1, name)[0]
+            self.assertTrue(card_actions(state, 1, card), name)
+
+    # --- Poisoning / Plague: the purges ------------------------------------
+    def test_plague_lets_every_player_name_a_courtier(self):
+        state = fresh()
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb",
+              "Crosser of Rivers", "Silver Tongue")
+        self.play(state, "Plague")
+        # Four players, four names, four dead.
+        self.assertEqual(len(state.outer), 1)
+        self.assertEqual(state.stats.get("courtiers_killed"), 4)
+
+    def test_poisoning_allows_each_target_a_save(self):
+        state = fresh()
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb",
+              "Crosser of Rivers", "Silver Tongue")
+        self.play(state, "Poisoning at the Feast", rolls=(2, 2, 2, 2))  # all even
+        self.assertEqual(len(state.outer), 5)
+        self.assertEqual(state.stats.get("saves_made"), 4)
+
+    def test_a_purge_cannot_reach_a_sealed_inner_circle(self):
+        state = fresh()
+        sitting = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        outer(state, "Beloved of the Gods")
+        self.play(state, "Quarantine")
+        self.play(state, "Plague")
+        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], sitting)  # sealed in
+        self.assertEqual(state.outer, [])                          # the rest die
+
+    def test_a_purge_needs_somebody_to_kill(self):
         state = fresh()
         card = give(state, 0, "Plague")[0]
-        give(state, 0, "Hand of the Oracle")  # in hand, not in play
         self.assertEqual(card_actions(state, 0, card), [])
+
+    # --- Caravan / Treasure Fleet: the windfalls ---------------------------
+    def test_caravan_gives_every_player_a_card(self):
+        state = fresh()
+        state.deck = list(range(20))
+        self.play(state, "Caravan")
+        self.assertEqual([len(h) for h in state.hands], [1, 1, 1, 1])
+
+    def test_treasure_fleet_gives_two(self):
+        state = fresh()
+        state.deck = list(range(20))
+        self.play(state, "Treasure Fleet")
+        self.assertEqual([len(h) for h in state.hands], [2, 2, 2, 2])
+
+    # --- Debasement / Famine: the purses -----------------------------------
+    def test_debasement_takes_a_card_from_every_hand(self):
+        state = fresh()
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion", "Demotion")
+        self.play(state, "Debasement of the Coinage")
+        # The caster also paid the event card itself.
+        self.assertEqual([len(h) for h in state.hands], [2, 2, 2, 2])
+        self.assertEqual(state.stats.get("cards_forced_out"), 4)
+
+    def test_famine_takes_two(self):
+        state = fresh()
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion", "Demotion")
+        self.play(state, "Famine")
+        self.assertEqual([len(h) for h in state.hands], [1, 1, 1, 1])
+
+    def test_an_empty_hand_has_nothing_to_give_up(self):
+        state = fresh()
+        give(state, 0, "Assassination")
+        self.play(state, "Famine")
+        self.assertEqual([len(h) for h in state.hands], [0, 0, 0, 0])
+
+    # --- Eclipse / Meteor: the shuffles ------------------------------------
+    def test_eclipse_shuffles_the_discards_back_in(self):
+        state = fresh()
+        state.discard = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb")]
+        state.deck = [uid(state, "Horse Breaker")]
+        self.play(state, "Eclipse")
+        self.assertEqual(state.discard, [uid(state, "Eclipse")])  # only the card itself
+        self.assertEqual(len(state.deck), 3)
+
+    def test_meteor_shuffles_every_hand_in_and_deals_back(self):
+        state = fresh()
+        state.deck = [uid(state, n) for n in
+                      ("Silver Tongue", "Golden Thumb", "Horse Breaker", "Mender of Bones")]
+        give(state, 1, "Assassination", "Promotion")
+        give(state, 2, "Demotion")
+        before = [len(h) for h in state.hands]
+        self.play(state, "Meteor")
+        after = [len(h) for h in state.hands]
+        self.assertEqual(after[1:], before[1:])      # sizes are preserved
+        self.assertEqual(sum(after), sum(before))
+        everywhere = [u for h in state.hands for u in h] + state.deck
+        self.assertEqual(len(everywhere), len(set(everywhere)))
 
     def test_no_defense_stops_an_event(self):
         state = fresh()
@@ -658,8 +675,9 @@ class TestEvents(unittest.TestCase):
         apply_action(
             state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
         )
-        self.play(state, "Plague", defended)
-        self.assertIn(defended, state.removed)
+        self.play(state, "Plague")
+        self.assertIn(defended, state.discard)
+        self.assertIn(shield, state.discard)
 
 
 class TestOutmaneuverAndPivot(unittest.TestCase):

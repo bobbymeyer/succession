@@ -55,7 +55,7 @@ courtier is bumped to the outer circle.
 | Defense (5) | Attached preemptively to an inner-circle courtier by sacrificing a matching-estate courtier *from hand* (`Patron Protection`: any estate). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → None. The courtier stays where they are. |
 | Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
-| Event (10) | Names **one target courtier in play**. Minor: the target may save. Major: no save. No Defense covers an event. Ten distinct effects -- see below. |
+| Event (10) | Hits the whole table, not one courtier. Five minor/major pairs -- see below. No Defense covers an event. |
 | Outmaneuver (1) | The targeted player skips their next turn. |
 | Pivot (1) | `Schismatic Event`: discard your agenda, draw a new one from the unused pool. The act is public; both agendas stay private. |
 
@@ -181,52 +181,65 @@ first; the flag flips it.
 
 # Event effects
 
-Each event names **one target courtier in play** (never one in a hand or the
-deck). The five minor events allow the target a d6 save, even on 4+ — the same
-roll for all of them. The five major events allow no save. **No Defense covers
-any event**, minor or major, exactly as the brief has it.
+Events are **not aimed at a courtier**: each one hits the whole table. They come
+in five minor/major pairs, the major being the harsher half. Only the purge has
+anything to save against, and only its minor half allows the roll. No Defense
+covers any event.
 
-All ten do something none of the other nine do. The table lives in `EVENT_CARDS`
-in `succession/cards.py`, and the primitives in
-`succession/engine.py::_resolve_event`.
-
-| Card | Tier | Effect |
+| Pair | Minor | Major |
 |---|---|---|
-| Quarantine | minor | Demoted to the outer circle |
-| Poisoning at the Feast | minor | Leaves play; the epithet may reshuffle back on somebody new |
-| Caravan | minor | Carried off — shuffled back into the draw deck |
-| Debasement of the Coinage | minor | Their attached Defense is destroyed |
-| Eclipse | minor | Faith stripped to none |
-| Siege | major | Demoted, and any attached Defense destroyed with them |
-| Plague | major | Out of the game for good — the one death nobody returns from |
-| Treasure Fleet | major | A windfall: installed from the outer circle into an empty matching seat, free |
-| Famine | major | Family stripped to none |
-| Meteor | major | Estate ruined to Commons, unseating them if the seat no longer fits |
+| **Freeze** | **Quarantine** — the inner circle is sealed for a round | **Siege** — the whole board is sealed for a round |
+| **Purge** | **Poisoning at the Feast** — every player names a courtier to kill; each may save on an even d6 | **Plague** — the same, and nobody is spared |
+| **Windfall** | **Caravan** — every player draws a card | **Treasure Fleet** — every player draws two |
+| **Want** | **Debasement of the Coinage** — every player discards a card | **Famine** — every player discards two |
+| **Upheaval** | **Eclipse** — the discard pile is shuffled back into the deck | **Meteor** — every hand is shuffled in and dealt back out |
 
-Notes on the edges:
+## What a freeze stops
 
-* An event only generates a legal target it can actually affect. Famine needs a
-  courtier with a family, Meteor one who is not already a commoner, Debasement
-  one who actually holds a Defense. A card with no target cannot be played that
-  turn.
-* Eclipse and Famine **strip**, so they do not spend the courtier's one faith or
-  family mutation: `Conversion` and `Adoption` can still put back what an event
-  took. Meteor's ruin works the same way for estate.
-* Meteor leans on the standing rule that an estate change which un-matches a
-  seat demotes its holder at once. Dropped on a seated Church or Military
-  courtier it both ruins and unseats them; on someone in the outer circle it
-  only ruins.
-* Plague ignores `--removed-out-of-game` in the other direction: the epithet is
-  gone whatever that setting says.
-* Debasement is deliberately narrow. Defenses get played in about 60% of games,
-  roughly one per game, so it is a counter you hold rather than a card you
-  always have a use for.
+A freeze runs **until just before the caster's next turn**, so every other
+player takes one turn under it.
 
-**One judgement call worth revisiting:** Treasure Fleet is the only *helpful*
-event, played on your own courtier. A fleet arriving in harbour reads badly as a
-disaster, and it gives the deck a card whose target is a friend, which adds
-texture. If events should be uniformly hostile, it is one line — the obvious
-hostile reading would be estate → Merchant, which mostly unseats people.
+* **Quarantine** seals the seats. No promotion, no demotion, no free move into
+  an empty seat, and no Defense attached (defenses only go on seated
+  courtiers). A seated courtier cannot be removed, stripped or mutated, and a
+  purge played during it can only reach the outer circle. Courtiers can still
+  be played to the outer circle, and outer courtiers can still be targeted.
+* **Siege** seals everything. Nothing enters the board, leaves it or changes on
+  it. What still works is what never touches a courtier: discarding,
+  Outmaneuver, Schismatic Event, and the four non-purge event pairs — including
+  another freeze.
+
+## How a purge runs
+
+Starting with the player who played the card and going clockwise, **every
+player names one courtier in play**, and that courtier dies — to the discard,
+so the epithet may return on somebody new. Each name is taken in turn against
+the board as it then stands, so a courtier already named cannot be named again.
+Under Poisoning the target rolls a d6 and survives on an even; under Plague
+there is no roll. A purge with nobody left to kill cannot be played.
+
+## Decisions this needed
+
+The brief gave the effects but not these edges:
+
+| Decision | Chosen |
+|---|---|
+| How long "a round" lasts | Until just before the caster's next turn — every other player gets one turn under it |
+| Whether the caster is also hit by their own draw, discard or purge | Yes; "every player" includes them |
+| Draw order and hand limit | Clockwise from the caster, and the limit of 7 still applies, so a full hand draws nothing |
+| What Meteor deals back | Each player gets back as many cards as they held, with the contents randomised |
+| Whether Eclipse shuffles itself in | No — it resolves, then goes to the discard |
+| Whether a Defense stops any of it | No, exactly as the brief has it |
+
+## A simulator caveat
+
+The bots score **boards**, and four of the five pairs touch hands and the deck
+instead. Without help they would rate a Caravan exactly as highly as discarding
+it. `ThinkingBot.event_bonus` in `succession/bots.py` gives each pair a crude
+value — a freeze is worth something only when there is a lead to protect, a
+discard-all only when yours is the empty hand, and so on. These are heuristics
+for the simulation, not rules, and they are the first thing to revisit if the
+event numbers look wrong.
 
 # Open question: how many seats should a faith need?
 
