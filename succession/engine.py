@@ -20,10 +20,13 @@ from .cards import (
     EFFECT_BREAK_DEFENSE,
     EFFECT_DEMOTE,
     EFFECT_DEMOTE_AND_BREAK,
+    EFFECT_ERASE,
     EFFECT_INSTALL,
     EFFECT_RECALL,
     EFFECT_REMOVE,
+    EFFECT_RUIN,
     EFFECT_STRIP_FAITH,
+    EFFECT_STRIP_FAMILY,
 )
 from .courtiers import COURTIERS_BY_NAME
 from .enums import DEFENDABLE, SEAT_ESTATE, CardKind, Estate, Faith, Family, Origin, Seat
@@ -87,21 +90,22 @@ def demote(state: GameState, uid: int) -> bool:
     return True
 
 
-def kill(state: GameState, uid: int) -> None:
+def kill(state: GameState, uid: int, *, permanent: bool = False) -> None:
     """Remove a courtier from the game.
 
     With `removed_courtiers_return_to_deck` the card goes to the discard, so a
     later reshuffle can bring the epithet back as a new person with printed
-    attributes. Otherwise the card is out of the game for good.
+    attributes. `permanent` overrides that -- Plague takes an epithet out of the
+    game whatever the setting says.
     """
 
     _pull_from_play(state, uid)
     _reset(state, uid)
-    if state.config.removed_courtiers_return_to_deck:
+    if state.config.removed_courtiers_return_to_deck and not permanent:
         state.discard.append(uid)
     else:
         state.removed.append(uid)
-    state.bump("courtiers_killed")
+    state.bump("courtiers_erased" if permanent else "courtiers_killed")
     state.note(f"{state.name(uid)} removed from play")
 
 
@@ -306,17 +310,27 @@ def _resolve_event(state: GameState, effect: str, target: int, rng) -> None:
         demote(state, target)
     elif effect == EFFECT_REMOVE:
         kill(state, target)
+    elif effect == EFFECT_ERASE:
+        kill(state, target, permanent=True)
     elif effect == EFFECT_RECALL:
         recall(state, target, rng)
     elif effect == EFFECT_STRIP_FAITH:
         state.cstate[target] = state.cstate[target].with_attribute(
             "faith", Faith.NONE, is_mutation=False
         )
+    elif effect == EFFECT_STRIP_FAMILY:
+        state.cstate[target] = state.cstate[target].with_attribute(
+            "family", Family.NONE, is_mutation=False
+        )
+    elif effect == EFFECT_RUIN:
+        # A disaster, not a choice: it does not spend the courtier's one
+        # estate mutation, and it unseats them if the seat no longer matches.
+        state.cstate[target] = state.cstate[target].with_attribute(
+            "estate", Estate.COMMONS, is_mutation=False
+        )
+        _enforce_seat_estate(state, target)
     elif effect == EFFECT_BREAK_DEFENSE:
-        if target in state.defenses:
-            _detach_defense(state, target)
-        else:
-            demote(state, target)
+        _detach_defense(state, target)
     elif effect == EFFECT_DEMOTE_AND_BREAK:
         _detach_defense(state, target)
         demote(state, target)

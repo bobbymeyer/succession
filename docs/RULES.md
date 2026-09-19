@@ -55,7 +55,7 @@ courtier is bumped to the outer circle.
 | Defense (5) | Attached preemptively to an inner-circle courtier by sacrificing a matching-estate courtier *from hand* (`Patron Protection`: any estate). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → None. The courtier stays where they are. |
 | Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
-| Event (10) | The player playing it names **one target courtier**. Minor: the target may attempt a save. Major: no save. |
+| Event (10) | Names **one target courtier in play**. Minor: the target may save. Major: no save. No Defense covers an event. Ten distinct effects -- see below. |
 | Outmaneuver (1) | The targeted player skips their next turn. |
 | Pivot (1) | `Schismatic Event`: discard your agenda, draw a new one from the unused pool. The act is public; both agendas stay private. |
 
@@ -179,41 +179,54 @@ first; the flag flips it.
 | 7 | Bots never make a false/premature reveal, so that rule is modelled but never exercised. `GameState.revealed` is the hook if you want to simulate bluffing. | — | — |
 | 8 | A skipped turn (Outmaneuver) consumes the whole turn, draw included. | — | — |
 
-# Event effects — placeholder, needs Bobby
+# Event effects
 
-The brief flags this explicitly: the source document's event effects were
-written for a board-wide version and do not map 1:1 onto "choose one target
-courtier". The table below is a **playable placeholder** chosen to give each
-card a distinct, mechanically meaningful single-target effect. All of it lives
-in one place — `EVENT_CARDS` in `succession/cards.py` — and the primitives are
+Each event names **one target courtier in play** (never one in a hand or the
+deck). The five minor events allow the target a d6 save, even on 4+ — the same
+roll for all of them. The five major events allow no save. **No Defense covers
+any event**, minor or major, exactly as the brief has it.
+
+All ten do something none of the other nine do. The table lives in `EVENT_CARDS`
+in `succession/cards.py`, and the primitives in
 `succession/engine.py::_resolve_event`.
 
-| Card | Tier | Placeholder effect |
+| Card | Tier | Effect |
 |---|---|---|
-| Quarantine | minor (save) | Target is demoted to the outer circle |
-| Poisoning at the Feast | minor (save) | Target leaves play |
-| Caravan | minor (save) | Target is shuffled back into the draw deck |
-| Debasement of the Coinage | minor (save) | Destroy the target's attached Defense; if none, demote them |
-| Eclipse | minor (save) | Target's Faith → None |
-| Siege | major | Target leaves play |
-| Plague | major | Target is shuffled back into the draw deck |
-| Treasure Fleet | major | Install the target from outer into an empty matching seat, free |
-| Famine | major | Demote the target and destroy their attached Defense |
-| Meteor | major | Target leaves play |
+| Quarantine | minor | Demoted to the outer circle |
+| Poisoning at the Feast | minor | Leaves play; the epithet may reshuffle back on somebody new |
+| Caravan | minor | Carried off — shuffled back into the draw deck |
+| Debasement of the Coinage | minor | Their attached Defense is destroyed |
+| Eclipse | minor | Faith stripped to none |
+| Siege | major | Demoted, and any attached Defense destroyed with them |
+| Plague | major | Out of the game for good — the one death nobody returns from |
+| Treasure Fleet | major | A windfall: installed from the outer circle into an empty matching seat, free |
+| Famine | major | Family stripped to none |
+| Meteor | major | Estate ruined to Commons, unseating them if the seat no longer fits |
 
-Open questions behind that table:
+Notes on the edges:
 
-1. **What does each event actually do to a single courtier?** Three of the ten
-   currently duplicate "leaves play", which is flat. Each wants its own verb.
-2. **Can an event target a courtier in a player's hand or in the deck?**
-   Currently no: only courtiers in play (inner or outer) can be targeted.
-3. **Are events always hostile?** `Treasure Fleet` is implemented as a
-   *helpful* event, which gives the deck a card you play on your own courtier.
-   If events are meant to be strictly hostile, say so and it changes.
-4. **Minor-event save:** the same d6-even roll as `Targeted Poisoning`. Is the
-   save the same across all minor events, or per-card?
-5. **Does a Defense really never stop an Event?** Implemented exactly as
-   written; worth confirming, because it makes majors unanswerable.
+* An event only generates a legal target it can actually affect. Famine needs a
+  courtier with a family, Meteor one who is not already a commoner, Debasement
+  one who actually holds a Defense. A card with no target cannot be played that
+  turn.
+* Eclipse and Famine **strip**, so they do not spend the courtier's one faith or
+  family mutation: `Conversion` and `Adoption` can still put back what an event
+  took. Meteor's ruin works the same way for estate.
+* Meteor leans on the standing rule that an estate change which un-matches a
+  seat demotes its holder at once. Dropped on a seated Church or Military
+  courtier it both ruins and unseats them; on someone in the outer circle it
+  only ruins.
+* Plague ignores `--removed-out-of-game` in the other direction: the epithet is
+  gone whatever that setting says.
+* Debasement is deliberately narrow. Defenses get played in about 60% of games,
+  roughly one per game, so it is a counter you hold rather than a card you
+  always have a use for.
+
+**One judgement call worth revisiting:** Treasure Fleet is the only *helpful*
+event, played on your own courtier. A fleet arriving in harbour reads badly as a
+disaster, and it gives the deck a card whose target is a friend, which adds
+texture. If events should be uniformly hostile, it is one line — the obvious
+hostile reading would be estate → Merchant, which mostly unseats people.
 
 # Open question: how many seats should a faith need?
 

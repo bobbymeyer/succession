@@ -19,12 +19,15 @@ from .enums import CardKind, Estate, Faith, Family, Origin
 
 # --- Event effect primitives ------------------------------------------------
 # Each event resolves to exactly one of these against its single target.
-EFFECT_DEMOTE = "demote"                      # inner -> outer (no effect if outer)
-EFFECT_REMOVE = "remove"                      # courtier leaves play
-EFFECT_RECALL = "recall"                      # courtier is shuffled back into the deck
-EFFECT_BREAK_DEFENSE = "break_defense"        # discard attached defense, else demote
+EFFECT_DEMOTE = "demote"                      # inner -> outer
+EFFECT_REMOVE = "remove"                      # leaves play; may reshuffle back as a new person
+EFFECT_ERASE = "erase"                        # leaves play and out of the game for good
+EFFECT_RECALL = "recall"                      # leaves court, shuffled back into the deck
 EFFECT_STRIP_FAITH = "strip_faith"            # faith -> None
-EFFECT_DEMOTE_AND_BREAK = "demote_and_break"  # demote and discard attached defense
+EFFECT_STRIP_FAMILY = "strip_family"          # family -> None
+EFFECT_RUIN = "ruin"                          # estate -> Commons, unseating them if it clashes
+EFFECT_DEMOTE_AND_BREAK = "demote_and_break"  # demote and destroy any attached defense
+EFFECT_BREAK_DEFENSE = "break_defense"        # destroy an attached defense
 EFFECT_INSTALL = "install"                    # free install into an empty matching seat
 
 
@@ -61,19 +64,32 @@ def _courtier_cards() -> list[CardDef]:
     ]
 
 
+#: Each of the ten events does something the other nine do not. The minor five
+#: allow the target a save; the major five do not, and no Defense covers any of
+#: them.
 EVENT_CARDS: tuple[CardDef, ...] = (
-    # Minor events: the target may attempt a save.
+    # --- Minor: the target may attempt a d6 save ---------------------------
+    #: Sent away from court, but not out of it.
     CardDef("Quarantine", CardKind.EVENT, tier="minor", effect=EFFECT_DEMOTE, save=True),
+    #: Dead, though the epithet may return on somebody new.
     CardDef("Poisoning at the Feast", CardKind.EVENT, tier="minor", effect=EFFECT_REMOVE, save=True),
+    #: Carried off down the trade road and back into the deck.
     CardDef("Caravan", CardKind.EVENT, tier="minor", effect=EFFECT_RECALL, save=True),
+    #: Their patron's money is worthless; the protection lapses.
     CardDef("Debasement of the Coinage", CardKind.EVENT, tier="minor", effect=EFFECT_BREAK_DEFENSE, save=True),
+    #: The sky goes dark and the omens with it: faith stripped to none.
     CardDef("Eclipse", CardKind.EVENT, tier="minor", effect=EFFECT_STRIP_FAITH, save=True),
-    # Major events: no save.
-    CardDef("Siege", CardKind.EVENT, tier="major", effect=EFFECT_REMOVE),
-    CardDef("Plague", CardKind.EVENT, tier="major", effect=EFFECT_RECALL),
+    # --- Major: no save ----------------------------------------------------
+    #: Starved out of the seat, and no bodyguard gets in.
+    CardDef("Siege", CardKind.EVENT, tier="major", effect=EFFECT_DEMOTE_AND_BREAK),
+    #: Out of the game entirely -- the one death nobody comes back from.
+    CardDef("Plague", CardKind.EVENT, tier="major", effect=EFFECT_ERASE),
+    #: A windfall: install them from the outer circle for free.
     CardDef("Treasure Fleet", CardKind.EVENT, tier="major", effect=EFFECT_INSTALL),
-    CardDef("Famine", CardKind.EVENT, tier="major", effect=EFFECT_DEMOTE_AND_BREAK),
-    CardDef("Meteor", CardKind.EVENT, tier="major", effect=EFFECT_REMOVE),
+    #: The house cannot feed its own: family stripped to none.
+    CardDef("Famine", CardKind.EVENT, tier="major", effect=EFFECT_STRIP_FAMILY),
+    #: Ruined to the commons, and unseated if the seat no longer fits.
+    CardDef("Meteor", CardKind.EVENT, tier="major", effect=EFFECT_RUIN),
 )
 
 PROMOTION_CARDS: tuple[CardDef, ...] = (

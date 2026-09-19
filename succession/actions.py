@@ -20,10 +20,13 @@ from .cards import (
     EFFECT_BREAK_DEFENSE,
     EFFECT_DEMOTE,
     EFFECT_DEMOTE_AND_BREAK,
+    EFFECT_ERASE,
     EFFECT_INSTALL,
     EFFECT_RECALL,
     EFFECT_REMOVE,
+    EFFECT_RUIN,
     EFFECT_STRIP_FAITH,
+    EFFECT_STRIP_FAMILY,
 )
 from .enums import FAITHS, SEAT_ESTATE, SEATS, CardKind, Estate, Faith, Family, Seat
 from .state import GameState
@@ -76,14 +79,17 @@ def event_targets(state: GameState, effect: str) -> list[int]:
 
     if effect == EFFECT_DEMOTE or effect == EFFECT_DEMOTE_AND_BREAK:
         return state.inner_uids()
-    if effect in (EFFECT_REMOVE, EFFECT_RECALL):
+    if effect in (EFFECT_REMOVE, EFFECT_RECALL, EFFECT_ERASE):
         return state.uids_in_play()
     if effect == EFFECT_STRIP_FAITH:
         return [u for u in state.uids_in_play() if state.cstate[u].faith is not Faith.NONE]
+    if effect == EFFECT_STRIP_FAMILY:
+        return [u for u in state.uids_in_play() if state.cstate[u].family is not Family.NONE]
+    if effect == EFFECT_RUIN:
+        return [u for u in state.uids_in_play() if state.cstate[u].estate is not Estate.COMMONS]
     if effect == EFFECT_BREAK_DEFENSE:
-        return [u for u in state.uids_in_play() if u in state.defenses] + [
-            u for u in state.inner_uids() if u not in state.defenses
-        ]
+        # Only worth playing against a courtier who actually has one.
+        return [u for u in state.uids_in_play() if u in state.defenses]
     if effect == EFFECT_INSTALL:
         empty = {SEAT_ESTATE[s] for s in state.empty_seats()}
         return [u for u in state.outer if state.cstate[u].estate in empty]

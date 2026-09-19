@@ -69,47 +69,47 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 57.8 player-turns (14.8 rounds), median 53, max 250
+Game length: mean 57.3 player-turns (14.7 rounds), median 52, max 351
 Double wins: 6.1%          Timeouts: 0%
 
-Win rate by tier      naive 11.1%   greedy 23.0%   strategic 60.9%
+Win rate by tier      naive 10.5%   greedy 23.2%   strategic 62.0%
 
-Win rate by agenda    Barbarian Conquest              31.3%
-                      House Rising: Amonides          29.6%
-                      House Rising: Mitreas           29.0%
-                      House Rising: Argaian           27.6%
-                      Balance                         26.2%
-                      Faith Ascendant: Old Gods       23.1%
-                      Faith Ascendant: Mystery Cults  23.0%
-                      Faith Ascendant: The One God    22.5%
+Win rate by agenda    Barbarian Conquest              30.1%
+                      House Rising: Mitreas           28.1%
+                      House Rising: Amonides          26.8%
+                      Faith Ascendant: The One God    26.3%
+                      House Rising: Argaian           26.2%
+                      Balance                         25.1%
+                      Faith Ascendant: Old Gods       24.9%
+                      Faith Ascendant: Mystery Cults  24.8%
 ```
 
-1. **All eight agendas sit inside 8.7 points**, from 22.5% to 31.3%, against
-   2–53% under the first draft of the rules. The three faiths are within 0.6 of
-   each other and the three houses within 2.0.
+1. **All eight agendas sit inside 5.2 points**, from 24.8% to 30.1%, against
+   2–53% under the first draft of the rules. Nothing is obviously the best or
+   worst thing to be dealt.
 
-2. **Getting there took trimming the two composition agendas.** Balance and
-   Barbarian Conquest both led the board by five points, and they are
-   *substitutes* — cutting one pushes the other up, so they had to come down
-   together. Conquest lost its "both generals" shortcut (−5.5) and Balance now
-   wants two barbarians rather than one (−8.2).
+2. **The event rewrite tightened it further than the agenda tuning did** — 8.7
+   points to 5.2 — and lifted the faiths about two points. Replacing three
+   duplicate "target leaves play" events with attribute damage (Famine strips a
+   family, Meteor ruins an estate) means fewer courtiers get killed outright
+   (2.4 per game, down from 3.3), boards stay fuller (6.01 of 7 seats at the
+   end), and the pressure lands on what a courtier *is* rather than on whether
+   they are there at all.
 
-3. **The skill premium is the thing to watch.** The strategic bot is at 60.9%,
-   up from 57.9% before the trim. Every constraint added to a composition
-   agenda favours the player who plans: for reference, deleting Balance
-   outright put the strategic bot at 64.5%. If 60.9% is too steep, relaxing
-   `--balance-barbarians 1` gives back about two points of it.
+3. **The skill premium is the open worry.** The strategic bot has climbed 57.9%
+   → 60.9% → 62.0% over the last two changes, while the naive bot has fallen to
+   10.5%. Every constraint added to an agenda, and every event that damages an
+   attribute rather than clearing a seat, rewards the player tracking the whole
+   board. It is worth deciding what spread between a thinking player and a
+   careless one the game wants.
 
-4. **Games run long now** — 57.8 player-turns, up from 44.6 two changes ago,
-   and they end with 5.94 of 7 seats filled.
-
-   A strategic bot at the table also suppresses everyone else. Swapping exactly
-   one greedy seat for a strategic seat (6,000 games each):
+   Suppression, swapping exactly one greedy seat for a strategic one (6,000
+   games each):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
    | without a strategic bot | 26.5% | 43.0 turns |
-   | with a strategic bot | 15.1% | 57.8 turns |
+   | with a strategic bot | 14.7% | 57.3 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
@@ -195,9 +195,8 @@ board and is a bare majority of seven, which is why the faiths lead the table.
 `docs/RULES.md`. It is the one threshold the seventh seat changed the meaning
 of without anyone deciding to.
 
-**Event effects.** The bigger one. The brief called out that the source
-document's effects were written for the board-wide version and do not map onto
-single-target. The ten events currently use a playable placeholder table (all
-in one place in `cards.py`), but three of them duplicate "target leaves play",
-and `Treasure Fleet` is implemented as a *helpful* event — both worth a
-decision before the balance numbers above mean much.
+**Treasure Fleet is the only helpful event.** Every other event is played on
+somebody else's courtier; this one installs your own from the outer circle. A
+fleet arriving in harbour reads badly as a disaster, and a card whose target is
+a friend adds texture — but if events should be uniformly hostile it is one
+line to change. `docs/RULES.md` has the alternative.

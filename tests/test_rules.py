@@ -513,31 +513,127 @@ class TestGodlessness(unittest.TestCase):
 
 
 class TestEvents(unittest.TestCase):
+    """One test per event: all ten do something none of the others do."""
+
+    def play(self, state, name, target, rolls=(1,)):
+        card = give(state, 0, name)[0]
+        apply_action(state, 0, Action(PLAY, card=card, courtier=target), FixedRng(rolls))
+
+    # --- minor: a save is allowed -----------------------------------------
+    def test_quarantine_demotes(self):
+        state = fresh()
+        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        self.play(state, "Quarantine", target)
+        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
+        self.assertIn(target, state.outer)
+
     def test_minor_event_allows_a_save(self):
         state = fresh()
-        card = give(state, 0, "Quarantine")[0]
-        sitting = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        apply_action(state, 0, Action(PLAY, card=card, courtier=sitting), FixedRng([2]))
-        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], sitting)
+        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        self.play(state, "Quarantine", target, rolls=(2,))  # even: saved
+        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], target)
 
+    def test_poisoning_at_the_feast_kills(self):
+        state = fresh()
+        target = outer(state, "Hand of the Oracle")[0]
+        self.play(state, "Poisoning at the Feast", target)
+        self.assertNotIn(target, state.outer)
+        self.assertIn(target, state.discard)  # the epithet may come back
+
+    def test_caravan_returns_them_to_the_deck(self):
+        state = fresh()
+        target = outer(state, "Hand of the Oracle")[0]
+        self.play(state, "Caravan", target)
+        self.assertIn(target, state.deck)
+
+    def test_debasement_destroys_a_defense_and_needs_one(self):
+        state = fresh()
+        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
+        apply_action(
+            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
+        )
+        card = give(state, 0, "Debasement of the Coinage")[0]
+        self.assertEqual(
+            [a.courtier for a in card_actions(state, 0, card)], [defended]
+        )  # nobody else is worth targeting
+        apply_action(state, 0, Action(PLAY, card=card, courtier=defended), FixedRng())
+        self.assertNotIn(defended, state.defenses)
+        self.assertEqual(state.seats[Seat.CHIEF_PRIEST], defended)  # still seated
+
+    def test_eclipse_strips_faith(self):
+        state = fresh()
+        target = outer(state, "Beloved of the Gods")[0]
+        self.play(state, "Eclipse", target)
+        self.assertIs(state.cstate[target].faith, Faith.NONE)
+        self.assertFalse(state.cstate[target].mutated_faith)  # Conversion can restore it
+
+    # --- major: no save ----------------------------------------------------
     def test_major_event_allows_no_save(self):
         state = fresh()
-        card = give(state, 0, "Famine")[0]
-        sitting = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
-        apply_action(state, 0, Action(PLAY, card=card, courtier=sitting), FixedRng([2]))
+        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        self.play(state, "Siege", target, rolls=(2,))  # an even roll saves nobody
         self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
 
-    def test_recall_puts_the_courtier_back_in_the_deck(self):
+    def test_siege_demotes_and_breaks_the_defense(self):
         state = fresh()
-        card = give(state, 0, "Plague")[0]
+        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
+        apply_action(
+            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
+        )
+        self.play(state, "Siege", defended)
+        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
+        self.assertNotIn(defended, state.defenses)
+
+    def test_plague_takes_them_out_of_the_game(self):
+        state = fresh()
         target = outer(state, "Hand of the Oracle")[0]
-        apply_action(state, 0, Action(PLAY, card=card, courtier=target), FixedRng())
-        self.assertIn(target, state.deck)
-        self.assertNotIn(target, state.outer)
+        self.play(state, "Plague", target)
+        self.assertIn(target, state.removed)
+        self.assertNotIn(target, state.discard)  # this epithet never returns
+        self.assertNotIn(target, state.deck)
+
+    def test_famine_strips_family(self):
+        state = fresh()
+        target = outer(state, "Beloved of the Gods")[0]
+        self.play(state, "Famine", target)
+        self.assertIs(state.cstate[target].family, Family.NONE)
+
+    def test_famine_only_targets_a_house(self):
+        state = fresh()
+        card = give(state, 0, "Famine")[0]
+        outer(state, "Silver Tongue")  # no family to lose
+        self.assertEqual(card_actions(state, 0, card), [])
+
+    def test_meteor_ruins_them_to_the_commons(self):
+        state = fresh()
+        target = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)  # Church
+        self.play(state, "Meteor", target)
+        self.assertIs(state.cstate[target].estate, Estate.COMMONS)
+        # A Church seat no longer fits, so they are unseated on the spot.
+        self.assertIsNone(state.seats[Seat.CHIEF_PRIEST])
+        self.assertIn(target, state.outer)
+        self.assertFalse(state.cstate[target].mutated_estate)  # a disaster, not a choice
+
+    def test_treasure_fleet_installs_from_outer(self):
+        state = fresh()
+        target = outer(state, "Golden Thumb")[0]
+        self.play(state, "Treasure Fleet", target)
+        self.assertIn(state.seats[Seat.EXCHEQUER] or state.seats[Seat.HARBORMASTER], (target,))
+
+    def test_every_event_does_something_distinct(self):
+        from succession.cards import EVENT_CARDS
+
+        self.assertEqual(len(EVENT_CARDS), 10)
+        self.assertEqual(len({c.effect for c in EVENT_CARDS}), 10)
+        self.assertEqual(sum(1 for c in EVENT_CARDS if c.save), 5)
+        for card in EVENT_CARDS:
+            self.assertEqual(card.save, card.tier == "minor", card.name)
 
     def test_recalled_courtier_returns_with_printed_attributes(self):
         state = fresh()
-        mutate, recall_card = give(state, 0, "Conversion", "Plague")
+        mutate = give(state, 0, "Conversion")[0]
         target = outer(state, "Crosser of Rivers")[0]  # Mystery Cults
         apply_action(
             state,
@@ -545,22 +641,25 @@ class TestEvents(unittest.TestCase):
             Action(PLAY, card=mutate, courtier=target, value=Faith.OLD_GODS.value),
             FixedRng(),
         )
-        apply_action(state, 0, Action(PLAY, card=recall_card, courtier=target), FixedRng())
+        self.play(state, "Caravan", target)
         self.assertIs(state.cstate[target].faith, Faith.MYSTERY_CULTS)
         self.assertFalse(state.cstate[target].mutated_faith)
 
-    def test_treasure_fleet_installs_from_outer(self):
-        state = fresh()
-        card = give(state, 0, "Treasure Fleet")[0]
-        target = outer(state, "Golden Thumb")[0]
-        apply_action(state, 0, Action(PLAY, card=card, courtier=target), FixedRng())
-        self.assertEqual(state.seats[Seat.EXCHEQUER], target)
-
     def test_event_targets_must_be_in_play(self):
         state = fresh()
-        card = give(state, 0, "Meteor")[0]
+        card = give(state, 0, "Plague")[0]
         give(state, 0, "Hand of the Oracle")  # in hand, not in play
         self.assertEqual(card_actions(state, 0, card), [])
+
+    def test_no_defense_stops_an_event(self):
+        state = fresh()
+        defended = seat(state, "Hand of the Oracle", Seat.CHIEF_PRIEST)
+        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
+        apply_action(
+            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
+        )
+        self.play(state, "Plague", defended)
+        self.assertIn(defended, state.removed)
 
 
 class TestOutmaneuverAndPivot(unittest.TestCase):
