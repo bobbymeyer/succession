@@ -76,24 +76,24 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 53.3 player-turns (13.7 rounds), median 48, max 339
-Double wins: 6.7%          Timeouts: 0%
+Game length: mean 53.6 player-turns (13.8 rounds), median 47, max 233
+Double wins: 6.5%          Timeouts: 0%
 
-Win rate by tier      naive 10.6%   greedy 27.1%   strategic 58.5%
+Win rate by tier      naive 10.5%   greedy 27.0%   strategic 58.4%
 
-Win rate by agenda    Barbarian Conquest              31.1%
-                      House Rising: Mitreas           27.6%
-                      House Rising: Amonides          27.6%
-                      Faith Ascendant: Mystery Cults  26.2%
-                      Faith Ascendant: The One God    25.5%
-                      Balance                         25.3%
-                      House Rising: Argaian           25.3%
-                      Faith Ascendant: Old Gods       25.0%
+Win rate by agenda    Barbarian Conquest              31.6%
+                      House Rising: Amonides          27.1%
+                      House Rising: Mitreas           26.4%
+                      Balance                         26.0%
+                      Faith Ascendant: Mystery Cults  25.7%
+                      Faith Ascendant: The One God    25.7%
+                      House Rising: Argaian           25.4%
+                      Faith Ascendant: Old Gods       25.1%
 ```
 
-1. **All eight agendas sit inside 6.1 points**, from 25.0% to 31.1%, against
-   2–53% under the first draft of the rules. The three faiths finish within 1.2
-   points of each other and the three houses within 2.3.
+1. **All eight agendas sit inside 6.5 points**, from 25.1% to 31.6%, against
+   2–53% under the first draft of the rules. The three faiths finish within 0.6
+   points of each other and the three houses within 1.7.
 
 2. **Table-wide events narrowed the skill gap rather than widening it.** The
    strategic bot came down from 62.0% to 58.5% and the greedy bot rose from
@@ -112,8 +112,8 @@ Win rate by agenda    Barbarian Conquest              31.1%
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.8% | 39.8 turns |
-   | with a strategic bot | 16.1% | 53.3 turns |
+   | without a strategic bot | 26.6% | 41.5 turns |
+   | with a strategic bot | 16.0% | 53.6 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
@@ -138,33 +138,27 @@ the hard way, through Apostasy.
 
 ### What the Balance threshold buys
 
-`--balance-seats` sets how full the court must be before Balance counts. The
-board averages 5.8 filled seats at a win, so anything up to five is a rule that
-is usually already true. 6,000 games each, on the three-faith board:
+`--balance-seats` sets how full the court must be before Balance counts. Six is
+the default: one empty chair is allowed, a second is not.
 
-| Threshold | Balance | naive wins Balance | mean turns |
+Seven was the default for a while, chosen to stop a careless player falling
+into Balance by accident. That premise rested on a blind spot — the bots were
+badly under-using purges and freezes, so courts filled up more than they should
+have. Once the events were priced properly, a full court became rare enough
+that Balance dropped to 20.8%, five points clear of anything else at the
+bottom, and the spread across the eight agendas blew out to 13 points.
+
+6,000 games each, on the corrected bots:
+
+| Threshold | Balance | naive wins Balance | spread across all eight |
 |---|---|---|---|
-| 4 of 7 | 45.5% | 28.9% | 49.4 |
-| 5 of 7 | 44.2% | 29.2% | 50.0 |
-| 6 of 7 | 41.5% | 25.5% | 51.1 |
-| **7 of 7 (current)** | **34.3%** | **20.1%** | 53.3 |
+| **6 of 7 (current)** | **26.0%** | 13.0% | **6.5 points** |
+| 7 of 7 | 20.8% | 9.7% | 13.0 points |
 
-The middle column is the one that matters: it is how often a player who is not
-trying wins Balance. Only the full seven brings it into line with the rest of
-the board — at 20.1% it now sits alongside Barbarian Conquest's 18.8%, where at
-five seats it was nearly double anything else.
-
-Win rate per deal by tier, on the current board:
-
-| Agenda | naive | greedy | strategic |
-|---|---|---|---|
-| Barbarian Conquest | 18.8% | 38.8% | 69.9% |
-| Balance | 20.1% | 28.6% | 66.1% |
-| House Rising (mean) | 12.9% | 23.5% | 58.9% |
-| Faith Ascendant (mean) | 6.9% | 17.6% | 49.7% |
-
-The faiths have become the board's skill agendas: a bot playing at random
-almost never lands one, and even the greedy bot only manages 17.6%.
+The accident problem does not come back at six. The naive bot's overall win
+rate is 10.5%, so winning Balance 13.0% of the time is barely above its own
+average — nothing like the 25.5% that made the change worth doing in the first
+place.
 
 ### Apostasy is the first card only one tier will play
 

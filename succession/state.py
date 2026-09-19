@@ -48,7 +48,7 @@ class Config:
     #: Inner seats a faith must hold for Faith Ascendant.
     faith_seats: int = 4
     #: Seats that must be filled before Balance counts.
-    balance_seats: int = 7
+    balance_seats: int = 6
     #: Barbarians Balance wants seated, not just one.
     balance_barbarians: int = 2
     #: Agenda keys left out of the pool entirely -- neither dealt nor available
