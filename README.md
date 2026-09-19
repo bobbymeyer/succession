@@ -113,6 +113,26 @@ Win rate by agenda    Balance                         42.3%
 
 Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
 
+### Apostasy is the first card only one tier will play
+
+Apostasy can never advance your own agenda — it only takes a seat away from
+someone else's. That makes it a clean separator, and the bots split exactly as
+their definitions say they should (4,000 games, counting real plays only, not
+the lookahead the thinking bots do internally):
+
+| Tier | Played | Discarded | |
+|---|---|---|---|
+| naive | 876 | 322 | 73% — it is picking at random |
+| greedy | **0** | 52 | 0% — advancing nobody's agenda, so never worth a turn |
+| strategic | 467 | 35 | 93% — almost always worth a turn |
+
+Its effect on the board is smaller than the reassignment that created the
+atheists. Taking the card out of the deck entirely and keeping the five
+atheist courtiers moves the faiths by about a point (31.7% → 32.6% and 30.8% →
+31.9%) and shortens games from 43.1 to 41.9 turns. Barbarian Conquest is what
+actually depends on it, gaining two points (28.8% → 30.9%) from the room the
+card takes out of the faiths' schedule.
+
 ### Which courtiers turn atheist matters more than how many
 
 The five atheists have to come out of the faiths unevenly — three Old Gods and
