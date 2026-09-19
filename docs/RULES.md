@@ -32,8 +32,9 @@ move any outer courtier into an empty matching seat.
 
 ## Turn
 
-Exactly one action, then draw one card (only if the hand is below the limit of
-7). Turn order is clockwise; the first player is chosen at random.
+**Draw one card, then take exactly one action.** The card drawn at the top of
+the turn can be played that same turn. A hand already at the limit of 7 draws
+nothing. Turn order is clockwise; the first player is chosen at random.
 
 1. **Play a card from hand** — a card from hand only ever reaches the outer
    circle. There is no way to play a card from hand straight into a seat.
@@ -177,7 +178,7 @@ first; the flag flips it.
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
 | 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |
 | 7 | **The false-reveal rule is not exercised.** The brief has it that a premature reveal stays revealed and the game continues without that player's fog. A bot has no reason to bluff, so none does, and nothing reads `GameState.revealed` but the win check. Simulating bluffing would need a deliberate-reveal action and a strategic bot that plays differently against a known agenda. | — | — |
-| 8 | A skipped turn (Outmaneuver) consumes the whole turn, draw included. | — | — |
+| 8 | A skipped turn (Outmaneuver) consumes the whole turn, so the skipped player never reaches their draw. | — | — |
 
 # Event effects
 

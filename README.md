@@ -69,27 +69,27 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 54.1 player-turns (13.9 rounds), median 48, max 254
-Double wins: 6.2%          Timeouts: 0%
+Game length: mean 54.0 player-turns (13.9 rounds), median 48, max 272
+Double wins: 5.9%          Timeouts: 0%
 
-Win rate by tier      naive 10.4%   greedy 28.7%   strategic 56.8%
+Win rate by tier      naive 10.6%   greedy 26.2%   strategic 58.5%
 
-Win rate by agenda    Barbarian Conquest              30.6%
-                      House Rising: Mitreas           29.8%
-                      House Rising: Amonides          28.8%
-                      House Rising: Argaian           25.9%
-                      Balance                         25.6%
-                      Faith Ascendant: Mystery Cults  24.3%
-                      Faith Ascendant: The One God    23.8%
-                      Faith Ascendant: Old Gods       23.5%
+Win rate by agenda    Barbarian Conquest              30.2%
+                      House Rising: Mitreas           29.4%
+                      House Rising: Amonides          28.6%
+                      House Rising: Argaian           27.3%
+                      Balance                         25.5%
+                      Faith Ascendant: Old Gods       24.1%
+                      Faith Ascendant: The One God    23.4%
+                      Faith Ascendant: Mystery Cults  23.3%
 ```
 
-1. **All eight agendas sit inside 7.1 points**, from 23.5% to 30.6%, against
+1. **All eight agendas sit inside 7.0 points**, from 23.3% to 30.2%, against
    2–53% under the first draft of the rules.
 
 2. **Table-wide events narrowed the skill gap rather than widening it.** The
-   strategic bot came down from 62.0% to 56.8% and the greedy bot jumped from
-   23.2% to 28.7%. Events that hit everybody — a purge that kills four
+   strategic bot came down from 62.0% to 58.5% and the greedy bot rose from
+   23.2% to 26.2%. Events that hit everybody — a purge that kills four
    courtiers at once, a freeze that protects whoever is ahead, a redeal that
    throws away everyone's plans — disrupt a carefully built position as much as
    a careless one. The single-target version they replaced rewarded the player
@@ -104,8 +104,8 @@ Win rate by agenda    Barbarian Conquest              30.6%
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.6% | 41.6 turns |
-   | with a strategic bot | 16.5% | 54.1 turns |
+   | without a strategic bot | 26.7% | 41.0 turns |
+   | with a strategic bot | 15.8% | 54.0 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 

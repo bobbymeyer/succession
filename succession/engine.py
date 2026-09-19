@@ -487,6 +487,9 @@ def play_game(
             continue
 
         state.turn += 1
+        # Draw at the top of the turn: the card you pick up is one you may
+        # play this turn. A skipped turn draws nothing, since it never starts.
+        draw(state, player, rng)
         actions = legal_actions(state, player)
         before = progress_vector(state) if watching else None
         action = bots[player].choose(state, player, actions)
@@ -504,7 +507,6 @@ def play_game(
                 state.revealed[p] = True
             break
 
-        draw(state, player, rng)
         state.current = (state.current + 1) % config.num_players
 
     return GameResult(

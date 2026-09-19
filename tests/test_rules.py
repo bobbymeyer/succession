@@ -915,6 +915,47 @@ class TestDeckAndTurns(unittest.TestCase):
         with self.assertRaises(ValueError):
             setup_game(config, random.Random(0))
 
+    def test_the_draw_comes_before_the_action(self):
+        """A card picked up at the top of the turn is playable that turn."""
+
+        seen = []
+
+        class Watcher:
+            observes = False
+
+            def __init__(self, seat, rng):
+                self.rng = rng
+
+            def choose(self, state, player, actions):
+                seen.append(len(state.hands[player]))
+                return next(a for a in actions if a.kind == DISCARD)
+
+        config = Config(max_turns=8)
+        play_game(config, seed=1, bot_factory=lambda t, s, r: Watcher(s, r))
+        # Dealt five, drew a sixth before being asked to act.
+        self.assertEqual(seen[0], config.starting_hand + 1)
+        self.assertTrue(all(n == config.starting_hand + 1 for n in seen))
+
+    def test_one_card_leaves_the_deck_per_turn_taken(self):
+        """The draw is the first thing a turn does, and the only one it does."""
+
+        class Discarder:
+            observes = False
+
+            def __init__(self, seat, rng):
+                self.rng = rng
+
+            def choose(self, state, player, actions):
+                return next(a for a in actions if a.kind == DISCARD)
+
+        config = Config(max_turns=10)
+        result = play_game(
+            config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True
+        )
+        state = result.final_state
+        dealt = config.starting_hand * config.num_players
+        self.assertEqual(len(state.deck), len(state.cards) - dealt - result.turns)
+
     def test_a_player_always_has_a_legal_action(self):
         state = setup_game(Config(), random.Random(5))
         for p in range(state.config.num_players):
