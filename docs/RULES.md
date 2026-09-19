@@ -120,12 +120,12 @@ state, **both** players win and the game is logged as a double win.
 |---|---|---|
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
 | Faith Ascendant | 3 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
-| Barbarian Conquest | 1 | **3 barbarians in the inner circle**, *or* both Military seats held by barbarians |
-| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and a barbarian (`--balance-seats`) |
+| Barbarian Conquest | 1 | **3 barbarians seated in the inner circle** |
+| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and **two** barbarians (`--balance-seats`, `--balance-barbarians`) |
 
-Barbarian Conquest has two routes and either one wins outright: a bloc of
-three seated barbarians anywhere in the inner circle, or both generals. Two
-barbarian generals therefore win on their own.
+Barbarian Conquest is one clause: three barbarians holding inner seats, in any
+estates. There is no shortcut for taking both Military seats -- two barbarian
+generals are simply two of the three.
 
 Each house also fields one commoner -- its charioteer -- which is the only way
 a house can ever hold the Guildmaster's seat.
@@ -165,7 +165,7 @@ first; the flag flips it.
 | # | Decision | Default | Flag |
 |---|---|---|---|
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
-| 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
+| 2 | **Balance wants two barbarians, Conquest three.** Both were tuned down from a board where they led every other agenda by five points. | 2 / 3 | `--balance-barbarians` |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
 | 2f | **All eight agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all eight | `--drop-agendas` |
 | 2d | **Balance asks for all three faiths**, but not for a godless courtier, since godlessness has no agenda. | three faiths | -- |

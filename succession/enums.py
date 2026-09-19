@@ -74,8 +74,6 @@ SEAT_ESTATE: dict[Seat, Estate] = {
 
 SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
 
-#: Barbarian Conquest's "both generals" route reads these two seats.
-MILITARY_SEATS: tuple[Seat, ...] = (Seat.FIELD_GENERAL, Seat.PRAETORIAN_CHIEF)
 
 #: The faiths an agenda can be built on. Godlessness deliberately has none: a
 #: godless courtier in a seat is a seat no faith can count.

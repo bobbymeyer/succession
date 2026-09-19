@@ -69,50 +69,47 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 53.3 player-turns (13.7 rounds), median 49, max 259
-Double wins: 6.3%          Timeouts: 0%
+Game length: mean 57.8 player-turns (14.8 rounds), median 53, max 250
+Double wins: 6.1%          Timeouts: 0%
 
-Win rate by tier      naive 12.3%   greedy 23.9%   strategic 57.9%
+Win rate by tier      naive 11.1%   greedy 23.0%   strategic 60.9%
 
-Win rate by agenda    Barbarian Conquest              36.7%
-                      Balance                         34.4%
-                      House Rising: Mitreas           27.2%
-                      House Rising: Argaian           26.8%
-                      House Rising: Amonides          26.6%
-                      Faith Ascendant: Mystery Cults  20.7%
-                      Faith Ascendant: The One God    20.5%
-                      Faith Ascendant: Old Gods       19.4%
+Win rate by agenda    Barbarian Conquest              31.3%
+                      House Rising: Amonides          29.6%
+                      House Rising: Mitreas           29.0%
+                      House Rising: Argaian           27.6%
+                      Balance                         26.2%
+                      Faith Ascendant: Old Gods       23.1%
+                      Faith Ascendant: Mystery Cults  23.0%
+                      Faith Ascendant: The One God    22.5%
 ```
 
-1. **The eight agendas span 19–37%**, against 2–53% under the first draft of
-   the rules. The three faiths sit within 1.3 points of each other and the three
-   houses within 0.7.
+1. **All eight agendas sit inside 8.7 points**, from 22.5% to 31.3%, against
+   2–53% under the first draft of the rules. The three faiths are within 0.6 of
+   each other and the three houses within 2.0.
 
-2. **The third faith is what finally lifted the houses.** They went from ~19%
-   to ~27% without being touched: three faiths of twelve courtiers each, all
-   chasing four of the same seven seats, no longer sweep the board the way two
-   faiths of eighteen did. Adding house courtiers had only reached ~25%, and
-   cost Barbarian Conquest twelve points to do it.
+2. **Getting there took trimming the two composition agendas.** Balance and
+   Barbarian Conquest both led the board by five points, and they are
+   *substitutes* — cutting one pushes the other up, so they had to come down
+   together. Conquest lost its "both generals" shortcut (−5.5) and Balance now
+   wants two barbarians rather than one (−8.2).
 
-3. **The faiths and the houses swapped places.** Faith Ascendant went from the
-   strongest agenda at ~39% to the weakest at ~20%. Four of seven seats was
-   calibrated for an eighteen-courtier faith; at twelve it is a hard ask.
-   `--faith-seats 3` overshoots badly — the faiths jump to ~40% and everything
-   else collapses — so four is the right number for a three-faith board.
+3. **The skill premium is the thing to watch.** The strategic bot is at 60.9%,
+   up from 57.9% before the trim. Every constraint added to a composition
+   agenda favours the player who plans: for reference, deleting Balance
+   outright put the strategic bot at 64.5%. If 60.9% is too steep, relaxing
+   `--balance-barbarians 1` gives back about two points of it.
 
-4. **Games run a fifth longer** (44.6 → 53.3 turns) and end fuller (5.8 of 7
-   seats occupied, up from 5.5), because no single faith can close the board out
-   early.
+4. **Games run long now** — 57.8 player-turns, up from 44.6 two changes ago,
+   and they end with 5.94 of 7 seats filled.
 
-5. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 12.3% → 23.9% → 57.9%. A strategic bot at the table
-   also suppresses everyone else. Swapping exactly one greedy seat for a
-   strategic seat (6,000 games each, everything else held fixed):
+   A strategic bot at the table also suppresses everyone else. Swapping exactly
+   one greedy seat for a strategic seat (6,000 games each):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.7% | 39.4 turns |
-   | with a strategic bot | 16.2% | 53.3 turns |
+   | without a strategic bot | 26.5% | 43.0 turns |
+   | with a strategic bot | 15.1% | 57.8 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 

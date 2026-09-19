@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from .courtiers import FAMILY_PREFERRED_ESTATE
-from .enums import FAITHS, FAMILIES, MILITARY_SEATS, SEAT_ESTATE, Faith, Family, Origin
+from .enums import FAITHS, FAMILIES, SEAT_ESTATE, Faith, Family, Origin
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from .state import GameState
@@ -59,10 +59,10 @@ FAITH_SEATS = 4
 #: Balance must hold across this many of the seven seats. At the full seven it
 #: stops being an agenda anyone can satisfy by accident.
 BALANCE_SEATS = 7
-#: Barbarian Conquest: this many barbarians in the inner circle wins...
+#: Barbarian Conquest: this many barbarians seated in the inner circle.
 CONQUEST_BARBARIANS = 3
-#: ...or this many barbarian generals (both Military seats) wins outright.
-CONQUEST_GENERALS = 2
+#: Balance wants this many barbarians, not just one.
+BALANCE_BARBARIANS = 2
 
 @dataclass(frozen=True, slots=True)
 class AgendaRules:
@@ -74,6 +74,8 @@ class AgendaRules:
     faith_seats: int = FAITH_SEATS
     #: Seats that must be filled for Balance to count.
     balance_seats: int = BALANCE_SEATS
+    #: Barbarians Balance wants seated.
+    balance_barbarians: int = BALANCE_BARBARIANS
     #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
@@ -95,6 +97,7 @@ def rules_for(state: "GameState") -> AgendaRules:
         house_preferred_estate=config.house_preferred_estates,
         faith_seats=config.faith_seats,
         balance_seats=config.balance_seats,
+        balance_barbarians=config.balance_barbarians,
     )
 
 
@@ -111,8 +114,6 @@ class BoardCounts:
     inner_filled: int
     inner_barbarians: int
     barbarians_in_play: int
-    military_seats_filled: int
-    military_seats_barbarian: int
 
 
 def count_board(state: "GameState") -> BoardCounts:
@@ -124,17 +125,8 @@ def count_board(state: "GameState") -> BoardCounts:
     inner_filled = 0
     inner_barbarians = 0
     barbarians = 0
-    military_filled = 0
-    military_barbarian = 0
 
     cstate = state.cstate
-    for seat in MILITARY_SEATS:
-        uid = state.seats[seat]
-        if uid is not None:
-            military_filled += 1
-            if cstate[uid].origin is Origin.BARBARIAN:
-                military_barbarian += 1
-
     for seat, uid in state.seats.items():
         if uid is None:
             continue
@@ -168,8 +160,6 @@ def count_board(state: "GameState") -> BoardCounts:
         inner_filled,
         inner_barbarians,
         barbarians,
-        military_filled,
-        military_barbarian,
     )
 
 
@@ -196,17 +186,13 @@ def satisfied_counts(
     if kind == FAITH_ASCENDANT:
         return counts.inner_faith.get(agenda.param, 0) >= rules.faith_seats
     if kind == CONQUEST:
-        # Either route wins: a bloc of three seats, or both generals.
-        return (
-            counts.inner_barbarians >= CONQUEST_BARBARIANS
-            or counts.military_seats_barbarian >= CONQUEST_GENERALS
-        )
+        return counts.inner_barbarians >= CONQUEST_BARBARIANS
     if kind == BALANCE:
         return (
             counts.inner_filled >= rules.balance_seats
             and all(counts.inner_family.get(f.value, 0) > 0 for f in FAMILIES)
             and all(counts.inner_faith.get(f.value, 0) > 0 for f in FAITHS)
-            and counts.inner_barbarians > 0
+            and counts.inner_barbarians >= rules.balance_barbarians
         )
     raise ValueError(f"unknown agenda kind: {kind}")  # pragma: no cover
 
@@ -236,17 +222,14 @@ def progress_counts(
         core = counts.inner_faith.get(agenda.param, 0) / needed
         bench = min(counts.outer_faith.get(agenda.param, 0), needed) / needed
     elif kind == CONQUEST:
-        # Whichever of the two routes is closer.
-        bloc = min(counts.inner_barbarians, CONQUEST_BARBARIANS) / CONQUEST_BARBARIANS
-        generals = counts.military_seats_barbarian / CONQUEST_GENERALS
-        core = max(bloc, generals)
-        # Barbarians waiting outside are the raw material either route needs.
+        core = min(counts.inner_barbarians, CONQUEST_BARBARIANS) / CONQUEST_BARBARIANS
+        # Barbarians waiting outside are the raw material the bloc needs.
         bench = min(counts.barbarians_in_play - counts.inner_barbarians, 3) / 3
     elif kind == BALANCE:
         met = sum(1 for f in FAMILIES if counts.inner_family.get(f.value, 0) > 0)
         met += sum(1 for f in FAITHS if counts.inner_faith.get(f.value, 0) > 0)
-        met += 1 if counts.inner_barbarians else 0
-        wanted = len(FAMILIES) + len(FAITHS) + 1
+        met += min(counts.inner_barbarians, rules.balance_barbarians)
+        wanted = len(FAMILIES) + len(FAITHS) + rules.balance_barbarians
         seats = min(counts.inner_filled, rules.balance_seats) / rules.balance_seats
         core = 0.8 * met / wanted + 0.2 * seats
         bench = 0.0

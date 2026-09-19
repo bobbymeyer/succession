@@ -701,22 +701,16 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Master Mason", Seat.GUILDMASTER)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_barbarian_conquest_wins_on_both_generals(self):
+    def test_barbarian_conquest_has_no_generals_shortcut(self):
+        """Holding both Military seats with barbarians is only two of the three."""
+
         state = fresh()
         agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
-        self.assertFalse(satisfied(state, agenda))
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
-        self.assertTrue(satisfied(state, agenda))  # two barbarians is enough here
-
-    def test_barbarian_conquest_generals_must_be_barbarians(self):
-        state = fresh()
-        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
-        seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
-        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
-        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
         self.assertFalse(satisfied(state, agenda))
+        seat(state, "Master Mason", Seat.GUILDMASTER)
+        self.assertTrue(satisfied(state, agenda))
 
     def test_barbarian_conquest_ignores_the_outer_circle(self):
         state = fresh()
