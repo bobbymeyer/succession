@@ -175,8 +175,8 @@ first; the flag flips it.
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
-| 6 | A courtier who leaves play (killed or recalled) loses any attachment and reverts to printed attributes. | — | — |
-| 7 | Bots never make a false/premature reveal, so that rule is modelled but never exercised. `GameState.revealed` is the hook if you want to simulate bluffing. | — | — |
+| 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |
+| 7 | **The false-reveal rule is not exercised.** The brief has it that a premature reveal stays revealed and the game continues without that player's fog. A bot has no reason to bluff, so none does, and nothing reads `GameState.revealed` but the win check. Simulating bluffing would need a deliberate-reveal action and a strategic bot that plays differently against a known agenda. | — | — |
 | 8 | A skipped turn (Outmaneuver) consumes the whole turn, draw included. | — | — |
 
 # Event effects
