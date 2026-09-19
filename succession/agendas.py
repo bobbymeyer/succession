@@ -40,19 +40,22 @@ AGENDAS: tuple[Agenda, ...] = (
     Agenda("house_argaian", "House Rising: Argaian", HOUSE_RISING, Family.ARGAIAN.value),
     Agenda("faith_old_gods", "Faith Ascendant: Old Gods", FAITH_ASCENDANT, Faith.OLD_GODS.value),
     Agenda("faith_mystery_cults", "Faith Ascendant: Mystery Cults", FAITH_ASCENDANT, Faith.MYSTERY_CULTS.value),
-    Agenda("conquest", "Conquest", CONQUEST),
+    Agenda("barbarian_conquest", "Barbarian Conquest", CONQUEST),
     Agenda("balance", "Balance", BALANCE),
 )
 
 AGENDA_KEYS: tuple[str, ...] = tuple(a.key for a in AGENDAS)
 AGENDAS_BY_KEY: dict[str, Agenda] = {a.key: a for a in AGENDAS}
 
-#: House Rising needs this many of the six inner seats.
+#: House Rising needs this many of the inner seats, two of them in one estate.
 HOUSE_SEATS = 3
-#: Faith Ascendant needs this many of the six inner seats.
+#: Faith Ascendant needs this many of the inner seats. Four of seven is a bare
+#: majority; five is the two-thirds the rule meant when the board had six.
 FAITH_SEATS = 4
-#: Conquest needs this many barbarians *in the inner circle*.
+#: Barbarian Conquest: this many barbarians in the inner circle wins...
 CONQUEST_BARBARIANS = 3
+#: ...or this many barbarian generals (both Military seats) wins outright.
+CONQUEST_GENERALS = 2
 #: Two of a House Rising trio must sit in the family's preferred estate.
 HOUSE_ESTATE_PAIR = 2
 
@@ -61,10 +64,10 @@ HOUSE_ESTATE_PAIR = 2
 class AgendaRules:
     """The agenda variants; see docs/RULES.md."""
 
-    #: Conquest's two Military seats must be held *by barbarians*.
-    strict_conquest: bool = False
     #: Two of the three House Rising seats must share an estate.
     house_estate_pair: bool = True
+    #: Seats a faith must hold to win.
+    faith_seats: int = FAITH_SEATS
     #: Optional fixed family -> estate mapping. When empty, a family's
     #: preferred estate is whichever one it has doubled up in; when set, only
     #: that estate's seats count toward the pair.
@@ -83,9 +86,9 @@ DEFAULT_RULES = AgendaRules()
 def rules_for(state: "GameState") -> AgendaRules:
     config = state.config
     return AgendaRules(
-        strict_conquest=config.conquest_requires_barbarian_generals,
         house_estate_pair=config.house_rising_requires_estate_pair,
         house_preferred_estate=config.house_preferred_estates,
+        faith_seats=config.faith_seats,
     )
 
 
@@ -187,16 +190,12 @@ def satisfied_counts(
             return _estate_block(counts, agenda.param, rules) >= HOUSE_ESTATE_PAIR
         return True
     if kind == FAITH_ASCENDANT:
-        return counts.inner_faith.get(agenda.param, 0) >= FAITH_SEATS
+        return counts.inner_faith.get(agenda.param, 0) >= rules.faith_seats
     if kind == CONQUEST:
-        generals = (
-            counts.military_seats_barbarian
-            if rules.strict_conquest
-            else counts.military_seats_filled
-        )
+        # Either route wins: a bloc of three seats, or both generals.
         return (
             counts.inner_barbarians >= CONQUEST_BARBARIANS
-            and generals >= len(MILITARY_SEATS)
+            or counts.military_seats_barbarian >= CONQUEST_GENERALS
         )
     if kind == BALANCE:
         return (
@@ -228,17 +227,15 @@ def progress_counts(
             core = 0.6 * core + 0.4 * block / HOUSE_ESTATE_PAIR
         bench = min(counts.outer_family.get(agenda.param, 0), HOUSE_SEATS) / HOUSE_SEATS
     elif kind == FAITH_ASCENDANT:
-        core = counts.inner_faith.get(agenda.param, 0) / FAITH_SEATS
-        bench = min(counts.outer_faith.get(agenda.param, 0), FAITH_SEATS) / FAITH_SEATS
+        needed = rules.faith_seats
+        core = counts.inner_faith.get(agenda.param, 0) / needed
+        bench = min(counts.outer_faith.get(agenda.param, 0), needed) / needed
     elif kind == CONQUEST:
-        generals = (
-            counts.military_seats_barbarian
-            if rules.strict_conquest
-            else counts.military_seats_filled
-        )
-        core = 0.5 * min(counts.inner_barbarians, CONQUEST_BARBARIANS) / CONQUEST_BARBARIANS
-        core += 0.5 * generals / len(MILITARY_SEATS)
-        # Barbarians waiting outside are the raw material Conquest needs.
+        # Whichever of the two routes is closer.
+        bloc = min(counts.inner_barbarians, CONQUEST_BARBARIANS) / CONQUEST_BARBARIANS
+        generals = counts.military_seats_barbarian / CONQUEST_GENERALS
+        core = max(bloc, generals)
+        # Barbarians waiting outside are the raw material either route needs.
         bench = min(counts.barbarians_in_play - counts.inner_barbarians, 3) / 3
     elif kind == BALANCE:
         met = sum(1 for f in FAMILIES if counts.inner_family.get(f.value, 0) > 0)

@@ -50,23 +50,27 @@ class Seat(str, Enum):
     FIELD_GENERAL = "Field General"
     PRAETORIAN_CHIEF = "Praetorian Chief"
     EXCHEQUER = "Master of the Exchequer"
+    HARBORMASTER = "Harbormaster"
     GUILDMASTER = "Guildmaster"
 
 
-#: Only a courtier whose estate matches may occupy a seat.
+#: Only a courtier whose estate matches may occupy a seat. Church, Military
+#: and Merchant each have a pair of mechanically identical seats; Commons has
+#: one.
 SEAT_ESTATE: dict[Seat, Estate] = {
     Seat.CHIEF_PRIEST: Estate.CHURCH,
     Seat.ORACLE: Estate.CHURCH,
     Seat.FIELD_GENERAL: Estate.MILITARY,
     Seat.PRAETORIAN_CHIEF: Estate.MILITARY,
     Seat.EXCHEQUER: Estate.MERCHANT,
+    Seat.HARBORMASTER: Estate.MERCHANT,
     Seat.GUILDMASTER: Estate.COMMONS,
 }
 
 SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
 
+#: Barbarian Conquest's "both generals" route reads these two seats.
 MILITARY_SEATS: tuple[Seat, ...] = (Seat.FIELD_GENERAL, Seat.PRAETORIAN_CHIEF)
-CHURCH_SEATS: tuple[Seat, ...] = (Seat.CHIEF_PRIEST, Seat.ORACLE)
 
 FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS)
 FAMILIES: tuple[Family, ...] = (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN)

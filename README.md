@@ -69,49 +69,52 @@ works: run one batch with a strategic seat and one without, then pool them.
 4,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 52.8 player-turns (13.6 rounds), median 47, max 439
-Double wins: 4.5%          Timeouts: 0%
+Game length: mean 43.0 player-turns (11.1 rounds), median 39, max 231
+Double wins: 6.2%          Timeouts: 0%
 
-Win rate by tier      naive 13.3%   greedy 24.4%   strategic 53.6%
+Win rate by tier      naive 14.7%   greedy 24.4%   strategic 52.5%
 
-Win rate by agenda    Balance                         43.1%
-                      Faith Ascendant: Mystery Cults  42.5%
-                      Faith Ascendant: Old Gods       42.1%
-                      Conquest                        25.8%
-                      House Rising: Amonides           9.4%
-                      House Rising: Mitreas            9.0%
-                      House Rising: Argaian            8.7%
+Win rate by agenda    Faith Ascendant: Mystery Cults  43.6%
+                      Faith Ascendant: Old Gods       40.9%
+                      Balance                         39.0%
+                      Barbarian Conquest              33.3%
+                      House Rising: Amonides           9.5%
+                      House Rising: Mitreas            9.3%
+                      House Rising: Argaian            8.8%
 ```
 
-1. **The agendas sit in a playable band** — 9% to 43%, against 2% to 53% under
-   the first draft of the rules. Balance and the two faiths cluster at ~42%:
-   they are all "get four-ish of the six seats to look a certain way" and they
-   can be assembled incidentally. Conquest and the houses are the ones you have
-   to actually play for.
+1. **Four of the seven agendas sit in a tight 33–44% band**, and the three
+   houses are within 0.7 points of each other — which is what you want from
+   three copies of one agenda. The whole spread is 9–44%, against 2–53% under
+   the first draft of the rules.
 
-2. **The three houses are within 0.7 points of each other**, which is what you
-   want from three copies of one agenda. At ~9% they are the hardest thing on
-   the board — the estate pair is a real constraint, because only Church and
-   Military have two seats, so every house is fighting for the same four seats.
+2. **The houses at ~9% are the hardest thing on the board.** They are the only
+   agenda needing three *specific* courtiers of a six-card subset seated at
+   once, with two of them paired in an estate. Every house is fighting for the
+   same handful of paired seats.
 
-3. **Conquest is the second-hardest at 25.8%.** Requiring the three barbarians
-   *in the inner circle* is sharper than it looks: of the eight barbarians only
-   one is Church, one Merchant and two Commons, so at most five could ever be
-   seated, and the two Military seats are the most-contested on the board. If
-   that reads as too harsh, the cheapest dial is letting the two generals count
-   toward the three rather than needing a third barbarian elsewhere.
+3. **Barbarian Conquest's two routes make it a real agenda again** — 33.3%,
+   up from 25.8% when it was a single strict condition. The generals route
+   (two barbarian generals) is the fast one; the three-seat bloc is the
+   fallback when the Military seats are contested.
 
-4. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 13.3% → 24.4% → 53.6%. A strategic bot at the table
+4. **Faith Ascendant is now the strongest pair**, because "4 seats" was
+   two-thirds of a six-seat board and is a bare majority of seven.
+   `--faith-seats 5` restores the two-thirds shape — see `docs/RULES.md` for
+   what that does to everything else (short version: it hands the lead to
+   Balance rather than tightening the spread).
+
+5. **The tiers separate cleanly**, which is the sanity check that the bots are
+   really playing the game: 14.7% → 24.4% → 52.5%. A strategic bot at the table
    also suppresses everyone else. Swapping exactly one greedy seat for a
    strategic seat (4,000 games each, everything else held fixed):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.5% | 37.6 turns |
-   | with a strategic bot | 17.0% | 52.8 turns |
+   | without a strategic bot | 26.4% | 30.2 turns |
+   | with a strategic bot | 17.9% | 43.0 turns |
 
-   It takes over a third of the other players' equity and makes games ~40%
+   It takes about a third of the other players' equity and makes games ~40%
    longer — it is genuinely denying wins, not just winning faster.
 
 Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
@@ -120,9 +123,9 @@ Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
 
 | Flag | Effect on the batch |
 |---|---|
-| `--house-preferred-estates amonides=church,mitreas=merchant,argaian=military` | Amonides 5.6%, Argaian 5.6%, **Mitreas 0.0%** — see below |
+| `--faith-seats 5` | faiths 19–23%, Balance 50%, Conquest 43%, houses ~14% |
+| `--house-preferred-estates amonides=church,mitreas=merchant,argaian=military` | houses drop to ~4% each |
 | `--house-any-three` | drops the pair requirement; houses rise to ~14% |
-| `--strict-conquest` | Conquest's two generals must themselves be barbarians |
 | `--removed-out-of-game` | killed courtiers never return |
 | `--defense-matches-target` | an estate Defense may only shield its own estate |
 
@@ -130,20 +133,15 @@ Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
 
 `docs/RULES.md` ends with the open questions. Two of them matter.
 
-**Which estate does each family prefer?** Three seats with two in one estate
-is implemented. What is still open is whether the preferred estate is *fixed*
-per family or simply whichever one they double up in (the default).
+**Fixed preferred estates, or emergent?** The seventh seat fixed the hard part
+— Merchant seats a pair now, so Amonides/Church, Mitreas/Merchant and
+Argaian/Military all work, and Mitreas went from 0 wins in 1,086 games to
+winning normally. What is left is a balance call: fixing the mapping roughly
+halves the houses (~9% → ~4%), because a house that draws the wrong courtiers
+can no longer pivot to the estate it *can* pair in. Default is emergent.
 
-The board resists a fixed mapping: only Church and Military have two inner
-seats. Running the source document's affiliations for 2,000 games —
-`amonides=church,mitreas=merchant,argaian=military` — House Rising: Mitreas
-won **0 of 1,086** games, because it can hold every seat it is able to hold
-(five of six, having no commoner for the Guildmaster) and still never pair in
-Merchant. Amonides and Argaian drop to 5.6% each.
-
-So a fixed mapping needs one of: give Mitreas a two-seat estate, add a second
-Merchant seat, or leave the preference emergent. `docs/RULES.md` lays out all
-three.
+**How many seats should a faith need?** Four was two-thirds of six and is a
+bare majority of seven. Both numbers are in `docs/RULES.md`.
 
 **Event effects.** The bigger one. The brief called out that the source
 document's effects were written for the board-wide version and do not map onto

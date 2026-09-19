@@ -7,7 +7,7 @@ where a real design decision is still owed.
 
 ## Board
 
-Six inner seats, each locked to one estate. Only a courtier whose *current*
+Seven inner seats, each locked to one estate. Only a courtier whose *current*
 estate matches may occupy a seat.
 
 | Seat | Estate |
@@ -17,11 +17,14 @@ estate matches may occupy a seat.
 | Field General | Military |
 | Praetorian Chief | Military |
 | Master of the Exchequer | Merchant |
+| Harbormaster | Merchant |
 | Guildmaster | Commons |
 
-The two Church seats are mechanically identical, as are the two Military
-seats; the engine therefore treats them as interchangeable when a card only
-needs "an empty matching seat".
+Church, Military and Merchant each seat a mechanically identical pair; Commons
+seats one. The engine treats the members of a pair as interchangeable when a
+card only needs "an empty matching seat". ("Harbormaster" is a placeholder
+name -- it lives in `Seat` in `succession/enums.py` and nothing else depends on
+the spelling.)
 
 The **outer circle is a single shared court**, not a per-player tableau.
 Nobody owns a courtier: agendas are read off the board, and any player may
@@ -71,22 +74,22 @@ state, **both** players win and the game is logged as a double win.
 
 | Agenda | Copies | Condition |
 |---|---|---|
-| House Rising | 3 (one per family) | That family holds **3+** of the 6 inner seats, **two of them in a single estate** |
-| Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 6 inner seats |
-| Conquest | 1 | **3 barbarians in the inner circle** and both Military seats held |
+| House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **two of them in a single estate** |
+| Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
+| Barbarian Conquest | 1 | **3 barbarians in the inner circle**, *or* both Military seats held by barbarians |
 | Balance | 1 | Inner circle simultaneously shows all three families, both faiths, and a barbarian |
 
+Barbarian Conquest has two routes and either one wins outright: a bloc of
+three seated barbarians anywhere in the inner circle, or both generals. Two
+barbarian generals therefore win on their own.
+
 Each family fields exactly two Church, two Military and two Merchant courtiers
-and no commoner. The pair therefore has to come from one of the two-seat
-estates -- both Church seats or both Military seats -- plus a third seat
-anywhere. One Church + one Military + the Exchequer is three seats but no
-pair, and does not win.
+and no commoner, and each of those three estates seats a pair, so every house
+has a pair it can take. Three seats spread one-per-estate is still not a win.
 
 By default a family's preferred estate is *emergent*: whichever estate it
 manages to double up in. `--house-preferred-estates amonides=church,...` fixes
-it per family instead, and then only that estate's seats count toward the
-pair. See the open question below before using it -- Merchant has a single
-inner seat, so a family fixed to Merchant can never win.
+it per family instead, and then only that estate's seats count toward the pair.
 
 Four of the seven agendas are dealt out; the other three stay in fog and are
 the pool `Schismatic Event` draws from.
@@ -107,8 +110,9 @@ first; the flag flips it.
 | # | Decision | Default | Flag |
 |---|---|---|---|
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
-| 2 | **Conquest's Military seats need only be occupied**, by anyone -- the three barbarians it needs are counted in the inner circle, so the two generals need not themselves be barbarians. | any occupants | `--strict-conquest` requires barbarian generals |
-| 2b | **A family's preferred estate is emergent** -- whichever of the two-seat estates it doubles up in. | emergent | `--house-preferred-estates` fixes it per family; `--house-any-three` drops the pair requirement entirely |
+| 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
+| 2b | **A family's preferred estate is emergent** -- whichever pair estate it doubles up in. | emergent | `--house-preferred-estates` fixes it per family; `--house-any-three` drops the pair requirement entirely |
+| 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
@@ -152,39 +156,41 @@ Open questions behind that table:
 5. **Does a Defense really never stop an Event?** Implemented exactly as
    written; worth confirming, because it makes majors unanswerable.
 
-# Open question: which estate does each family prefer?
+# Open question: fix each family's preferred estate, or leave it emergent?
 
-House Rising is three seats with two of them in one estate. What is still open
-is whether each family has a *fixed* preferred estate or simply doubles up
-wherever it can.
+The seventh seat settled the hard part. Merchant now seats a pair, so all three
+affiliations from the source document work: Amonides/Church, Mitreas/Merchant,
+Argaian/Military. Mitreas went from 0 wins in 1,086 games to winning normally.
 
-The board makes a fixed mapping awkward: **only Church and Military have two
-inner seats.** Merchant (Master of the Exchequer) and Commons (Guildmaster)
-have one each. So the affiliations from the source document --
-Amonides/Church, Mitreas/Merchant, Argaian/Military -- cannot all work: a
-family fixed to Merchant has only one seat to pair in.
+What is left is a balance choice (2,500 games each):
 
-Simulated (2,000 games, `--house-preferred-estates
-amonides=church,mitreas=merchant,argaian=military`):
-
-| Agenda | Fixed mapping | Emergent (default) |
+| Agenda | Emergent (default) | Fixed mapping |
 |---|---|---|
-| House Rising: Amonides | 5.6% | 9.4% |
-| House Rising: Argaian | 5.6% | 8.7% |
-| House Rising: Mitreas | **0.0%** (0 of 1,086) | 9.0% |
+| House Rising: Amonides | 9.5% | 3.5% |
+| House Rising: Mitreas | 9.3% | 4.3% |
+| House Rising: Argaian | 8.8% | 3.5% |
 
-Mitreas did not win a single game, and cannot: it can hold every seat it is
-able to hold -- five of six, since it has no commoner for the Guildmaster --
-and still never pair in Merchant.
+Fixing the mapping roughly halves the houses, because a house that draws the
+wrong courtiers can no longer pivot to the estate it *can* pair in. The houses
+are already the hardest agenda at ~9%; at ~4% they would be close to
+decorative. If the fixed affiliations matter thematically, they probably want
+a compensating buff -- three seats with no pair requirement
+(`--house-any-three`, ~14%) would land in the right range.
 
-Three ways out, if you want fixed affiliations:
+# Open question: how many seats should a faith need?
 
-1. **Leave it emergent** (the default today). Houses land at ~9% each and the
-   three are within a point of each other, which is what you want from three
-   copies of one agenda.
-2. **Give Mitreas a two-seat estate.** Amonides/Church and Argaian/Military
-   are natural; Mitreas would need Church or Military too, which muddies the
-   three-way identity.
-3. **Add a second Merchant seat** (or make the Guildmaster seat Merchant-or-
-   Commons), so all three affiliated estates have a pair to take. This is the
-   only option that keeps Mitreas commercial, and it changes the board.
+Faith Ascendant was "4 of 6" -- two-thirds. The board is now seven seats, so
+four is a bare majority and the faiths became the two strongest agendas.
+`--faith-seats 5` restores the two-thirds shape (2,500 games each):
+
+| Agenda | 4 of 7 (default) | 5 of 7 |
+|---|---|---|
+| Faith Ascendant: Mystery Cults | 43.6% | 23.4% |
+| Faith Ascendant: Old Gods | 40.9% | 19.5% |
+| Balance | 39.0% | 50.4% |
+| Barbarian Conquest | 33.3% | 43.0% |
+| House Rising (mean) | 9.2% | 13.9% |
+
+Five is not obviously better: it does not tighten the overall spread (13-50%
+against 9-44%), it just hands the lead to Balance, and it stretches the mean
+game from 43 to 52 player-turns. Four is the current default.

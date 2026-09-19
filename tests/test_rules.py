@@ -18,6 +18,7 @@ from succession.courtiers import COURTIERS
 from succession.engine import apply_action, check_winners, draw, play_game, setup_game
 from succession.enums import (
     SEAT_ESTATE,
+    SEATS,
     CardKind,
     Estate,
     Faith,
@@ -50,7 +51,7 @@ class FixedRng:
 def fresh(**overrides) -> GameState:
     state = GameState.new(Config(**overrides))
     state.deck = []
-    state.agendas = ["balance", "conquest", "house_amonides", "faith_old_gods"][
+    state.agendas = ["balance", "barbarian_conquest", "house_amonides", "faith_old_gods"][
         : state.config.num_players
     ]
     state.unused_agendas = [
@@ -164,7 +165,7 @@ class TestHandVsPromotion(unittest.TestCase):
         state = fresh()
         outer(state, "Golden Thumb")  # Merchant
         seats = {a.seat for a in legal_actions(state, 0) if a.kind == MOVE}
-        self.assertEqual(seats, {Seat.EXCHEQUER})
+        self.assertEqual(seats, {Seat.EXCHEQUER, Seat.HARBORMASTER})
 
     def test_promotion_needs_an_occupied_seat(self):
         state = fresh()
@@ -500,21 +501,29 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_a_single_seat_estate_cannot_supply_a_pair(self):
-        """Merchant has one inner seat, so Mitreas can never pair there."""
+    def test_every_family_estate_has_a_pair_of_seats_to_take(self):
+        """Church, Military and Merchant each seat two, so no house is locked out."""
 
-        state = fresh(house_preferred_estates=(("Mitreas", "Merchant"),))
-        agenda = AGENDAS_BY_KEY["house_mitreas"]
-        seat(state, "Golden Thumb", Seat.EXCHEQUER)  # the only Merchant seat
-        seat(state, "Initiate of the Seven Veils", Seat.CHIEF_PRIEST)
-        seat(state, "Whisperer to the Serpent", Seat.ORACLE)
-        seat(state, "Crosser of Rivers", Seat.FIELD_GENERAL)
-        seat(state, "Rider of the Long Road", Seat.PRAETORIAN_CHIEF)
-        # Mitreas holds every seat it could ever legally hold -- it has no
-        # commoner for the Guildmaster -- and still cannot pair in Merchant.
-        self.assertEqual(len(state.inner_uids()), 5)
-        self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(satisfied(judged_as(state), agenda))
+        for family, estate, names in (
+            ("Amonides", "Church", ("Beloved of the Gods", "Hand of the Oracle", "Weigher of Grain")),
+            ("Argaian", "Military", ("Horse Breaker", "Destroyer of Walls", "Reader of Omens")),
+            ("Mitreas", "Merchant", ("Golden Thumb", "Buyer of Cities", "Initiate of the Seven Veils")),
+        ):
+            with self.subTest(family=family):
+                state = fresh(house_preferred_estates=((family, estate),))
+                agenda = AGENDAS_BY_KEY[f"house_{family.lower()}"]
+                pair = [s for s in SEATS if SEAT_ESTATE[s].value == estate]
+                state.seats[pair[0]] = uid(state, names[0])
+                state.seats[pair[1]] = uid(state, names[1])
+                self.assertFalse(satisfied(state, agenda))  # the pair is only two seats
+                spare = next(
+                    s
+                    for s in SEATS
+                    if state.seats[s] is None
+                    and SEAT_ESTATE[s] is state.cstate[uid(state, names[2])].estate
+                )
+                state.seats[spare] = uid(state, names[2])
+                self.assertTrue(satisfied(state, agenda))
 
     def test_faith_ascendant_needs_four_seats(self):
         state = fresh()
@@ -525,51 +534,37 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_conquest_needs_three_barbarians_in_the_inner_circle(self):
+    def test_barbarian_conquest_wins_on_three_seated_barbarians(self):
         state = fresh()
-        agenda = AGENDAS_BY_KEY["conquest"]
-        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
-        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
-        self.assertFalse(satisfied(state, agenda))  # only two barbarians seated
+        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
+        self.assertFalse(satisfied(state, agenda))
+        seat(state, "Master Mason", Seat.GUILDMASTER)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_conquest_ignores_barbarians_in_the_outer_circle(self):
+    def test_barbarian_conquest_wins_on_both_generals(self):
         state = fresh()
-        agenda = AGENDAS_BY_KEY["conquest"]
+        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
+        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
+        self.assertFalse(satisfied(state, agenda))
+        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
+        self.assertTrue(satisfied(state, agenda))  # two barbarians is enough here
+
+    def test_barbarian_conquest_generals_must_be_barbarians(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
         seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
+        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
+        self.assertFalse(satisfied(state, agenda))
+
+    def test_barbarian_conquest_ignores_the_outer_circle(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         outer(state, "Master Mason", "Priest of the Two-Horned God", "Hundred-Kill Rider")
         self.assertFalse(satisfied(state, agenda))
-
-    def test_conquest_still_needs_both_military_seats(self):
-        state = fresh()
-        agenda = AGENDAS_BY_KEY["conquest"]
-        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
-        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
-        seat(state, "Master Mason", Seat.GUILDMASTER)
-        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
-        self.assertFalse(satisfied(state, agenda))  # Praetorian Chief still empty
-        seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
-        self.assertTrue(satisfied(state, agenda))
-
-    def test_strict_conquest_requires_barbarian_generals(self):
-        state = fresh(conquest_requires_barbarian_generals=True)
-        agenda = AGENDAS_BY_KEY["conquest"]
-        seat(state, "Priest of the Two-Horned God", Seat.CHIEF_PRIEST)
-        seat(state, "Caravan-Lord of the Salt Road", Seat.EXCHEQUER)
-        seat(state, "Master Mason", Seat.GUILDMASTER)
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
-        seat(state, "Crosser of Rivers", Seat.PRAETORIAN_CHIEF)
-        self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(
-            satisfied(
-                judged_as(state, conquest_requires_barbarian_generals=False), agenda
-            )
-        )
-        seat(state, "Cataphract of the Iron Bridge", Seat.FIELD_GENERAL)
-        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
-        self.assertTrue(satisfied(state, agenda))
 
     def test_balance_needs_every_family_both_faiths_and_a_barbarian(self):
         state = fresh()
@@ -583,7 +578,7 @@ class TestWinConditions(unittest.TestCase):
 
     def test_simultaneous_agendas_both_win(self):
         state = fresh()
-        state.agendas = ["faith_mystery_cults", "house_mitreas", "conquest", "balance"]
+        state.agendas = ["faith_mystery_cults", "house_mitreas", "barbarian_conquest", "balance"]
         seat(state, "Initiate of the Seven Veils", Seat.CHIEF_PRIEST)
         seat(state, "Whisperer to the Serpent", Seat.ORACLE)
         seat(state, "Crosser of Rivers", Seat.FIELD_GENERAL)
