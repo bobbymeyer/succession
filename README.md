@@ -76,22 +76,22 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 54.0 player-turns (13.9 rounds), median 48, max 272
-Double wins: 5.9%          Timeouts: 0%
+Game length: mean 52.5 player-turns (13.5 rounds), median 47, max 264
+Double wins: 6.8%          Timeouts: 0%
 
-Win rate by tier      naive 10.6%   greedy 26.2%   strategic 58.5%
+Win rate by tier      naive 10.6%   greedy 26.8%   strategic 58.9%
 
-Win rate by agenda    Barbarian Conquest              30.2%
-                      House Rising: Mitreas           29.4%
-                      House Rising: Amonides          28.6%
-                      House Rising: Argaian           27.3%
-                      Balance                         25.5%
-                      Faith Ascendant: Old Gods       24.1%
-                      Faith Ascendant: The One God    23.4%
-                      Faith Ascendant: Mystery Cults  23.3%
+Win rate by agenda    Barbarian Conquest              30.5%
+                      House Rising: Mitreas           28.0%
+                      Faith Ascendant: Old Gods       27.9%
+                      House Rising: Amonides          27.1%
+                      Faith Ascendant: Mystery Cults  26.1%
+                      Faith Ascendant: The One God    25.0%
+                      Balance                         24.9%
+                      House Rising: Argaian           24.5%
 ```
 
-1. **All eight agendas sit inside 7.0 points**, from 23.3% to 30.2%, against
+1. **All eight agendas sit inside 6.0 points**, from 24.5% to 30.5%, against
    2–53% under the first draft of the rules.
 
 2. **Table-wide events narrowed the skill gap rather than widening it.** The
@@ -111,30 +111,28 @@ Win rate by agenda    Barbarian Conquest              30.2%
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.7% | 41.0 turns |
-   | with a strategic bot | 15.8% | 54.0 turns |
+   | without a strategic bot | 26.8% | 39.3 turns |
+   | with a strategic bot | 16.0% | 52.5 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
-### Every faith gets the same bench
+### Every faith gets the same bench where it counts
 
-Three faiths at twelve courtiers each, with identical estate spreads:
+Nobody is born Godless — it is somewhere Apostasy sends a courtier, never
+somewhere they start. Forty courtiers do not divide by three, so the roster is
+14 / 13 / 13, and the odd card is parked in Commons:
 
 | | Church | Military | Merchant | Commons |
 |---|---|---|---|---|
-| Old Gods | 3 | 4 | 3 | 2 |
-| Mystery Cults | 3 | 4 | 3 | 2 |
-| The One God | 3 | 4 | 3 | 2 |
-| Godless | 0 | 0 | 0 | 4 |
+| Old Gods | 3 | 4 | 3 | 4 |
+| Mystery Cults | 3 | 4 | 3 | 3 |
+| The One God | 3 | 4 | 3 | 3 |
 
-Earlier rounds established that faith parity is about benches rather than head
-count, so the roster was built to that shape directly. Keeping all four Godless
-in Commons is what makes it possible — Commons seats one courtier, so it is the
-only estate with slack to spare. The result: the three faiths land within 1.3
-points of each other.
-
-Balance now asks for all three faiths. Letting it settle for any two is worth
-about three points to it (34.4% → 37.3%).
+Commons seats one courtier against two apiece for the other three estates, so
+that is the cheapest place to put an imbalance — but it is not free. Moving the
+fourteenth card from Old Gods to Mystery Cults moves the lead with it, worth
+about a point and a half. Two more courtiers, one commoner and one barbarian,
+would make it 14 / 14 / 14 without touching the houses.
 
 ### What the Balance threshold buys
 

@@ -121,24 +121,32 @@ class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
         self.assertEqual(len(COURTIERS), 40)
         faith = collections.Counter(c.faith for c in COURTIERS)
-        # The three faiths are level with each other; the Godless are not.
-        self.assertEqual(faith[Faith.OLD_GODS], 12)
-        self.assertEqual(faith[Faith.MYSTERY_CULTS], 12)
-        self.assertEqual(faith[Faith.ONE_GOD], 12)
-        self.assertEqual(faith[Faith.GODLESS], 4)
+        # Forty does not divide by three, so one faith carries the odd card.
+        self.assertEqual(faith[Faith.OLD_GODS], 14)
+        self.assertEqual(faith[Faith.MYSTERY_CULTS], 13)
+        self.assertEqual(faith[Faith.ONE_GOD], 13)
 
-    def test_each_faith_gets_the_same_estates(self):
-        """Every faith fields the same bench, so none is short of seats."""
+    def test_nobody_is_born_godless(self):
+        """Godlessness is somewhere Apostasy sends you, not somewhere you start."""
+
+        self.assertEqual([c.name for c in COURTIERS if c.faith is Faith.GODLESS], [])
+
+    def test_each_faith_gets_the_same_bench_where_it_counts(self):
+        """Identical in the paired estates; the odd card sits in Commons.
+
+        Church, Military and Merchant seat two apiece, so a courtier there is
+        worth far more than one queuing for the single Guildmaster's chair --
+        which is why the uneven remainder is parked in Commons.
+        """
 
         for faith in FAITHS:
             estates = collections.Counter(
                 c.estate for c in COURTIERS if c.faith is faith
             )
-            self.assertEqual(
-                dict(estates),
-                {Estate.CHURCH: 3, Estate.MILITARY: 4, Estate.MERCHANT: 3, Estate.COMMONS: 2},
-                faith.value,
-            )
+            self.assertEqual(estates[Estate.CHURCH], 3, faith.value)
+            self.assertEqual(estates[Estate.MILITARY], 4, faith.value)
+            self.assertEqual(estates[Estate.MERCHANT], 3, faith.value)
+            self.assertIn(estates[Estate.COMMONS], (3, 4), faith.value)
         origin = collections.Counter(c.origin for c in COURTIERS)
         self.assertEqual(origin[Origin.IMPERIAL], 32)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
@@ -173,14 +181,6 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
         self.assertEqual(len(cards), 84)
-
-    def test_the_godless_are_few_and_all_commoners(self):
-        """Keeping the Godless in Commons is what lets the faiths share estates."""
-
-        godless = [c for c in COURTIERS if c.faith is Faith.GODLESS]
-        self.assertEqual(len(godless), 4)
-        self.assertTrue(all(c.estate is Estate.COMMONS for c in godless))
-        self.assertGreaterEqual(len({c.house for c in godless}), 3)
 
     def test_every_house_fields_one_charioteer(self):
         """A house's charioteer is its only route to the Guildmaster's seat."""
@@ -414,10 +414,16 @@ class TestGodlessness(unittest.TestCase):
 
     def test_apostasy_cannot_target_the_godless(self):
         state = fresh()
-        card = give(state, 0, "Apostasy")[0]
-        target = outer(state, "Ten Thousand Verses")[0]  # already godless
+        first, second = give(state, 0, "Apostasy", "Apostasy")
+        target = outer(state, "Ten Thousand Verses")[0]
+        apply_action(
+            state,
+            0,
+            Action(PLAY, card=first, courtier=target, value=Faith.GODLESS.value),
+            FixedRng(),
+        )
         self.assertEqual(
-            [a for a in card_actions(state, 0, card) if a.courtier == target], []
+            [a for a in card_actions(state, 0, second) if a.courtier == target], []
         )
 
     def test_a_courtier_may_convert_or_apostatise_but_not_both(self):
@@ -434,10 +440,14 @@ class TestGodlessness(unittest.TestCase):
             [a for a in card_actions(state, 0, conversion) if a.courtier == target], []
         )
 
-    def test_conversion_redeems_the_godless_to_either_faith(self):
+    def test_conversion_redeems_the_godless_to_any_faith(self):
         state = fresh()
         card = give(state, 0, "Conversion")[0]
         target = outer(state, "Master Swordsmith")[0]
+        # Excommunication leaves the same empty slot Apostasy would, without
+        # spending the courtier's one faith change.
+        strip = give(state, 0, "Excommunication")[0]
+        apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
         options = {a.value for a in card_actions(state, 0, card) if a.courtier == target}
         self.assertEqual(options, {f.value for f in FAITHS})
 
@@ -446,7 +456,14 @@ class TestGodlessness(unittest.TestCase):
         for agenda_key in ("faith_old_gods", "faith_mystery_cults"):
             agenda = AGENDAS_BY_KEY[agenda_key]
             self.assertFalse(satisfied(state, agenda))
-        seat(state, "Ten Thousand Verses", Seat.GUILDMASTER)          # godless
+        godless = seat(state, "Ten Thousand Verses", Seat.GUILDMASTER)
+        apostasy = give(state, 0, "Apostasy")[0]
+        apply_action(
+            state,
+            0,
+            Action(PLAY, card=apostasy, courtier=godless, value=Faith.GODLESS.value),
+            FixedRng(),
+        )
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)         # Old Gods
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)   # Old Gods
         seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)      # Old Gods
