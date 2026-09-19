@@ -29,16 +29,35 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from succession.cards import build_cards  # noqa: E402
 from succession.enums import CardKind  # noqa: E402
 
-#: Shared tail. Anchors the period positively first, then names the exclusions.
-#: Move the final sentence into a negative-prompt node if your workflow has one.
+#: Shared positive tail. Purely an anchor for the period and the medium -- every
+#: exclusion lives in `NEGATIVE` and is written to negative.txt instead, so no
+#: prompt ever names a thing it does not want.
 STYLE = (
     "Epic painted card illustration, oil on panel, dramatic cinematic light, "
     "deep saturated colour, fine brushwork, ornate detail, 2:3 vertical portrait "
     "aspect. Hellenistic Greek and successor-kingdom world: chiton, himation, "
     "chlamys, kausia, linothorax, bronze muscle cuirass, pteruges, Phrygian and "
     "Boeotian helms, sarissa and kopis, painted polychrome marble, Doric and "
-    "Ionic columns. No Roman togas or legionaries, no medieval knights, armour "
-    "or castles, nothing modern or futuristic."
+    "Ionic columns, encaustic panel painting and Pergamene sculpture."
+)
+
+#: One shared negative prompt for the whole batch, written to negative.txt.
+#: First three groups are the period exclusions from the brief; the last group
+#: is ordinary render hygiene and can be cut without affecting the look.
+NEGATIVE = (
+    "Roman, toga, legionary, centurion, lorica segmentata, gladius, scutum, "
+    "aquila standard, Latin inscription, Colosseum, Roman arch, "
+    "medieval, knight, plate armour, chainmail, mail hauberk, great helm, "
+    "heraldry, coat of arms, tabard, crusader, castle, gothic cathedral, "
+    "pointed arch, stained glass, monk's habit, wimple, longsword, "
+    "Renaissance, baroque dress, Viking, samurai, "
+    "modern, contemporary clothing, suit, jeans, t-shirt, eyeglasses, "
+    "wristwatch, wires, electric light, firearm, vehicle, "
+    "futuristic, science fiction, cyberpunk, neon, robot, spacecraft, chrome, "
+    "hologram, "
+    "anime, cartoon, 3d render, cgi, photograph, watermark, signature, text, "
+    "caption, logo, border frame, blurry, low resolution, malformed hands, "
+    "extra fingers, extra limbs"
 )
 
 FRAMING = {
@@ -736,7 +755,11 @@ def main() -> None:
     prompts, filenames = build_lines()
     (root / "prompts.txt").write_text("\n".join(prompts) + "\n", encoding="utf-8")
     (root / "filenames.txt").write_text("\n".join(filenames) + "\n", encoding="utf-8")
-    print(f"wrote {len(prompts)} prompts and {len(filenames)} filenames")
+    # One line, shared by every prompt. If your loader reads the negative file
+    # line by line alongside the positives, repeat it 84 times:
+    #   yes "$(cat negative.txt)" | head -n $(wc -l < prompts.txt) > negative_batch.txt
+    (root / "negative.txt").write_text(NEGATIVE + "\n", encoding="utf-8")
+    print(f"wrote {len(prompts)} prompts, {len(filenames)} filenames, 1 negative")
 
 
 if __name__ == "__main__":
