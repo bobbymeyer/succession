@@ -19,6 +19,11 @@ class Estate(str, Enum):
 class Faith(str, Enum):
     OLD_GODS = "Old Gods"
     MYSTERY_CULTS = "Mystery Cults"
+    ONE_GOD = "The One God"
+    #: Actively godless. A real faith value a courtier can be born with or be
+    #: pushed into by Apostasy -- distinct from NONE, which is the empty slot
+    #: an Excommunication leaves behind.
+    GODLESS = "Godless"
     NONE = "None"
 
 
@@ -50,25 +55,29 @@ class Seat(str, Enum):
     FIELD_GENERAL = "Field General"
     PRAETORIAN_CHIEF = "Praetorian Chief"
     EXCHEQUER = "Master of the Exchequer"
+    HARBORMASTER = "Harbormaster"
     GUILDMASTER = "Guildmaster"
 
 
-#: Only a courtier whose estate matches may occupy a seat.
+#: Only a courtier whose estate matches may occupy a seat. Church, Military
+#: and Merchant each have a pair of mechanically identical seats; Commons has
+#: one.
 SEAT_ESTATE: dict[Seat, Estate] = {
     Seat.CHIEF_PRIEST: Estate.CHURCH,
     Seat.ORACLE: Estate.CHURCH,
     Seat.FIELD_GENERAL: Estate.MILITARY,
     Seat.PRAETORIAN_CHIEF: Estate.MILITARY,
     Seat.EXCHEQUER: Estate.MERCHANT,
+    Seat.HARBORMASTER: Estate.MERCHANT,
     Seat.GUILDMASTER: Estate.COMMONS,
 }
 
 SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
 
-MILITARY_SEATS: tuple[Seat, ...] = (Seat.FIELD_GENERAL, Seat.PRAETORIAN_CHIEF)
-CHURCH_SEATS: tuple[Seat, ...] = (Seat.CHIEF_PRIEST, Seat.ORACLE)
 
-FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS)
+#: The faiths an agenda can be built on. Godlessness deliberately has none: a
+#: godless courtier in a seat is a seat no faith can count.
+FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS, Faith.ONE_GOD)
 FAMILIES: tuple[Family, ...] = (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN)
 
 

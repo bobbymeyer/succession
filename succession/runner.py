@@ -16,14 +16,54 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
-from .agendas import AGENDAS
+from .agendas import AGENDA_KEYS, AGENDAS
 from .analysis import format_summary, summarize
 from .bots import BOT_TIERS, make_bot
+from .enums import FAMILIES, Estate
 from .engine import GameResult, play_game
 from .logsink import open_sink, read_rows, row
 from .state import Config
 
 DEFAULT_PLAYERS = "naive,greedy,strategic,naive"
+
+
+def parse_preferred_estates(spec: str) -> tuple[tuple[str, str], ...]:
+    """Parse ``amonides=church,argaian=military`` into a family->estate mapping."""
+
+    if not spec:
+        return ()
+    families = {f.value.lower(): f.value for f in FAMILIES}
+    estates = {e.value.lower(): e.value for e in Estate}
+    pairs: list[tuple[str, str]] = []
+    for item in spec.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        if "=" not in item:
+            raise SystemExit(f"--house-preferred-estates: expected family=estate, got {item!r}")
+        family, estate = (part.strip().lower() for part in item.split("=", 1))
+        if family not in families:
+            raise SystemExit(f"unknown family {family!r} (have: {', '.join(sorted(families))})")
+        if estate not in estates:
+            raise SystemExit(f"unknown estate {estate!r} (have: {', '.join(sorted(estates))})")
+        pairs.append((families[family], estates[estate]))
+    return tuple(pairs)
+
+
+def parse_dropped_agendas(spec: str) -> tuple[str, ...]:
+    if not spec:
+        return ()
+    keys = []
+    for item in spec.split(","):
+        key = item.strip().lower().replace(" ", "_").replace("-", "_")
+        if not key:
+            continue
+        if key not in AGENDA_KEYS:
+            raise SystemExit(
+                f"unknown agenda {key!r} (have: {', '.join(AGENDA_KEYS)})"
+            )
+        keys.append(key)
+    return tuple(keys)
 
 
 def build_config(args: argparse.Namespace) -> Config:
@@ -46,7 +86,12 @@ def build_config(args: argparse.Namespace) -> Config:
         outmaneuver_copies=args.outmaneuver_copies,
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
         defense_requires_matching_target=args.defense_matches_target,
-        conquest_requires_barbarian_generals=args.strict_conquest,
+        house_rising_requires_preferred_seat=not args.house_any_three,
+        house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
+        faith_seats=args.faith_seats,
+        balance_seats=args.balance_seats,
+        balance_barbarians=args.balance_barbarians,
+        excluded_agendas=parse_dropped_agendas(args.drop_agendas),
     )
 
 
@@ -134,7 +179,12 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
-    parser.add_argument("--strict-conquest", action="store_true", help="Conquest needs both Military seats held by barbarians")
+    parser.add_argument("--balance-seats", type=int, default=7, help="seats that must be filled for Balance to count (default: all 7)")
+    parser.add_argument("--balance-barbarians", type=int, default=2, help="barbarians Balance wants seated (default 2)")
+    parser.add_argument("--drop-agendas", default="", metavar="KEYS", help="leave agendas out of the pool entirely, e.g. balance")
+    parser.add_argument("--faith-seats", type=int, default=4, help="inner seats a faith must hold to win (default 4 of 7)")
+    parser.add_argument("--house-any-three", action="store_true", help="drop the preferred-estate requirement: any three seats of a family win")
+    parser.add_argument("--house-preferred-estates", default="", metavar="SPEC", help="override a family's own estate, e.g. mitreas=church (default: amonides=church, mitreas=merchant, argaian=military)")
 
 
 def build_parser() -> argparse.ArgumentParser:

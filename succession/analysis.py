@@ -7,6 +7,7 @@ from collections import Counter, defaultdict
 from typing import Any, Sequence
 
 from .agendas import AGENDAS_BY_KEY
+from .enums import SEATS
 
 TIER_ORDER = ("naive", "greedy", "strategic")
 
@@ -111,7 +112,7 @@ def format_summary(s: dict[str, Any]) -> str:
         f"median {s['turns_median']:.0f}  min {s['turns_min']}  max {s['turns_max']}  "
         f"(mean {s['rounds_mean']:.1f} rounds)",
         f"Double wins: {s['double_wins']} ({s['double_win_rate']:.2%})",
-        f"Mean inner seats filled at end: {s['inner_filled_mean']:.2f}/6   "
+        f"Mean inner seats filled at end: {s['inner_filled_mean']:.2f}/{len(SEATS)}   "
         f"courtiers killed: {s['courtiers_killed_mean']:.1f}   "
         f"deck reshuffles: {s['reshuffles_mean']:.2f}",
         "-" * 64,

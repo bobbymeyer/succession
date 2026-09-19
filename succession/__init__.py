@@ -31,4 +31,4 @@ __all__ = [
     "play_game",
     "setup_game",
 ]
-__version__ = "0.1.0"
+__version__ = "0.1.0a1"  # playtest alpha

@@ -1,8 +1,15 @@
-# Court of Succession — headless simulator
+# Court of Succession — playtest alpha
 
 A dependency-free Python simulator for the card-driven succession game: full
 card and board model, a rules engine, three tiers of bot, and a CLI that runs
 N games and logs each one to CSV or SQLite for balance analysis.
+
+**Playtest alpha.** The rules are settled enough to put in front of players:
+every agenda is winnable, the eight of them sit inside seven points of each
+other, and 24,000 simulated games resolve without a single stall. What is
+alpha about it is that none of it has been played by a human yet — the numbers
+come from bots, and the open questions in `docs/RULES.md` are the ones a table
+will answer faster than a batch run.
 
 Stdlib only, Python 3.10+. It runs the same from a terminal or from a chat
 code-execution sandbox — no install step, no packages to fetch.
@@ -21,13 +28,13 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 
 | File | What's in it |
 |---|---|
-| `succession/courtiers.py` | The 34-courtier attribute table (estate · faith · family · origin) |
+| `succession/courtiers.py` | The 40-courtier attribute table (estate · faith · family · origin) |
 | `succession/cards.py` | Every card, deck construction, and the event-effect table |
 | `succession/enums.py` | Estates, faiths, families, origins, the six seats |
 | `succession/state.py` | `Config` (every rules knob) and `GameState` (cheap to clone) |
 | `succession/actions.py` | Legal-move generation, including hand-vs-promotion enforcement |
 | `succession/engine.py` | Card resolution, the turn loop, win checking |
-| `succession/agendas.py` | The seven agendas: win predicates and the bots' progress metric |
+| `succession/agendas.py` | The eight agendas: win predicates and the bots' progress metric |
 | `succession/bots.py` | Naive, greedy, and strategic bots |
 | `succession/logsink.py` | CSV and SQLite writers, one row per game |
 | `succession/analysis.py` | Batch summary statistics |
@@ -66,61 +73,134 @@ works: run one batch with a strategic seat and one without, then pool them.
 
 ## First findings
 
-4,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
+6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 49.1 player-turns (12.6 rounds), median 44, max 236
-Double wins: 3.2%          Timeouts: 0%
+Game length: mean 54.0 player-turns (13.9 rounds), median 48, max 272
+Double wins: 5.9%          Timeouts: 0%
 
-Win rate by tier      naive 15.6%   greedy 23.2%   strategic 48.9%
+Win rate by tier      naive 10.6%   greedy 26.2%   strategic 58.5%
 
-Win rate by agenda    Conquest                        53.3%
-                      Faith Ascendant: Old Gods       39.8%
-                      Balance                         38.9%
-                      Faith Ascendant: Mystery Cults  38.2%
-                      House Rising: Amonides           2.4%
-                      House Rising: Argaian            2.3%
-                      House Rising: Mitreas            1.9%
+Win rate by agenda    Barbarian Conquest              30.2%
+                      House Rising: Mitreas           29.4%
+                      House Rising: Amonides          28.6%
+                      House Rising: Argaian           27.3%
+                      Balance                         25.5%
+                      Faith Ascendant: Old Gods       24.1%
+                      Faith Ascendant: The One God    23.4%
+                      Faith Ascendant: Mystery Cults  23.3%
 ```
 
-Three things fall out of that, all worth a design conversation:
+1. **All eight agendas sit inside 7.0 points**, from 23.3% to 30.2%, against
+   2–53% under the first draft of the rules.
 
-1. **House Rising is close to unwinnable — ~2% against ~40% for the others.**
-   It is the only agenda needing four *specific* courtiers seated at once, and
-   estate coverage makes even that hard: each house has 2 Church, 2 Military
-   and 2 Merchant courtiers and *no* commoner, so it can reach at most five of
-   the six seats, and every rival can undo a seat with one card. Options: drop
-   the threshold to 3 seats, count a house's outer-circle courtiers, or let a
-   house claim the Guildmaster seat.
+2. **Table-wide events narrowed the skill gap rather than widening it.** The
+   strategic bot came down from 62.0% to 58.5% and the greedy bot rose from
+   23.2% to 26.2%. Events that hit everybody — a purge that kills four
+   courtiers at once, a freeze that protects whoever is ahead, a redeal that
+   throws away everyone's plans — disrupt a carefully built position as much as
+   a careless one. The single-target version they replaced rewarded the player
+   tracking the whole board; these do not.
 
-2. **Conquest is the easiest agenda, and it is the "anywhere in play" clause
-   doing it** — three barbarians merely need to be on the table, including in
-   the outer circle, and the two Military seats fill up on their own. Running
-   with `--strict-conquest` (both Military seats held *by barbarians*) over
-   3,000 games moves it from 53% to 24% and puts it below the two faith
-   agendas, which looks much healthier.
+3. **Events are played about twice a game**, down from four times when they
+   were single-target. Four of the five pairs advance nobody's agenda directly,
+   so they are held for the turn they matter rather than spent on sight.
 
-3. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 15.6% → 23.2% → 48.9%. A strategic bot at the table
-   also suppresses everyone else. Swapping exactly one greedy seat for a
-   strategic seat (4,000 games each, everything else held fixed):
+   Suppression, swapping exactly one greedy seat for a strategic one (6,000
+   games each):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 25.9% | 33.4 turns |
-   | with a strategic bot | 18.1% | 49.1 turns |
+   | without a strategic bot | 26.7% | 41.0 turns |
+   | with a strategic bot | 15.8% | 54.0 turns |
 
-   It takes about a third of the other players' equity and makes games ~47%
-   longer — it is genuinely denying wins, not just winning faster.
+Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
-Games always resolve: no timeouts in 15,000 games at the 600-turn cap.
+### Every faith gets the same bench
+
+Three faiths at twelve courtiers each, with identical estate spreads:
+
+| | Church | Military | Merchant | Commons |
+|---|---|---|---|---|
+| Old Gods | 3 | 4 | 3 | 2 |
+| Mystery Cults | 3 | 4 | 3 | 2 |
+| The One God | 3 | 4 | 3 | 2 |
+| Godless | 0 | 0 | 0 | 4 |
+
+Earlier rounds established that faith parity is about benches rather than head
+count, so the roster was built to that shape directly. Keeping all four Godless
+in Commons is what makes it possible — Commons seats one courtier, so it is the
+only estate with slack to spare. The result: the three faiths land within 1.3
+points of each other.
+
+Balance now asks for all three faiths. Letting it settle for any two is worth
+about three points to it (34.4% → 37.3%).
+
+### What the Balance threshold buys
+
+`--balance-seats` sets how full the court must be before Balance counts. The
+board averages 5.8 filled seats at a win, so anything up to five is a rule that
+is usually already true. 6,000 games each, on the three-faith board:
+
+| Threshold | Balance | naive wins Balance | mean turns |
+|---|---|---|---|
+| 4 of 7 | 45.5% | 28.9% | 49.4 |
+| 5 of 7 | 44.2% | 29.2% | 50.0 |
+| 6 of 7 | 41.5% | 25.5% | 51.1 |
+| **7 of 7 (current)** | **34.3%** | **20.1%** | 53.3 |
+
+The middle column is the one that matters: it is how often a player who is not
+trying wins Balance. Only the full seven brings it into line with the rest of
+the board — at 20.1% it now sits alongside Barbarian Conquest's 18.8%, where at
+five seats it was nearly double anything else.
+
+Win rate per deal by tier, on the current board:
+
+| Agenda | naive | greedy | strategic |
+|---|---|---|---|
+| Barbarian Conquest | 18.8% | 38.8% | 69.9% |
+| Balance | 20.1% | 28.6% | 66.1% |
+| House Rising (mean) | 12.9% | 23.5% | 58.9% |
+| Faith Ascendant (mean) | 6.9% | 17.6% | 49.7% |
+
+The faiths have become the board's skill agendas: a bot playing at random
+almost never lands one, and even the greedy bot only manages 17.6%.
+
+### Apostasy is the first card only one tier will play
+
+Apostasy can never advance your own agenda — it only takes a seat away from
+someone else's. The bots split exactly as their definitions say they should
+(4,000 games, counting real plays, not the lookahead the thinking bots run):
+
+| Tier | Played | Discarded | |
+|---|---|---|---|
+| naive | 876 | 322 | 73% — it is picking at random |
+| greedy | **0** | 52 | 0% — advancing nobody's agenda, so never worth a turn |
+| strategic | 467 | 35 | 93% — almost always worth a turn |
+
+### Variants already wired up
+
+| Flag | Effect on the batch |
+|---|---|
+| `--faith-seats 5` | faiths drop ~20 points; Balance and Conquest take the lead |
+| `--house-any-three` | drops the own-estate requirement |
+| `--house-preferred-estates mitreas=church` | reassign a house's own estate |
+| `--removed-out-of-game` | killed courtiers never return |
+| `--defense-matches-target` | an estate Defense may only shield its own estate |
 
 ## What still needs you
 
-`docs/RULES.md` ends with the open questions. The big one is the **event
-effects**: the brief called out that the source document's effects were written
-for the board-wide version and do not map onto single-target. The ten events
-currently use a playable placeholder table (all in one place in `cards.py`),
-but three of them duplicate "target leaves play", and `Treasure Fleet` is
-implemented as a *helpful* event — both worth a decision before the balance
-numbers above mean much.
+`docs/RULES.md` ends with the open questions. Two of them matter.
+
+**How many seats should a faith need?** Four was two-thirds of a six-seat
+board and is a bare majority of seven, which is why the faiths lead the table.
+`--faith-seats 5` restores the two-thirds shape; both sets of numbers are in
+`docs/RULES.md`. It is the one threshold the seventh seat changed the meaning
+of without anyone deciding to.
+
+**How the bots value events.** Four of the five event pairs touch hands and the
+deck rather than the board, and the bots score boards, so they need a heuristic
+to rate a Caravan above discarding it. `ThinkingBot.event_bonus` supplies one —
+crude on purpose, and the first thing to revisit if the event numbers look
+wrong. `docs/RULES.md` lists the other edges the brief left open, such as how
+long a freeze runs and what Meteor deals back.

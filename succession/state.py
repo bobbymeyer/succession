@@ -43,9 +43,20 @@ class Config:
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
-    #: Require Conquest's two Military seats to be held by barbarians, rather
-    #: than merely occupied.
-    conquest_requires_barbarian_generals: bool = False
+    #: Require one of a House Rising trio to sit in the family's own estate.
+    house_rising_requires_preferred_seat: bool = True
+    #: Inner seats a faith must hold for Faith Ascendant.
+    faith_seats: int = 4
+    #: Seats that must be filled before Balance counts.
+    balance_seats: int = 7
+    #: Barbarians Balance wants seated, not just one.
+    balance_barbarians: int = 2
+    #: Agenda keys left out of the pool entirely -- neither dealt nor available
+    #: to a Schismatic Event. For asking what the game looks like without one.
+    excluded_agendas: tuple[str, ...] = ()
+    #: Overrides for a family's own estate, e.g. (("Mitreas", "Church"),).
+    #: Unlisted families use courtiers.FAMILY_PREFERRED_ESTATE.
+    house_preferred_estates: tuple[tuple[str, str], ...] = ()
 
     @property
     def num_players(self) -> int:
@@ -103,6 +114,9 @@ class GameState:
     unused_agendas: list[str] = field(default_factory=list)
     revealed: list[bool] = field(default_factory=list)
     skip_next: list[bool] = field(default_factory=list)
+    #: Last turn number on which a freeze still holds (-1 when none does).
+    frozen_inner_until: int = -1
+    frozen_board_until: int = -1
     current: int = 0
     turn: int = 0
     reshuffles: int = 0
@@ -147,6 +161,8 @@ class GameState:
             unused_agendas=list(self.unused_agendas),
             revealed=list(self.revealed),
             skip_next=list(self.skip_next),
+            frozen_inner_until=self.frozen_inner_until,
+            frozen_board_until=self.frozen_board_until,
             current=self.current,
             turn=self.turn,
             reshuffles=self.reshuffles,
@@ -195,6 +211,27 @@ class GameState:
 
     def seat_estate(self, seat: Seat) -> Estate:
         return SEAT_ESTATE[seat]
+
+    @property
+    def inner_frozen(self) -> bool:
+        """Quarantine and Siege both seal the inner circle."""
+
+        return self.turn <= max(self.frozen_inner_until, self.frozen_board_until)
+
+    @property
+    def board_frozen(self) -> bool:
+        """Siege seals the outer circle too: no courtier moves at all."""
+
+        return self.turn <= self.frozen_board_until
+
+    def freeze(self, *, board: bool) -> None:
+        """Hold the board still until just before this player's next turn."""
+
+        until = self.turn + self.config.num_players - 1
+        if board:
+            self.frozen_board_until = max(self.frozen_board_until, until)
+        else:
+            self.frozen_inner_until = max(self.frozen_inner_until, until)
 
     def bump(self, key: str, amount: int = 1) -> None:
         self.stats[key] = self.stats.get(key, 0) + amount

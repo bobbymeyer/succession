@@ -1,7 +1,7 @@
 """Card definitions and deck construction.
 
-The play deck is 77 cards: the 34 courtiers plus 43 action cards (10 events,
-5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 8 mutations,
+The play deck is 84 cards: the 40 courtiers plus 44 action cards (10 events,
+5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 9 mutations,
 1 pivot, and N copies of Outmaneuver -- one by default).
 
 Event effects are the one place where the source document could not be carried
@@ -17,15 +17,16 @@ from dataclasses import dataclass
 from .courtiers import COURTIERS
 from .enums import CardKind, Estate, Faith, Family, Origin
 
-# --- Event effect primitives ------------------------------------------------
-# Each event resolves to exactly one of these against its single target.
-EFFECT_DEMOTE = "demote"                      # inner -> outer (no effect if outer)
-EFFECT_REMOVE = "remove"                      # courtier leaves play
-EFFECT_RECALL = "recall"                      # courtier is shuffled back into the deck
-EFFECT_BREAK_DEFENSE = "break_defense"        # discard attached defense, else demote
-EFFECT_STRIP_FAITH = "strip_faith"            # faith -> None
-EFFECT_DEMOTE_AND_BREAK = "demote_and_break"  # demote and discard attached defense
-EFFECT_INSTALL = "install"                    # free install into an empty matching seat
+# --- Event effects ----------------------------------------------------------
+# Events are not aimed at a courtier: each one hits the whole table. They come
+# in five minor/major pairs, the major being the harsher version of the minor.
+EFFECT_FREEZE_INNER = "freeze_inner"   # the inner circle cannot change for a round
+EFFECT_FREEZE_BOARD = "freeze_board"   # nothing on the board can change for a round
+EFFECT_PURGE = "purge"                 # every player names a courtier to kill
+EFFECT_DRAW_ALL = "draw_all"           # every player draws
+EFFECT_DISCARD_ALL = "discard_all"     # every player discards
+EFFECT_RESHUFFLE = "reshuffle"         # the discard pile is shuffled back into the deck
+EFFECT_REDEAL = "redeal"               # every hand is shuffled in and dealt back out
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,8 @@ class CardDef:
     tier: str | None = None
     #: Events only: which primitive above the card applies.
     effect: str | None = None
+    #: Events only: how many cards the effect moves, or how many rounds it lasts.
+    amount: int = 1
     #: Whether the target may attempt a d6 save.
     save: bool = False
     #: Strips/mutations: which attribute the card touches.
@@ -61,19 +64,29 @@ def _courtier_cards() -> list[CardDef]:
     ]
 
 
+#: Ten events in five pairs: a minor version and a harsher major one. Only the
+#: purge pair has anything to save against, and only its minor half allows it.
 EVENT_CARDS: tuple[CardDef, ...] = (
-    # Minor events: the target may attempt a save.
-    CardDef("Quarantine", CardKind.EVENT, tier="minor", effect=EFFECT_DEMOTE, save=True),
-    CardDef("Poisoning at the Feast", CardKind.EVENT, tier="minor", effect=EFFECT_REMOVE, save=True),
-    CardDef("Caravan", CardKind.EVENT, tier="minor", effect=EFFECT_RECALL, save=True),
-    CardDef("Debasement of the Coinage", CardKind.EVENT, tier="minor", effect=EFFECT_BREAK_DEFENSE, save=True),
-    CardDef("Eclipse", CardKind.EVENT, tier="minor", effect=EFFECT_STRIP_FAITH, save=True),
-    # Major events: no save.
-    CardDef("Siege", CardKind.EVENT, tier="major", effect=EFFECT_REMOVE),
-    CardDef("Plague", CardKind.EVENT, tier="major", effect=EFFECT_RECALL),
-    CardDef("Treasure Fleet", CardKind.EVENT, tier="major", effect=EFFECT_INSTALL),
-    CardDef("Famine", CardKind.EVENT, tier="major", effect=EFFECT_DEMOTE_AND_BREAK),
-    CardDef("Meteor", CardKind.EVENT, tier="major", effect=EFFECT_REMOVE),
+    #: The court is sealed: no seat changes hands for a round.
+    CardDef("Quarantine", CardKind.EVENT, tier="minor", effect=EFFECT_FREEZE_INNER),
+    #: The whole city is shut in: nothing on the board moves for a round.
+    CardDef("Siege", CardKind.EVENT, tier="major", effect=EFFECT_FREEZE_BOARD),
+    #: Every player names a courtier to die; each may roll to survive.
+    CardDef("Poisoning at the Feast", CardKind.EVENT, tier="minor", effect=EFFECT_PURGE, save=True),
+    #: The same, and nobody is spared.
+    CardDef("Plague", CardKind.EVENT, tier="major", effect=EFFECT_PURGE),
+    #: Trade arrives: a card for every player.
+    CardDef("Caravan", CardKind.EVENT, tier="minor", effect=EFFECT_DRAW_ALL, amount=1),
+    #: A fleet arrives: two cards for every player.
+    CardDef("Treasure Fleet", CardKind.EVENT, tier="major", effect=EFFECT_DRAW_ALL, amount=2),
+    #: The coin is worthless: every player discards a card.
+    CardDef("Debasement of the Coinage", CardKind.EVENT, tier="minor", effect=EFFECT_DISCARD_ALL, amount=1),
+    #: The granaries are empty: every player discards two.
+    CardDef("Famine", CardKind.EVENT, tier="major", effect=EFFECT_DISCARD_ALL, amount=2),
+    #: The sky turns over: the discard pile is shuffled back into the deck.
+    CardDef("Eclipse", CardKind.EVENT, tier="minor", effect=EFFECT_RESHUFFLE),
+    #: Everything turns over: every hand is shuffled in and dealt back out.
+    CardDef("Meteor", CardKind.EVENT, tier="major", effect=EFFECT_REDEAL),
 )
 
 PROMOTION_CARDS: tuple[CardDef, ...] = (
@@ -120,8 +133,11 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Take Vows", CardKind.MUTATION, attribute="estate", value=Estate.CHURCH.value),
     CardDef("Enter Trade", CardKind.MUTATION, attribute="estate", value=Estate.MERCHANT.value),
     CardDef("Lose Status", CardKind.MUTATION, attribute="estate", value=Estate.COMMONS.value),
-    # Conversion flips the two faiths; on a stripped courtier the player picks.
+    # Conversion flips the two faiths; on a godless or a stripped courtier
+    # the player picks which faith they come to.
     CardDef("Conversion", CardKind.MUTATION, attribute="faith"),
+    # Apostasy pushes a courtier out of faith altogether.
+    CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.GODLESS.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
     # Adoption takes its value from the family courtier sacrificed from hand.
