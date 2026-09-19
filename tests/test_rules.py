@@ -121,14 +121,22 @@ class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
         self.assertEqual(len(COURTIERS), 40)
         faith = collections.Counter(c.faith for c in COURTIERS)
-        # The three faiths are level with each other; the Godless are not.
-        self.assertEqual(faith[Faith.OLD_GODS], 12)
-        self.assertEqual(faith[Faith.MYSTERY_CULTS], 12)
-        self.assertEqual(faith[Faith.ONE_GOD], 12)
-        self.assertEqual(faith[Faith.GODLESS], 4)
+        # One cynic off the top leaves thirty-nine to split three ways.
+        self.assertEqual(faith[Faith.OLD_GODS], 13)
+        self.assertEqual(faith[Faith.MYSTERY_CULTS], 13)
+        self.assertEqual(faith[Faith.ONE_GOD], 13)
+        self.assertEqual(faith[Faith.GODLESS], 1)
 
-    def test_each_faith_gets_the_same_estates(self):
-        """Every faith fields the same bench, so none is short of seats."""
+    def test_one_commoner_is_born_godless(self):
+        """Everyone else reaches godlessness the hard way, through Apostasy."""
+
+        godless = [c for c in COURTIERS if c.faith is Faith.GODLESS]
+        self.assertEqual([c.name for c in godless], ["The Dog of the Agora"])
+        self.assertEqual(godless[0].house, "Commoner")
+        self.assertIs(godless[0].estate, Estate.COMMONS)
+
+    def test_each_faith_gets_exactly_the_same_bench(self):
+        """No faith is short of candidates for any seat."""
 
         for faith in FAITHS:
             estates = collections.Counter(
@@ -136,7 +144,7 @@ class TestData(unittest.TestCase):
             )
             self.assertEqual(
                 dict(estates),
-                {Estate.CHURCH: 3, Estate.MILITARY: 4, Estate.MERCHANT: 3, Estate.COMMONS: 2},
+                {Estate.CHURCH: 3, Estate.MILITARY: 4, Estate.MERCHANT: 3, Estate.COMMONS: 3},
                 faith.value,
             )
         origin = collections.Counter(c.origin for c in COURTIERS)
@@ -173,14 +181,6 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
         self.assertEqual(len(cards), 84)
-
-    def test_the_godless_are_few_and_all_commoners(self):
-        """Keeping the Godless in Commons is what lets the faiths share estates."""
-
-        godless = [c for c in COURTIERS if c.faith is Faith.GODLESS]
-        self.assertEqual(len(godless), 4)
-        self.assertTrue(all(c.estate is Estate.COMMONS for c in godless))
-        self.assertGreaterEqual(len({c.house for c in godless}), 3)
 
     def test_every_house_fields_one_charioteer(self):
         """A house's charioteer is its only route to the Guildmaster's seat."""
@@ -415,7 +415,7 @@ class TestGodlessness(unittest.TestCase):
     def test_apostasy_cannot_target_the_godless(self):
         state = fresh()
         card = give(state, 0, "Apostasy")[0]
-        target = outer(state, "Ten Thousand Verses")[0]  # already godless
+        target = outer(state, "The Dog of the Agora")[0]  # nothing left to lose
         self.assertEqual(
             [a for a in card_actions(state, 0, card) if a.courtier == target], []
         )
@@ -434,10 +434,14 @@ class TestGodlessness(unittest.TestCase):
             [a for a in card_actions(state, 0, conversion) if a.courtier == target], []
         )
 
-    def test_conversion_redeems_the_godless_to_either_faith(self):
+    def test_conversion_redeems_the_godless_to_any_faith(self):
         state = fresh()
         card = give(state, 0, "Conversion")[0]
         target = outer(state, "Master Swordsmith")[0]
+        # Excommunication leaves the same empty slot Apostasy would, without
+        # spending the courtier's one faith change.
+        strip = give(state, 0, "Excommunication")[0]
+        apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
         options = {a.value for a in card_actions(state, 0, card) if a.courtier == target}
         self.assertEqual(options, {f.value for f in FAITHS})
 
@@ -446,7 +450,7 @@ class TestGodlessness(unittest.TestCase):
         for agenda_key in ("faith_old_gods", "faith_mystery_cults"):
             agenda = AGENDAS_BY_KEY[agenda_key]
             self.assertFalse(satisfied(state, agenda))
-        seat(state, "Ten Thousand Verses", Seat.GUILDMASTER)          # godless
+        seat(state, "The Dog of the Agora", Seat.GUILDMASTER)      # godless
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)         # Old Gods
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)   # Old Gods
         seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)      # Old Gods

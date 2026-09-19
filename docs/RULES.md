@@ -64,25 +64,30 @@ Strips do **not** consume a courtier's mutation allowance, so a stripped
 attribute can be restored later by `Conversion` (the player picks the faith) or
 `Adoption`.
 
-## Faith and the Godless
+## Faith and godlessness
 
 Three faiths -- **Old Gods**, **Mystery Cults** and **The One God** -- each with
-its own Faith Ascendant agenda, plus a **Godless** value that is a real
-position rather than an absence. The three faiths are level with each other;
-the Godless have no win path, so they can be few.
+its own Faith Ascendant agenda. Godlessness is a real position rather than an
+absence, and **exactly one courtier is born into it**: the Dog of the Agora, a
+barefoot cynic who sleeps in a wine jar and carries a lamp through the market
+at noon looking for an honest man. Everyone else reaches godlessness the hard
+way, through Apostasy.
 
-The roster splits 12 / 12 / 12 / 4, and each faith fields exactly the same
-bench, so none is short of candidates for any seat:
+He earns his place twice over. Forty courtiers do not divide by three; taking
+the cynic off the top leaves thirty-nine, so the three faiths come out at
+thirteen apiece with an identical bench in every estate:
 
 | | Church | Military | Merchant | Commons |
 |---|---|---|---|---|
-| Old Gods | 3 | 4 | 3 | 2 |
-| Mystery Cults | 3 | 4 | 3 | 2 |
-| The One God | 3 | 4 | 3 | 2 |
-| Godless | 0 | 0 | 0 | 4 |
+| Old Gods | 3 | 4 | 3 | 3 |
+| Mystery Cults | 3 | 4 | 3 | 3 |
+| The One God | 3 | 4 | 3 | 3 |
+| The Dog of the Agora | — | — | — | 1 |
 
-That symmetry is what keeping all four Godless in Commons buys: the Commons
-estate seats one courtier, so it is the only estate with slack to spare.
+Before him the roster ran 14 / 13 / 13 and the faith holding the odd card led
+the other two by about a point and a half; the lead moved when the card did.
+With him it is 13 / 13 / 13 and the three faiths finish within 1.2 points of
+each other.
 
 House Amonides remains wholly Old Gods and House Mitreas wholly Mystery Cults.
 The One God is a newer faith: it has spread among the commoners and the
@@ -90,10 +95,9 @@ frontier peoples, and House Argaian -- the mixed-faith house -- is the only one
 that has taken it up.
 
 Godlessness has no agenda. There is no Faith Ascendant: Godless, and Balance
-still asks only for the two faiths, so **a godless courtier in an inner seat is
-a seat neither faith can count**. That makes godlessness purely denial: it is
-the one attribute you push a courtier into to take something away rather than
-to build something.
+asks for the three faiths, so **a godless courtier in an inner seat is a seat
+no faith can count**. That makes it purely denial: the one attribute you push a
+courtier into to take something away rather than to build something.
 
 Two cards move a courtier across that line, and each spends the courtier's one
 faith mutation, so nobody crosses it twice:

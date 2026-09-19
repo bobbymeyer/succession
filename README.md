@@ -76,23 +76,24 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 54.0 player-turns (13.9 rounds), median 48, max 272
-Double wins: 5.9%          Timeouts: 0%
+Game length: mean 53.3 player-turns (13.7 rounds), median 48, max 339
+Double wins: 6.7%          Timeouts: 0%
 
-Win rate by tier      naive 10.6%   greedy 26.2%   strategic 58.5%
+Win rate by tier      naive 10.6%   greedy 27.1%   strategic 58.5%
 
-Win rate by agenda    Barbarian Conquest              30.2%
-                      House Rising: Mitreas           29.4%
-                      House Rising: Amonides          28.6%
-                      House Rising: Argaian           27.3%
-                      Balance                         25.5%
-                      Faith Ascendant: Old Gods       24.1%
-                      Faith Ascendant: The One God    23.4%
-                      Faith Ascendant: Mystery Cults  23.3%
+Win rate by agenda    Barbarian Conquest              31.1%
+                      House Rising: Mitreas           27.6%
+                      House Rising: Amonides          27.6%
+                      Faith Ascendant: Mystery Cults  26.2%
+                      Faith Ascendant: The One God    25.5%
+                      Balance                         25.3%
+                      House Rising: Argaian           25.3%
+                      Faith Ascendant: Old Gods       25.0%
 ```
 
-1. **All eight agendas sit inside 7.0 points**, from 23.3% to 30.2%, against
-   2–53% under the first draft of the rules.
+1. **All eight agendas sit inside 6.1 points**, from 25.0% to 31.1%, against
+   2–53% under the first draft of the rules. The three faiths finish within 1.2
+   points of each other and the three houses within 2.3.
 
 2. **Table-wide events narrowed the skill gap rather than widening it.** The
    strategic bot came down from 62.0% to 58.5% and the greedy bot rose from
@@ -111,30 +112,29 @@ Win rate by agenda    Barbarian Conquest              30.2%
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.7% | 41.0 turns |
-   | with a strategic bot | 15.8% | 54.0 turns |
+   | without a strategic bot | 26.8% | 39.8 turns |
+   | with a strategic bot | 16.1% | 53.3 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
 
-### Every faith gets the same bench
+### One cynic makes the faiths divide evenly
 
-Three faiths at twelve courtiers each, with identical estate spreads:
+Forty courtiers do not divide by three. Exactly one is born Godless — the Dog
+of the Agora, a barefoot street philosopher who sleeps in a wine jar — and
+taking him off the top leaves thirty-nine, so the three faiths get thirteen
+each with an identical bench in every estate:
 
 | | Church | Military | Merchant | Commons |
 |---|---|---|---|---|
-| Old Gods | 3 | 4 | 3 | 2 |
-| Mystery Cults | 3 | 4 | 3 | 2 |
-| The One God | 3 | 4 | 3 | 2 |
-| Godless | 0 | 0 | 0 | 4 |
+| Old Gods | 3 | 4 | 3 | 3 |
+| Mystery Cults | 3 | 4 | 3 | 3 |
+| The One God | 3 | 4 | 3 | 3 |
+| The Dog of the Agora | — | — | — | 1 |
 
-Earlier rounds established that faith parity is about benches rather than head
-count, so the roster was built to that shape directly. Keeping all four Godless
-in Commons is what makes it possible — Commons seats one courtier, so it is the
-only estate with slack to spare. The result: the three faiths land within 1.3
-points of each other.
-
-Balance now asks for all three faiths. Letting it settle for any two is worth
-about three points to it (34.4% → 37.3%).
+It is worth doing. At 14 / 13 / 13 the faith holding the odd card led the other
+two by about a point and a half, and the lead moved when the card did. At
+13 / 13 / 13 they finish within 1.2 points. Everyone else reaches godlessness
+the hard way, through Apostasy.
 
 ### What the Balance threshold buys
 
