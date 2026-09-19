@@ -384,11 +384,21 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
         raise ValueError(f"unknown event effect: {effect}")
 
 
-def simulate(state: GameState, player: int, action: Action) -> GameState:
-    """Apply `action` to a copy of `state` -- the bots' one-ply lookahead."""
+def simulate(state: GameState, player: int, action: Action, decider=None) -> GameState:
+    """Apply `action` to a copy of `state` -- the bots' one-ply lookahead.
+
+    An event that asks the whole table to choose gives the acting player a
+    choice they control. Passing `decider` lets a bot model its own pick as a
+    good one; everyone else's is left to the deterministic stand-in, since
+    their reasoning is not ours to guess.
+    """
 
     nxt = state.clone()
-    apply_action(nxt, player, action, _EVAL_RNG, deciders=None)
+    deciders = None
+    if decider is not None:
+        deciders = [_DEFAULT_CHOICE] * state.config.num_players
+        deciders[player] = decider
+    apply_action(nxt, player, action, _EVAL_RNG, deciders=deciders)
     return nxt
 
 

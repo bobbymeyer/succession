@@ -236,15 +236,40 @@ The brief gave the effects but not these edges:
 | Whether Eclipse shuffles itself in | No — it resolves, then goes to the discard |
 | Whether a Defense stops any of it | No, exactly as the brief has it |
 
-## A simulator caveat
+## A simulator note: how the bots value events
 
-The bots score **boards**, and four of the five pairs touch hands and the deck
-instead. Without help they would rate a Caravan exactly as highly as discarding
-it. `ThinkingBot.event_bonus` in `succession/bots.py` gives each pair a crude
-value — a freeze is worth something only when there is a lead to protect, a
-discard-all only when yours is the empty hand, and so on. These are heuristics
-for the simulation, not rules, and they are the first thing to revisit if the
-event numbers look wrong.
+Lookahead scores boards, and four of the five event pairs touch hands and the
+deck instead. Three things make the bots price them sensibly, and none of them
+is a rule:
+
+* **`hand_edge`** puts a small card-economy term in the score, so a draw or a
+  discard shows up as a change the clone can actually see. This is what makes
+  Caravan and Treasure Fleet playable at all: before it, they scored below
+  throwing the card away and were never played once in 1,500 games.
+* **`event_bonus`** covers only what a one-ply clone cannot see -- a freeze,
+  whose value is the turns it denies everyone else; a table-wide discard, which
+  is symmetric except in the part only we can see; and the two shuffles.
+* **Its own purge pick.** When a bot weighs Poisoning or Plague, it models the
+  courtier *it* would name as one it chooses well, and leaves the other
+  players' picks to a deterministic stand-in.
+
+Play rates over 1,500 games, as a share of the times a bot held the card:
+
+| Event | naive | greedy | strategic |
+|---|---|---|---|
+| Quarantine / Siege | ~51% | 31% / 32% | 38% / 34% |
+| Poisoning / Plague | ~49% | 0% / 0% | 84% / 87% |
+| Caravan / Treasure Fleet | ~52% | 80% / 68% | 84% / 91% |
+| Debasement / Famine | ~51% | 31% / 34% | 35% / 32% |
+| Eclipse / Meteor | ~50% | 35% / 72% | 32% / 63% |
+
+The greedy bot never plays a purge, and that is the tier behaving as defined
+rather than a gap: killing courtiers advances nobody's agenda, so a bot that
+only advances its own has no use for it. Apostasy is the same.
+
+`tests/test_rules.py::TestEventValuation` pins the direction of each heuristic
+-- a freeze is worth more with a lead, a discard when our own hand is dead, a
+reshuffle when the deck is short -- without pinning the numbers.
 
 # Open question: how many seats should a faith need?
 

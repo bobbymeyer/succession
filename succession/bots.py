@@ -47,6 +47,12 @@ PER_CARD_LIMIT = 4
 
 #: How hard the strategic bot leans on suppressing other agendas.
 THREAT_WEIGHT = 0.7
+#: How much a hand full of useful cards is worth against a board position.
+#: Small on purpose: cards win games only by becoming seats.
+HAND_WEIGHT = 0.04
+#: Share of a typical hand with no legal play, measured over 300 games. A
+#: table-wide discard is worth a turn when ours is deader than this.
+DEAD_HAND_BASELINE = 0.15
 #: Prior odds that an arbitrary rival agenda is actually in an opponent's hand
 #: (three of the six agendas a player does not hold are dealt out).
 BASE_BELIEF = 0.5
@@ -159,37 +165,83 @@ class ThinkingBot(Bot):
     def my_agenda(self, state: GameState, player: int):
         return AGENDAS_BY_KEY[state.agendas[player]]
 
-    def event_bonus(self, state: GameState, player: int, card, progress: float) -> float:
-        """What an event is worth when it does not move a single courtier.
+    def hand_edge(self, state: GameState, player: int) -> float:
+        """Our hand measured against the table's, as a small part of the score.
 
-        Lookahead scores boards, and four of the five event pairs touch hands
-        and the deck rather than the board, so without this they would all look
-        like doing nothing. Deliberately crude: these only need to rank an
-        event against discarding it.
+        Hand sizes are public, contents are not, so this weighs what we can see
+        of ours against the bare size of everyone else's. It is what lets
+        lookahead notice that Famine empties four hands and Treasure Fleet
+        fills them: both show up in the cloned state, and until this was in the
+        score neither made any difference to it.
+        """
+
+        hands = [len(h) for h in state.hands]
+        mine = hands[player]
+        others = [n for i, n in enumerate(hands) if i != player]
+        size = (mine - sum(others) / len(others)) / state.config.hand_limit
+        wanted = sum(
+            1
+            for uid in state.hands[player]
+            if state.card(uid).is_courtier
+            and self.is_useful_courtier(state, player, uid)
+        )
+        return HAND_WEIGHT * (0.6 * size + 0.4 * wanted / state.config.hand_limit)
+
+    def event_bonus(self, state: GameState, player: int, card, progress: float) -> float:
+        """What an event is worth that the cloned board cannot show.
+
+        Draws are no longer here: they move hands, `hand_edge` sees them, and
+        lookahead prices them on its own. What is left is what a one-ply clone
+        genuinely cannot value -- a freeze, whose whole point is the turns it
+        denies other people; a table-wide discard, which is symmetric in
+        everything except the part only we can see; and the two shuffles, which
+        change what the deck is likely to hand out next.
         """
 
         effect = card.effect
-        hands = [len(h) for h in state.hands]
-        mine = hands[player]
-        theirs = (sum(hands) - mine) / max(1, len(hands) - 1)
 
         if effect in (EFFECT_FREEZE_INNER, EFFECT_FREEZE_BOARD):
-            # Worth a turn only when there is a lead worth protecting.
+            # A freeze buys a round of nothing happening. That is worth having
+            # when we are close enough that a round of nothing wins it -- or,
+            # for a bot that watches rivals, when somebody else is.
+            at_stake = max(progress, self.rival_progress(state, player))
             weight = 1.0 if effect == EFFECT_FREEZE_BOARD else 0.7
-            return max(0.0, progress - 0.5) * weight
-        if effect == EFFECT_DRAW_ALL:
-            # Everyone gains equally, and we paid a card for it.
-            return 0.01 * card.amount - 0.02
+            return max(0.0, at_stake - 0.5) * weight
+
         if effect == EFFECT_DISCARD_ALL:
-            # Good when ours is the empty hand.
-            return 0.02 * card.amount * (theirs - mine) / max(1.0, state.config.hand_limit)
+            # Everyone loses the same count, so this is near enough neutral --
+            # unless ours is the hand worth least. We cannot see their cards,
+            # but we can see that ours are unplayable.
+            mine = state.hands[player]
+            if not mine:
+                return 0.02 * card.amount  # nothing to lose, and they have plenty
+            dead = sum(1 for uid in mine if not card_actions(state, player, uid))
+            return 0.05 * card.amount * (dead / len(mine) - DEAD_HAND_BASELINE)
+
         if effect == EFFECT_RESHUFFLE:
-            # Worth it when the deck is running dry.
-            return 0.03 if len(state.deck) < state.config.num_players * 2 else -0.01
+            # Two reasons to turn the discard over: the deck is about to run
+            # dry, and the pile is holding courtiers we want back.
+            urgency = 0.03 if len(state.deck) < state.config.num_players * 2 else -0.01
+            if not state.discard:
+                return urgency
+            wanted = sum(
+                1
+                for uid in state.discard
+                if state.card(uid).is_courtier
+                and self.is_useful_courtier(state, player, uid)
+            )
+            return urgency + 0.04 * wanted / len(state.discard)
+
         if effect == EFFECT_REDEAL:
-            # Worth it when our own hand holds nothing playable.
-            dead = sum(1 for uid in state.hands[player] if not card_actions(state, player, uid))
-            return 0.04 * dead / max(1, mine) - 0.01
+            # A fresh hand is worth it when this one is dead weight. The clone
+            # deals a hand the real shuffle will not, so judge the hand we are
+            # throwing away rather than the one we would get.
+            mine = state.hands[player]
+            if not mine:
+                return 0.0
+            dead = sum(1 for uid in mine if not card_actions(state, player, uid))
+            return 0.05 * dead / len(mine) - 0.01
+
         return 0.0
 
     def structural_bonus(self, state: GameState, player: int, action: Action) -> float:
@@ -231,6 +283,11 @@ class ThinkingBot(Bot):
 
         return min(hand, key=lambda uid: (value(uid), self.rng.random()))
 
+    def rival_progress(self, state: GameState, player: int) -> float:
+        """How close anyone else is. A bot that ignores rivals reports none."""
+
+        return 0.0
+
     def is_useful_courtier(self, state: GameState, player: int, uid: int) -> bool:
         agenda = self.my_agenda(state, player)
         c = state.cstate[uid]
@@ -269,7 +326,9 @@ class ThinkingBot(Bot):
                 # see it; score its expected value instead.
                 score = self.pivot_score(state, player, current)
             else:
-                after = simulate(state, player, action)
+                # For an event that asks the table to choose, our own pick is
+                # ours to make well; everyone else's is a guess either way.
+                after = simulate(state, player, action, decider=self)
                 score = self.score(after, state, player, action)
                 if card is not None and card.kind is CardKind.EVENT:
                     score += self.event_bonus(state, player, card, current)
@@ -294,7 +353,7 @@ class GreedyBot(ThinkingBot):
         counts = count_board(after)
         if satisfied_counts(counts, agenda, rules):
             return 100.0  # this action wins the game outright
-        return progress_counts(counts, agenda, rules)
+        return progress_counts(counts, agenda, rules) + self.hand_edge(after, player)
 
 
 class StrategicBot(ThinkingBot):
@@ -323,6 +382,21 @@ class StrategicBot(ThinkingBot):
         for key in beliefs:
             beliefs[key] *= 0.98
 
+    def rival_progress(self, state: GameState, player: int) -> float:
+        """The closest any other agenda has come, weighted by who likely holds it."""
+
+        mine = state.agendas[player]
+        counts = count_board(state)
+        rules = rules_for(state)
+        return max(
+            (
+                self.threat_weight(a.key) * progress_counts(counts, a, rules)
+                for a in agenda_pool(state)
+                if a.key != mine
+            ),
+            default=0.0,
+        )
+
     def threat_weight(self, key: str) -> float:
         """0.5 (no evidence) .. 1.0 (an opponent is clearly chasing this)."""
 
@@ -343,7 +417,7 @@ class StrategicBot(ThinkingBot):
         if satisfied_counts(counts, agenda, rules):
             return 100.0
 
-        own = progress_counts(counts, agenda, rules)
+        own = progress_counts(counts, agenda, rules) + self.hand_edge(after, player)
         threat = 0.0
         for rival in agenda_pool(before):
             if rival.key == mine:

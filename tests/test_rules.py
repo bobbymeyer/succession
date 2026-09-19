@@ -15,7 +15,14 @@ from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
 from succession.courtiers import COURTIERS, FAMILY_PREFERRED_ESTATE
-from succession.engine import apply_action, check_winners, draw, play_game, setup_game
+from succession.engine import (
+    apply_action,
+    check_winners,
+    draw,
+    play_game,
+    setup_game,
+    simulate,
+)
 from succession.enums import (
     FAITHS,
     SEAT_ESTATE,
@@ -964,6 +971,102 @@ class TestDeckAndTurns(unittest.TestCase):
         state = setup_game(Config(), random.Random(5))
         for p in range(state.config.num_players):
             self.assertTrue(legal_actions(state, p))
+
+
+class TestEventValuation(unittest.TestCase):
+    """The heuristics are simulation scaffolding, so pin their direction.
+
+    None of this is a rule. What these check is that a thinking bot wants an
+    event in the situation the card is for, and does not want it otherwise.
+    """
+
+    def setUp(self):
+        self.bot = make_bot("strategic", 0, random.Random(0))
+
+    def event(self, name):
+        from succession.cards import EVENT_CARDS
+
+        return next(c for c in EVENT_CARDS if c.name == name)
+
+    def test_a_freeze_is_worth_more_when_there_is_a_lead_to_protect(self):
+        state = fresh()
+        siege = self.event("Siege")
+        behind = self.bot.event_bonus(state, 0, siege, progress=0.2)
+        ahead = self.bot.event_bonus(state, 0, siege, progress=0.9)
+        self.assertEqual(behind, 0.0)
+        self.assertGreater(ahead, 0.0)
+
+    def test_a_siege_is_worth_more_than_a_quarantine(self):
+        state = fresh()
+        self.assertGreater(
+            self.bot.event_bonus(state, 0, self.event("Siege"), progress=0.9),
+            self.bot.event_bonus(state, 0, self.event("Quarantine"), progress=0.9),
+        )
+
+    def test_a_table_wide_discard_is_for_when_our_own_hand_is_dead(self):
+        """Everyone loses the same count, so only our own junk tips it."""
+
+        famine = self.event("Famine")
+        live = fresh()
+        give(live, 0, "Beloved of the Gods", "Golden Thumb", "Horse Breaker")
+        dead = fresh()
+        # Promotions and demotions with an empty board can do nothing at all.
+        give(dead, 0, "Promotion", "Demotion", "Heresy Accusation")
+        self.assertGreater(
+            self.bot.event_bonus(dead, 0, famine, progress=0.3),
+            self.bot.event_bonus(live, 0, famine, progress=0.3),
+        )
+
+    def test_famine_is_worth_more_than_debasement_on_the_same_hand(self):
+        state = fresh()
+        give(state, 0, "Promotion", "Demotion")
+        self.assertGreater(
+            self.bot.event_bonus(state, 0, self.event("Famine"), progress=0.3),
+            self.bot.event_bonus(state, 0, self.event("Debasement of the Coinage"), progress=0.3),
+        )
+
+    def test_a_reshuffle_is_for_when_the_deck_is_running_out(self):
+        eclipse = self.event("Eclipse")
+        full = fresh()
+        full.deck = list(range(30))
+        full.discard = [uid(full, "Silver Tongue")]
+        empty = fresh()
+        empty.deck = []
+        empty.discard = [uid(empty, "Silver Tongue")]
+        self.assertGreater(
+            self.bot.event_bonus(empty, 0, eclipse, progress=0.3),
+            self.bot.event_bonus(full, 0, eclipse, progress=0.3),
+        )
+
+    def test_hand_edge_rises_with_a_bigger_hand_than_the_table(self):
+        state = fresh()
+        thin = self.bot.hand_edge(state, 0)
+        give(state, 0, "Assassination", "Promotion", "Demotion")
+        self.assertGreater(self.bot.hand_edge(state, 0), thin)
+
+    def test_hand_edge_stays_small_against_a_board_move(self):
+        """Cards win games by becoming seats, so they must not outrank one."""
+
+        state = fresh()
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion")
+        give(state, 0, "Demotion", "Castration", "Conversion")
+        self.assertLess(abs(self.bot.hand_edge(state, 0)), 0.05)
+
+    def test_a_bot_models_its_own_purge_pick_as_a_good_one(self):
+        """Our choice in a purge is ours; the stand-in picks arbitrarily."""
+
+        state = fresh()
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb",
+              "Crosser of Rivers", "Silver Tongue")
+        card = give(state, 0, "Plague")[0]
+        action = Action(PLAY, card=card)
+        mine = simulate(state, 0, action, decider=self.bot)
+        theirs = simulate(state, 0, action)
+        # Both kill four courtiers; the bot does not have to like the same four.
+        self.assertEqual(len(mine.outer), 1)
+        self.assertEqual(len(theirs.outer), 1)
+        self.assertIsNotNone(self.bot.pick_courtier(state, 0, state.outer))
 
 
 class TestGames(unittest.TestCase):
