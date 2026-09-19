@@ -67,25 +67,27 @@ attribute can be restored later by `Conversion` (the player picks the faith) or
 ## Faith and godlessness
 
 Three faiths -- **Old Gods**, **Mystery Cults** and **The One God** -- each with
-its own Faith Ascendant agenda. **Every courtier is born into one of them.**
-Godlessness is a real position rather than an absence, but it is somewhere a
-courtier is pushed, never somewhere they start.
+its own Faith Ascendant agenda. Godlessness is a real position rather than an
+absence, and **exactly one courtier is born into it**: the Dog of the Agora, a
+barefoot cynic who sleeps in a wine jar and carries a lamp through the market
+at noon looking for an honest man. Everyone else reaches godlessness the hard
+way, through Apostasy.
 
-Forty courtiers do not divide by three, so the roster runs 14 / 13 / 13. The
-odd card sits in Commons, which seats one courtier against two apiece for
-Church, Military and Merchant -- so the three faiths field an identical bench
-everywhere it matters:
+He earns his place twice over. Forty courtiers do not divide by three; taking
+the cynic off the top leaves thirty-nine, so the three faiths come out at
+thirteen apiece with an identical bench in every estate:
 
 | | Church | Military | Merchant | Commons |
 |---|---|---|---|---|
-| Old Gods | 3 | 4 | 3 | 4 |
+| Old Gods | 3 | 4 | 3 | 3 |
 | Mystery Cults | 3 | 4 | 3 | 3 |
 | The One God | 3 | 4 | 3 | 3 |
+| The Dog of the Agora | — | — | — | 1 |
 
-The fourteenth card is worth roughly a point and a half: move it from Old Gods
-to Mystery Cults and the lead moves with it. Two more courtiers -- one commoner
-and one barbarian, leaving the houses untouched -- would make it 14 / 14 / 14
-and remove the asymmetry, if it ever matters enough.
+Before him the roster ran 14 / 13 / 13 and the faith holding the odd card led
+the other two by about a point and a half; the lead moved when the card did.
+With him it is 13 / 13 / 13 and the three faiths finish within 1.2 points of
+each other.
 
 House Amonides remains wholly Old Gods and House Mitreas wholly Mystery Cults.
 The One God is a newer faith: it has spread among the commoners and the

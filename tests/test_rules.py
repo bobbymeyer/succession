@@ -121,32 +121,32 @@ class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
         self.assertEqual(len(COURTIERS), 40)
         faith = collections.Counter(c.faith for c in COURTIERS)
-        # Forty does not divide by three, so one faith carries the odd card.
-        self.assertEqual(faith[Faith.OLD_GODS], 14)
+        # One cynic off the top leaves thirty-nine to split three ways.
+        self.assertEqual(faith[Faith.OLD_GODS], 13)
         self.assertEqual(faith[Faith.MYSTERY_CULTS], 13)
         self.assertEqual(faith[Faith.ONE_GOD], 13)
+        self.assertEqual(faith[Faith.GODLESS], 1)
 
-    def test_nobody_is_born_godless(self):
-        """Godlessness is somewhere Apostasy sends you, not somewhere you start."""
+    def test_one_commoner_is_born_godless(self):
+        """Everyone else reaches godlessness the hard way, through Apostasy."""
 
-        self.assertEqual([c.name for c in COURTIERS if c.faith is Faith.GODLESS], [])
+        godless = [c for c in COURTIERS if c.faith is Faith.GODLESS]
+        self.assertEqual([c.name for c in godless], ["The Dog of the Agora"])
+        self.assertEqual(godless[0].house, "Commoner")
+        self.assertIs(godless[0].estate, Estate.COMMONS)
 
-    def test_each_faith_gets_the_same_bench_where_it_counts(self):
-        """Identical in the paired estates; the odd card sits in Commons.
-
-        Church, Military and Merchant seat two apiece, so a courtier there is
-        worth far more than one queuing for the single Guildmaster's chair --
-        which is why the uneven remainder is parked in Commons.
-        """
+    def test_each_faith_gets_exactly_the_same_bench(self):
+        """No faith is short of candidates for any seat."""
 
         for faith in FAITHS:
             estates = collections.Counter(
                 c.estate for c in COURTIERS if c.faith is faith
             )
-            self.assertEqual(estates[Estate.CHURCH], 3, faith.value)
-            self.assertEqual(estates[Estate.MILITARY], 4, faith.value)
-            self.assertEqual(estates[Estate.MERCHANT], 3, faith.value)
-            self.assertIn(estates[Estate.COMMONS], (3, 4), faith.value)
+            self.assertEqual(
+                dict(estates),
+                {Estate.CHURCH: 3, Estate.MILITARY: 4, Estate.MERCHANT: 3, Estate.COMMONS: 3},
+                faith.value,
+            )
         origin = collections.Counter(c.origin for c in COURTIERS)
         self.assertEqual(origin[Origin.IMPERIAL], 32)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
@@ -414,16 +414,10 @@ class TestGodlessness(unittest.TestCase):
 
     def test_apostasy_cannot_target_the_godless(self):
         state = fresh()
-        first, second = give(state, 0, "Apostasy", "Apostasy")
-        target = outer(state, "Ten Thousand Verses")[0]
-        apply_action(
-            state,
-            0,
-            Action(PLAY, card=first, courtier=target, value=Faith.GODLESS.value),
-            FixedRng(),
-        )
+        card = give(state, 0, "Apostasy")[0]
+        target = outer(state, "The Dog of the Agora")[0]  # nothing left to lose
         self.assertEqual(
-            [a for a in card_actions(state, 0, second) if a.courtier == target], []
+            [a for a in card_actions(state, 0, card) if a.courtier == target], []
         )
 
     def test_a_courtier_may_convert_or_apostatise_but_not_both(self):
@@ -456,14 +450,7 @@ class TestGodlessness(unittest.TestCase):
         for agenda_key in ("faith_old_gods", "faith_mystery_cults"):
             agenda = AGENDAS_BY_KEY[agenda_key]
             self.assertFalse(satisfied(state, agenda))
-        godless = seat(state, "Ten Thousand Verses", Seat.GUILDMASTER)
-        apostasy = give(state, 0, "Apostasy")[0]
-        apply_action(
-            state,
-            0,
-            Action(PLAY, card=apostasy, courtier=godless, value=Faith.GODLESS.value),
-            FixedRng(),
-        )
+        seat(state, "The Dog of the Agora", Seat.GUILDMASTER)      # godless
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)         # Old Gods
         seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)   # Old Gods
         seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)      # Old Gods

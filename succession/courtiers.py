@@ -1,7 +1,10 @@
 """The 40-courtier table.
 
-Every courtier is born into one of the three faiths. Godlessness is a state a
-courtier is pushed into by Apostasy, never one they start in. Godlessness is a real faith value, not an absence:
+Every courtier is born into one of the three faiths but one: the Dog of the
+Agora, a barefoot cynic who sleeps in a wine jar and carries a lamp through the
+market at noon, looking for an honest man. He is the only Godless courtier on
+the roster, and the reason the three faiths come out even at thirteen apiece.
+Everyone else reaches godlessness the hard way, through Apostasy. Godlessness is a real faith value, not an absence:
 it has no agenda of its own, so a godless courtier in an inner seat is a seat
 neither faith can count. Only Old Gods and Mystery Cults need to be level with
 each other -- the Godless need no win path, so they can be few.
@@ -44,7 +47,7 @@ class CourtierDef:
 
 _E, _C, _M, _K = Estate.MILITARY, Estate.CHURCH, Estate.MERCHANT, Estate.COMMONS
 _OG, _MC = Faith.OLD_GODS, Faith.MYSTERY_CULTS
-_1G = Faith.ONE_GOD
+_1G, _GL = Faith.ONE_GOD, Faith.GODLESS
 _AM, _MI, _AR, _NF = Family.AMONIDES, Family.MITREAS, Family.ARGAIAN, Family.NONE
 _IMP, _BAR = Origin.IMPERIAL, Origin.BARBARIAN
 
@@ -83,7 +86,7 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Charioteer of the Iron Wheel", _K, _1G, _AR, _IMP),
     # --- Commoners (unaffiliated, Imperial) ---------------------------------
     CourtierDef("Silver Tongue", _K, _1G, _NF, _IMP),
-    CourtierDef("Fastest of the Games", _K, _OG, _NF, _IMP),
+    CourtierDef("The Dog of the Agora", _K, _GL, _NF, _IMP),
     CourtierDef("Mender of Bones", _K, _MC, _NF, _IMP),
     CourtierDef("Ten Thousand Verses", _K, _OG, _NF, _IMP),
     CourtierDef("Builder of the Long Aqueduct", _K, _1G, _NF, _IMP),
