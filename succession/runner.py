@@ -178,7 +178,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
-    parser.add_argument("--balance-seats", type=int, default=5, help="seats that must be filled for Balance to count (default 5 of 7)")
+    parser.add_argument("--balance-seats", type=int, default=7, help="seats that must be filled for Balance to count (default: all 7)")
     parser.add_argument("--drop-agendas", default="", metavar="KEYS", help="leave agendas out of the pool entirely, e.g. balance")
     parser.add_argument("--faith-seats", type=int, default=4, help="inner seats a faith must hold to win (default 4 of 7)")
     parser.add_argument("--house-any-three", action="store_true", help="drop the preferred-estate requirement: any three seats of a family win")

@@ -113,7 +113,7 @@ state, **both** players win and the game is logged as a double win.
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
 | Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
 | Barbarian Conquest | 1 | **3 barbarians in the inner circle**, *or* both Military seats held by barbarians |
-| Balance | 1 | **Five of the seven seats filled**, and the inner circle simultaneously shows all three families, both faiths, and a barbarian (`--balance-seats`) |
+| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, both faiths, and a barbarian (`--balance-seats`) |
 
 Barbarian Conquest has two routes and either one wins outright: a bloc of
 three seated barbarians anywhere in the inner circle, or both generals. Two
@@ -162,7 +162,7 @@ first; the flag flips it.
 | 2f | **All seven agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all seven | `--drop-agendas` |
 | 2d | **Balance asks only for the two faiths**, not for a godless courtier as well, since godlessness has no agenda. | two faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
-| 2g | **Balance needs five of the seven seats filled**, so a thin board cannot satisfy it by accident. | 5 | `--balance-seats` |
+| 2g | **Balance needs the whole court seated.** Vacating any seat lapses it, however diverse the rest. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |

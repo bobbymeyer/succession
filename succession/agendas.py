@@ -55,9 +55,9 @@ HOUSE_PREFERRED_SEATS = 1
 #: Faith Ascendant needs this many of the inner seats. Four of seven is a bare
 #: majority; five is the two-thirds the rule meant when the board had six.
 FAITH_SEATS = 4
-#: Balance must hold across at least this many of the seven seats, so that a
-#: thin board cannot satisfy it by accident.
-BALANCE_SEATS = 5
+#: Balance must hold across this many of the seven seats. At the full seven it
+#: stops being an agenda anyone can satisfy by accident.
+BALANCE_SEATS = 7
 #: Barbarian Conquest: this many barbarians in the inner circle wins...
 CONQUEST_BARBARIANS = 3
 #: ...or this many barbarian generals (both Military seats) wins outright.

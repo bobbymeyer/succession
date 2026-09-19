@@ -60,6 +60,29 @@ def fresh(**overrides) -> GameState:
     return state
 
 
+#: A legal seven-seat court showing all three families, both faiths and a
+#: barbarian -- the minimum board that satisfies Balance.
+BALANCED_COURT = {
+    Seat.CHIEF_PRIEST: "Beloved of the Gods",          # Amonides / Old Gods
+    Seat.ORACLE: "Initiate of the Seven Veils",        # Mitreas / Mystery Cults
+    Seat.FIELD_GENERAL: "Horse Breaker",               # Argaian
+    Seat.PRAETORIAN_CHIEF: "Hundred-Kill Rider",       # Barbarian
+    Seat.EXCHEQUER: "Golden Thumb",                    # Mitreas
+    Seat.HARBORMASTER: "Weigher of Grain",             # Amonides / Old Gods
+    Seat.GUILDMASTER: "Master Mason",                  # Barbarian
+}
+
+
+def fill_the_court(state: GameState) -> None:
+    """Seat every empty chair from BALANCED_COURT, leaving occupied ones alone."""
+
+    for where, name in BALANCED_COURT.items():
+        if state.seats[where] is None:
+            u = uid(state, name)
+            if u not in state.seats.values():
+                state.seats[where] = u
+
+
 def judged_as(state: GameState, **overrides) -> GameState:
     """The same board, judged under a different set of rule options."""
 
@@ -466,7 +489,7 @@ class TestGodlessness(unittest.TestCase):
         seat(state, "Initiate of the Seven Veils", Seat.ORACLE)      # Mitreas / Mystery
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)             # Argaian / Mystery
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)     # Barbarian
-        seat(state, "Golden Thumb", Seat.EXCHEQUER)                  # fifth seat
+        fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))  # no godless courtier needed
 
 
@@ -690,21 +713,21 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)               # Argaian / Mystery
         self.assertFalse(satisfied(state, agenda))
         seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)       # Barbarian
-        self.assertFalse(satisfied(state, agenda))  # diverse, but only four seats
-        seat(state, "Golden Thumb", Seat.EXCHEQUER)
+        self.assertFalse(satisfied(state, agenda))  # diverse, but a thin court
+        fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_balance_wants_a_full_enough_board(self):
-        """Four diverse seats is a thin board, not a balanced court."""
+    def test_balance_wants_the_whole_court_seated(self):
+        """A diverse but half-empty court is not a balanced one."""
 
         state = fresh()
         agenda = AGENDAS_BY_KEY["balance"]
-        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
-        seat(state, "Initiate of the Seven Veils", Seat.ORACLE)
-        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)
-        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)
+        fill_the_court(state)
+        self.assertTrue(satisfied(state, agenda))
+        # Vacate any one seat and it lapses, however diverse the rest.
+        state.seats[Seat.HARBORMASTER] = None
         self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(satisfied(judged_as(state, balance_seats=4), agenda))
+        self.assertTrue(satisfied(judged_as(state, balance_seats=6), agenda))
 
     def test_simultaneous_agendas_both_win(self):
         state = fresh()
