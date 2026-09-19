@@ -97,8 +97,9 @@ class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
         self.assertEqual(len(COURTIERS), 37)
         faith = collections.Counter(c.faith for c in COURTIERS)
-        self.assertEqual(faith[Faith.OLD_GODS], 19)
-        self.assertEqual(faith[Faith.MYSTERY_CULTS], 18)
+        self.assertEqual(faith[Faith.OLD_GODS], 16)
+        self.assertEqual(faith[Faith.MYSTERY_CULTS], 16)
+        self.assertEqual(faith[Faith.ATHEIST], 5)
         origin = collections.Counter(c.origin for c in COURTIERS)
         self.assertEqual(origin[Origin.IMPERIAL], 29)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
@@ -129,10 +130,18 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.REMOVAL], 6)
         self.assertEqual(kinds[CardKind.DEFENSE], 5)
         self.assertEqual(kinds[CardKind.STRIP], 2)
-        self.assertEqual(kinds[CardKind.MUTATION], 8)
+        self.assertEqual(kinds[CardKind.MUTATION], 9)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
-        self.assertEqual(len(cards), 80)
+        self.assertEqual(len(cards), 81)
+
+    def test_atheists_are_spread_one_per_group(self):
+        atheists = [c for c in COURTIERS if c.faith is Faith.ATHEIST]
+        self.assertEqual(len(atheists), 5)
+        self.assertEqual(
+            collections.Counter(c.house for c in atheists),
+            collections.Counter(["Amonides", "Mitreas", "Argaian", "Commoner", "Barbarian"]),
+        )
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
@@ -356,6 +365,102 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         self.assertIs(state.cstate[target].family, Family.NONE)
 
 
+class TestAtheism(unittest.TestCase):
+    def test_apostasy_makes_a_courtier_an_atheist(self):
+        state = fresh()
+        card = give(state, 0, "Apostasy")[0]
+        target = outer(state, "Beloved of the Gods")[0]  # Old Gods
+        action = next(a for a in card_actions(state, 0, card) if a.courtier == target)
+        apply_action(state, 0, action, FixedRng())
+        self.assertIs(state.cstate[target].faith, Faith.ATHEIST)
+        self.assertTrue(state.cstate[target].mutated_faith)
+
+    def test_apostasy_cannot_target_an_atheist(self):
+        state = fresh()
+        card = give(state, 0, "Apostasy")[0]
+        target = outer(state, "Horse Breaker")[0]  # already an atheist
+        self.assertEqual(
+            [a for a in card_actions(state, 0, card) if a.courtier == target], []
+        )
+
+    def test_a_courtier_may_convert_or_apostatise_but_not_both(self):
+        state = fresh()
+        apostasy, conversion = give(state, 0, "Apostasy", "Conversion")
+        target = outer(state, "Beloved of the Gods")[0]
+        apply_action(
+            state,
+            0,
+            next(a for a in card_actions(state, 0, apostasy) if a.courtier == target),
+            FixedRng(),
+        )
+        self.assertEqual(
+            [a for a in card_actions(state, 0, conversion) if a.courtier == target], []
+        )
+
+    def test_conversion_redeems_an_atheist_to_either_faith(self):
+        state = fresh()
+        card = give(state, 0, "Conversion")[0]
+        target = outer(state, "Mender of Bones")[0]
+        options = {a.value for a in card_actions(state, 0, card) if a.courtier == target}
+        self.assertEqual(options, {Faith.OLD_GODS.value, Faith.MYSTERY_CULTS.value})
+
+    def test_an_atheist_seat_counts_for_neither_faith(self):
+        state = fresh()
+        for agenda_key in ("faith_old_gods", "faith_mystery_cults"):
+            agenda = AGENDAS_BY_KEY[agenda_key]
+            self.assertFalse(satisfied(state, agenda))
+        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)             # atheist
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)         # Old Gods
+        seat(state, "Hand of the Oracle", Seat.ORACLE)                # Old Gods
+        seat(state, "Keeper of the Long Peace", Seat.PRAETORIAN_CHIEF)  # Old Gods
+        self.assertFalse(satisfied(state, AGENDAS_BY_KEY["faith_old_gods"]))
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)               # Old Gods
+        self.assertTrue(satisfied(state, AGENDAS_BY_KEY["faith_old_gods"]))
+
+    def test_apostasy_can_deny_a_faith_its_fourth_seat(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["faith_old_gods"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        seat(state, "Hand of the Oracle", Seat.ORACLE)
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
+        victim = seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)
+        self.assertTrue(satisfied(state, agenda))
+        card = give(state, 0, "Apostasy")[0]
+        apply_action(
+            state,
+            0,
+            Action(PLAY, card=card, courtier=victim, value=Faith.ATHEIST.value),
+            FixedRng(),
+        )
+        self.assertFalse(satisfied(state, agenda))
+
+    def test_a_defense_stops_apostasy(self):
+        state = fresh()
+        defended = seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        cost, shield, card = give(
+            state, 0, "Hand of the Oracle", "Sanctuary", "Apostasy"
+        )
+        apply_action(
+            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
+        )
+        apply_action(
+            state,
+            0,
+            Action(PLAY, card=card, courtier=defended, value=Faith.ATHEIST.value),
+            FixedRng(),
+        )
+        self.assertIs(state.cstate[defended].faith, Faith.OLD_GODS)
+
+    def test_balance_still_wants_only_the_two_faiths(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["balance"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)        # Amonides / Old Gods
+        seat(state, "Initiate of the Seven Veils", Seat.ORACLE)      # Mitreas / Mystery
+        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)             # Argaian / Mystery
+        seat(state, "Hundred-Kill Rider", Seat.PRAETORIAN_CHIEF)     # Barbarian
+        self.assertTrue(satisfied(state, agenda))  # no atheist needed
+
+
 class TestEvents(unittest.TestCase):
     def test_minor_event_allows_a_save(self):
         state = fresh()
@@ -533,7 +638,7 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Initiate of the Seven Veils", Seat.CHIEF_PRIEST)
         seat(state, "Reader of Omens", Seat.ORACLE)
         seat(state, "Crosser of Rivers", Seat.FIELD_GENERAL)
-        seat(state, "Horse Breaker", Seat.PRAETORIAN_CHIEF)
+        seat(state, "Rider of the Long Road", Seat.PRAETORIAN_CHIEF)
         self.assertTrue(satisfied(state, agenda))
 
     def test_barbarian_conquest_wins_on_three_seated_barbarians(self):

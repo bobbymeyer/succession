@@ -1,7 +1,7 @@
 """Card definitions and deck construction.
 
-The play deck is 80 cards: the 37 courtiers plus 43 action cards (10 events,
-5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 8 mutations,
+The play deck is 81 cards: the 37 courtiers plus 44 action cards (10 events,
+5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 9 mutations,
 1 pivot, and N copies of Outmaneuver -- one by default).
 
 Event effects are the one place where the source document could not be carried
@@ -120,8 +120,11 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Take Vows", CardKind.MUTATION, attribute="estate", value=Estate.CHURCH.value),
     CardDef("Enter Trade", CardKind.MUTATION, attribute="estate", value=Estate.MERCHANT.value),
     CardDef("Lose Status", CardKind.MUTATION, attribute="estate", value=Estate.COMMONS.value),
-    # Conversion flips the two faiths; on a stripped courtier the player picks.
+    # Conversion flips the two faiths; on an atheist or a stripped courtier
+    # the player picks which faith they come to.
     CardDef("Conversion", CardKind.MUTATION, attribute="faith"),
+    # Apostasy pushes a courtier out of faith altogether.
+    CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.ATHEIST.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
     # Adoption takes its value from the family courtier sacrificed from hand.

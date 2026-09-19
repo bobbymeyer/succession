@@ -1,5 +1,10 @@
 """The 37-courtier table.
 
+Five courtiers are atheists -- one from each house, one commoner and one
+barbarian. Atheism is a real faith value, not an absence: it has no agenda of
+its own, so an atheist in an inner seat is a seat neither faith can count.
+
+
 Courtiers are identified by epithet only. A courtier killed during play may be
 reshuffled back into the deck as a *new* person bearing the same reputation --
 they re-enter with their printed (base) attributes, never with whatever
@@ -37,6 +42,7 @@ class CourtierDef:
 
 _E, _C, _M, _K = Estate.MILITARY, Estate.CHURCH, Estate.MERCHANT, Estate.COMMONS
 _OG, _MC = Faith.OLD_GODS, Faith.MYSTERY_CULTS
+_AT = Faith.ATHEIST
 _AM, _MI, _AR, _NF = Family.AMONIDES, Family.MITREAS, Family.ARGAIAN, Family.NONE
 _IMP, _BAR = Origin.IMPERIAL, Origin.BARBARIAN
 
@@ -50,19 +56,19 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Keeper of the Long Peace", _E, _OG, _AM, _IMP),
     CourtierDef("Hand of the Oracle", _C, _OG, _AM, _IMP),
     CourtierDef("Weigher of Grain", _M, _OG, _AM, _IMP),
-    CourtierDef("Speaker of the Old Words", _E, _OG, _AM, _IMP),
+    CourtierDef("Speaker of the Old Words", _E, _AT, _AM, _IMP),
     CourtierDef("Wearer of the Golden Diadem", _M, _OG, _AM, _IMP),
     CourtierDef("Tender of the Ancestral Flame", _C, _OG, _AM, _IMP),
     # --- House Mitreas (Mystery Cults, Merchant-affiliated) -----------------
     CourtierDef("Golden Thumb", _M, _MC, _MI, _IMP),
     CourtierDef("Initiate of the Seven Veils", _C, _MC, _MI, _IMP),
     CourtierDef("Crosser of Rivers", _E, _MC, _MI, _IMP),
-    CourtierDef("Buyer of Cities", _M, _MC, _MI, _IMP),
+    CourtierDef("Buyer of Cities", _M, _AT, _MI, _IMP),
     CourtierDef("Whisperer to the Serpent", _C, _MC, _MI, _IMP),
     CourtierDef("Rider of the Long Road", _E, _MC, _MI, _IMP),
     CourtierDef("Creditor of Kings", _M, _MC, _MI, _IMP),
     # --- House Argaian (mixed faith, Military-affiliated) -------------------
-    CourtierDef("Horse Breaker", _E, _MC, _AR, _IMP),
+    CourtierDef("Horse Breaker", _E, _AT, _AR, _IMP),
     CourtierDef("Destroyer of Walls", _E, _OG, _AR, _IMP),
     CourtierDef("Reader of Omens", _C, _MC, _AR, _IMP),
     CourtierDef("Sword of the Assembly", _C, _OG, _AR, _IMP),
@@ -72,7 +78,7 @@ COURTIERS: tuple[CourtierDef, ...] = (
     # --- Commoners (unaffiliated, Imperial) ---------------------------------
     CourtierDef("Silver Tongue", _K, _OG, _NF, _IMP),
     CourtierDef("Fastest of the Games", _K, _OG, _NF, _IMP),
-    CourtierDef("Mender of Bones", _K, _OG, _NF, _IMP),
+    CourtierDef("Mender of Bones", _K, _AT, _NF, _IMP),
     CourtierDef("Ten Thousand Verses", _K, _OG, _NF, _IMP),
     CourtierDef("Builder of the Long Aqueduct", _K, _OG, _NF, _IMP),
     CourtierDef("Risen from the Ranks", _E, _MC, _NF, _IMP),
@@ -86,7 +92,7 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Hundred-Kill Rider", _E, _MC, _NF, _BAR, People.SCYTHIAN),
     CourtierDef("Blade for Any Banner", _E, _MC, _NF, _BAR, People.SCYTHIAN),
     CourtierDef("Warlord of the Iron Grove", _E, _OG, _NF, _BAR, People.GERMAN),
-    CourtierDef("Master Swordsmith", _K, _OG, _NF, _BAR, People.GERMAN),
+    CourtierDef("Master Swordsmith", _K, _AT, _NF, _BAR, People.GERMAN),
 )
 
 COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS}

@@ -203,7 +203,7 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
     hand = state.hands[player]
     out: list[Action] = []
 
-    if attribute == "faith":  # Conversion
+    if attribute == "faith" and card.value is None:  # Conversion
         for cand in state.uids_in_play():
             cs = state.cstate[cand]
             if cs.mutated_faith:
@@ -212,7 +212,9 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.MYSTERY_CULTS.value))
             elif cs.faith is Faith.MYSTERY_CULTS:
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
-            else:  # stripped: Conversion restores a faith of the player's choice
+            else:
+                # An atheist or a stripped courtier comes to a faith of the
+                # player's choosing.
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
                 out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.MYSTERY_CULTS.value))
         return out

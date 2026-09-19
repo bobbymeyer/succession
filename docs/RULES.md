@@ -54,7 +54,7 @@ courtier is bumped to the outer circle.
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
 | Defense (5) | Attached preemptively to an inner-circle courtier by sacrificing a matching-estate courtier *from hand* (`Patron Protection`: any estate). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → None. The courtier stays where they are. |
-| Mutation (8) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
+| Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
 | Event (10) | The player playing it names **one target courtier**. Minor: the target may attempt a save. Major: no save. |
 | Outmaneuver (1) | The targeted player skips their next turn. |
 | Pivot (1) | `Schismatic Event`: discard your agenda, draw a new one from the unused pool. The act is public; both agendas stay private. |
@@ -62,6 +62,41 @@ courtier is bumped to the outer circle.
 Strips do **not** consume a courtier's mutation allowance, so a stripped
 attribute can be restored later by `Conversion` (the player picks the faith) or
 `Adoption`.
+
+## Faith and atheism
+
+There are two faiths -- Old Gods and Mystery Cults -- and an **Atheist** value
+that is a real position, not an absence. Five of the 37 courtiers are born
+atheists, one from each house, one commoner and one barbarian:
+
+| Courtier | Group | Estate | Was |
+|---|---|---|---|
+| Speaker of the Old Words | Amonides | Military | Old Gods |
+| Buyer of Cities | Mitreas | Merchant | Mystery Cults |
+| Horse Breaker | Argaian | Military | Mystery Cults |
+| Mender of Bones | Commoner | Commons | Old Gods |
+| Master Swordsmith | Barbarian | Commons | Old Gods |
+
+That leaves the roster at 16 Old Gods, 16 Mystery Cults, 5 atheists. Which
+three come out of Old Gods matters: see the note in the README on why they are
+taken from Commons.
+
+Atheism has no agenda. There is no Faith Ascendant: Atheist, and Balance still
+asks only for the two faiths, so **an atheist in an inner seat is a seat
+neither faith can count**. That makes atheism purely denial: it is the one
+attribute you push a courtier into to take something away rather than to build
+something.
+
+Two cards move a courtier across that line, and each spends the courtier's
+one faith mutation, so nobody crosses it twice:
+
+* **Apostasy** (mutation) -- target's faith becomes Atheist.
+* **Conversion** (mutation) -- flips Old Gods and Mystery Cults, and brings an
+  atheist (or an excommunicated courtier) to a faith of the player's choosing.
+
+Atheist is distinct from the `None` an `Excommunication` leaves: `None` is an
+empty slot, atheism is a conviction. Both count for no faith agenda; only the
+distinction in the log tells you which happened.
 
 A card with no legal target cannot be played at all that turn — the engine
 never generates an action that would do nothing.
@@ -104,8 +139,8 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-80 cards: 37 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
-5 defenses + 2 strips + 8 mutations + 1 pivot + 1 Outmaneuver. When the draw
+81 cards: 37 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
+5 defenses + 2 strips + 9 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
 
 ---
@@ -120,6 +155,8 @@ first; the flag flips it.
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
 | 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
+| 2d | **Balance asks only for the two faiths**, not for an atheist as well, since atheism has no agenda. | two faiths | -- |
+| 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |

@@ -69,55 +69,67 @@ works: run one batch with a strategic seat and one without, then pool them.
 4,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 39.5 player-turns (10.2 rounds), median 36, max 192
-Double wins: 7.4%          Timeouts: 0%
+Game length: mean 43.1 player-turns (11.1 rounds), median 39, max 189
+Double wins: 5.7%          Timeouts: 0%
 
-Win rate by tier      naive 14.1%   greedy 24.8%   strategic 54.6%
+Win rate by tier      naive 12.9%   greedy 23.9%   strategic 56.1%
 
-Win rate by agenda    Faith Ascendant: Mystery Cults  39.6%
-                      Faith Ascendant: Old Gods       39.4%
-                      Balance                         38.1%
-                      Barbarian Conquest              27.6%
-                      House Rising: Argaian           14.3%
-                      House Rising: Amonides          14.2%
-                      House Rising: Mitreas           13.9%
+Win rate by agenda    Balance                         42.3%
+                      Faith Ascendant: Mystery Cults  31.7%
+                      Barbarian Conquest              30.9%
+                      Faith Ascendant: Old Gods       30.8%
+                      House Rising: Amonides          17.1%
+                      House Rising: Argaian           15.7%
+                      House Rising: Mitreas           15.4%
 ```
 
-1. **The seven agendas span 14–40%**, against 2–53% under the first draft of
-   the rules. Three of them sit inside a point of each other at ~39%, and the
-   three houses within 0.4 points — which is what you want from copies of one
-   agenda.
+1. **The seven agendas span 15–42%**, against 2–53% under the first draft of
+   the rules. The two faiths and Conquest are within a point of each other, and
+   the three houses within 1.7.
 
-2. **The third own-estate courtier per house is what closed the gap.** Houses
-   went 11% → 14% when each family gained a third courtier in its own estate:
-   a house no longer has to spend both of its estate cards to claim the seat
-   its agenda demands.
+2. **Balance is now the outlier at the top**, 10 points clear. Atheism is why:
+   the two faith agendas each lost ~8 points when five courtiers stopped
+   counting for them, but Balance only ever needed *one* seat of each faith, so
+   it barely noticed — and it gained from its rivals slowing down.
 
-3. **Barbarian Conquest is now the outlier at 27.6%**, and it moved without
-   being touched — three more Imperial courtiers dilute the barbarian share of
-   the deck (8 of 37, down from 8 of 34), and the new Argaian courtier is
-   Military, so it competes directly for the two seats the generals route
-   needs. If you want it back near 33%, the lever is a ninth barbarian rather
-   than a rule change.
+3. **The houses climbed to 15–17%** for the same reason, without being touched.
+   They were the floor of the board at ~11% two changes ago.
 
-4. **The two faiths are at parity** (39.6% / 39.4%) despite the roster now
-   being 19 Old Gods to 18 Mystery Cults — the odd courtier out does not show
-   up above the noise.
+4. **The faiths are within a point of each other** (31.7% / 30.8%) on a 16/16
+   roster. That took some care in *which* courtiers turned atheist — see below.
 
 5. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 14.1% → 24.8% → 54.6%. A strategic bot at the table
+   really playing the game: 12.9% → 23.9% → 56.1%. A strategic bot at the table
    also suppresses everyone else. Swapping exactly one greedy seat for a
    strategic seat (4,000 games each, everything else held fixed):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.9% | 27.8 turns |
-   | with a strategic bot | 17.6% | 39.5 turns |
+   | without a strategic bot | 26.5% | 30.4 turns |
+   | with a strategic bot | 16.6% | 43.1 turns |
 
    It takes about a third of the other players' equity and makes games ~40%
    longer — it is genuinely denying wins, not just winning faster.
 
 Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
+
+### Which courtiers turn atheist matters more than how many
+
+The five atheists have to come out of the faiths unevenly — three Old Gods and
+two Mystery Cults, to land on 16/16 — and the obvious picks put the faiths 3.9
+points apart. Old Gods' depth sits in Commons, which has one seat, so its
+Church and Military courtiers are worth far more to it than its commoners are.
+Taking the Old Gods losses from Commons instead closes the gap (3,000 games
+each):
+
+| Atheist set | Old Gods | Mystery Cults | gap |
+|---|---|---|---|
+| Sword of the Assembly (Church), Mender, Blade for Any Banner | 27.9% | 31.8% | 3.9 |
+| **Horse Breaker, Master Swordsmith, Mender** (current) | **31.2%** | **32.3%** | **1.2** |
+
+The flavour cost is real: *Blade for Any Banner* is the best atheist name on
+the roster and it is back to Mystery Cults. One line in `courtiers.py` if you
+want it the other way.
 
 ### Variants already wired up
 
