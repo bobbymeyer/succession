@@ -156,6 +156,7 @@ first; the flag flips it.
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
 | 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
+| 2f | **All seven agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all seven | `--drop-agendas` |
 | 2d | **Balance asks only for the two faiths**, not for a godless courtier as well, since godlessness has no agenda. | two faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |

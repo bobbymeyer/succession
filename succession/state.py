@@ -47,6 +47,9 @@ class Config:
     house_rising_requires_preferred_seat: bool = True
     #: Inner seats a faith must hold for Faith Ascendant.
     faith_seats: int = 4
+    #: Agenda keys left out of the pool entirely -- neither dealt nor available
+    #: to a Schismatic Event. For asking what the game looks like without one.
+    excluded_agendas: tuple[str, ...] = ()
     #: Overrides for a family's own estate, e.g. (("Mitreas", "Church"),).
     #: Unlisted families use courtiers.FAMILY_PREFERRED_ESTATE.
     house_preferred_estates: tuple[tuple[str, str], ...] = ()

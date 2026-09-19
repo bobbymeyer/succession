@@ -45,6 +45,18 @@ THREAT_WEIGHT = 0.7
 BASE_BELIEF = 0.5
 
 
+def agenda_pool(state: GameState) -> list:
+    """Every agenda in this game -- dealt or in the fog, but not excluded ones.
+
+    Which agendas are *in play* is public (it is the deck); which player holds
+    which is not.
+    """
+
+    return [
+        AGENDAS_BY_KEY[k] for k in (*state.agendas, *state.unused_agendas)
+    ]
+
+
 def _is_pivot(state: GameState, action: Action) -> bool:
     return (
         action.kind == PLAY
@@ -254,7 +266,7 @@ class StrategicBot(ThinkingBot):
 
         own = progress_counts(counts, agenda, rules)
         threat = 0.0
-        for rival in AGENDAS:
+        for rival in agenda_pool(before):
             if rival.key == mine:
                 continue
             rival_progress = progress_counts(counts, rival, rules)
@@ -279,7 +291,7 @@ class StrategicBot(ThinkingBot):
                 lead = max(
                     (
                         beliefs.get(a.key, 0.0) / total * progress_counts(counts, a, rules)
-                        for a in AGENDAS
+                        for a in agenda_pool(state)
                         if a.key != state.agendas[player]
                     ),
                     default=0.0,

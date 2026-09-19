@@ -130,6 +130,43 @@ house courtiers all sit in the estates Old Gods cannot spare. The current trio
 instead spends its dead weight, and the price is that only one house (Mitreas)
 has a godless courtier. One line in `courtiers.py` either way.
 
+### Balance is the game's equalizer
+
+`--drop-agendas balance` answers what the game looks like without it (6,000
+games each, everything else held fixed):
+
+| | naive | greedy | strategic | mean turns | agenda spread |
+|---|---|---|---|---|---|
+| all seven agendas | 13.0% | 24.9% | 55.8% | 41.5 | 14.4–40.2% |
+| without Balance | 11.0% | 21.4% | **64.5%** | 45.6 | 17.3–37.7% |
+| control: without a *house* agenda | 13.2% | 25.0% | 55.9% | 40.1 | — |
+
+The control matters: dropping any agenda leaves six in the pool and two in the
+fog, but dropping a house agenda changes nothing. It is Balance specifically.
+
+Two things happen at once. The agendas that remain tidy up — the spread
+narrows to 17–38% and sorts cleanly into faiths, then Conquest, then the
+houses within 1.3 points of each other — and the skill gap widens sharply,
+because Balance is the one agenda a player can win without meaning to. Win
+rate per deal, with Balance in the game:
+
+| Agenda | naive | greedy | strategic |
+|---|---|---|---|
+| **Balance** | **26.1%** | 36.4% | 71.8% |
+| Barbarian Conquest | 13.5% | 34.2% | 64.5% |
+| Faith Ascendant (mean) | 17.4% | 30.8% | 66.2% |
+| House Rising (mean) | 5.8% | 13.2% | 39.4% |
+
+A bot playing at random wins Balance a quarter of the time — one and a half
+times its rate on the next-best agenda and four times its rate on a house. It
+is also the hardest agenda to *deny*, because it is satisfied by a diverse
+board, so almost any seat someone fills can complete it. Take it out and the
+strategic bot stops spending turns defending against a threat it cannot
+block, which is most of the jump from 56% to 64%.
+
+So it is a design question rather than a balance bug: Balance is what keeps a
+four-player game from being won two times in three by whoever plans best.
+
 ### Apostasy is the first card only one tier will play
 
 Apostasy can never advance your own agenda — it only takes a seat away from

@@ -16,7 +16,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
-from .agendas import AGENDAS
+from .agendas import AGENDA_KEYS, AGENDAS
 from .analysis import format_summary, summarize
 from .bots import BOT_TIERS, make_bot
 from .enums import FAMILIES, Estate
@@ -50,6 +50,22 @@ def parse_preferred_estates(spec: str) -> tuple[tuple[str, str], ...]:
     return tuple(pairs)
 
 
+def parse_dropped_agendas(spec: str) -> tuple[str, ...]:
+    if not spec:
+        return ()
+    keys = []
+    for item in spec.split(","):
+        key = item.strip().lower().replace(" ", "_").replace("-", "_")
+        if not key:
+            continue
+        if key not in AGENDA_KEYS:
+            raise SystemExit(
+                f"unknown agenda {key!r} (have: {', '.join(AGENDA_KEYS)})"
+            )
+        keys.append(key)
+    return tuple(keys)
+
+
 def build_config(args: argparse.Namespace) -> Config:
     players = tuple(p.strip() for p in args.players.split(",") if p.strip())
     unknown = [p for p in players if p not in BOT_TIERS]
@@ -73,6 +89,7 @@ def build_config(args: argparse.Namespace) -> Config:
         house_rising_requires_preferred_seat=not args.house_any_three,
         house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
         faith_seats=args.faith_seats,
+        excluded_agendas=parse_dropped_agendas(args.drop_agendas),
     )
 
 
@@ -160,6 +177,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
+    parser.add_argument("--drop-agendas", default="", metavar="KEYS", help="leave agendas out of the pool entirely, e.g. balance")
     parser.add_argument("--faith-seats", type=int, default=4, help="inner seats a faith must hold to win (default 4 of 7)")
     parser.add_argument("--house-any-three", action="store_true", help="drop the preferred-estate requirement: any three seats of a family win")
     parser.add_argument("--house-preferred-estates", default="", metavar="SPEC", help="override a family's own estate, e.g. mitreas=church (default: amonides=church, mitreas=merchant, argaian=military)")

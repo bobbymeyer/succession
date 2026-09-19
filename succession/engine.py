@@ -379,7 +379,12 @@ def setup_game(config: Config, rng: random.Random, *, trace: bool = False) -> Ga
     state = GameState.new(config)
     state.trace = trace
 
-    keys = [a.key for a in AGENDAS]
+    keys = [a.key for a in AGENDAS if a.key not in config.excluded_agendas]
+    if len(keys) < config.num_players:
+        raise ValueError(
+            f"{len(keys)} agendas left in the pool, but {config.num_players} players "
+            "need one each"
+        )
     rng.shuffle(keys)
     state.agendas = keys[: config.num_players]
     state.unused_agendas = keys[config.num_players :]

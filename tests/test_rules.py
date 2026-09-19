@@ -722,6 +722,21 @@ class TestDeckAndTurns(unittest.TestCase):
         for hand in state.hands:
             self.assertEqual(len(hand), config.starting_hand)
 
+    def test_excluded_agendas_never_reach_the_table(self):
+        config = Config(excluded_agendas=("balance",))
+        for seed in range(20):
+            state = setup_game(config, random.Random(seed))
+            self.assertNotIn("balance", state.agendas)
+            self.assertNotIn("balance", state.unused_agendas)
+            self.assertEqual(
+                len(state.agendas) + len(state.unused_agendas), len(AGENDAS_BY_KEY) - 1
+            )
+
+    def test_excluding_too_many_agendas_is_an_error(self):
+        config = Config(excluded_agendas=tuple(list(AGENDAS_BY_KEY)[:5]))
+        with self.assertRaises(ValueError):
+            setup_game(config, random.Random(0))
+
     def test_a_player_always_has_a_legal_action(self):
         state = setup_game(Config(), random.Random(5))
         for p in range(state.config.num_players):
