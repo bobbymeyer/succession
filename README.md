@@ -69,52 +69,53 @@ works: run one batch with a strategic seat and one without, then pool them.
 4,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 43.0 player-turns (11.1 rounds), median 39, max 231
-Double wins: 6.2%          Timeouts: 0%
+Game length: mean 41.9 player-turns (10.9 rounds), median 38, max 222
+Double wins: 6.1%          Timeouts: 0%
 
-Win rate by tier      naive 14.7%   greedy 24.4%   strategic 52.5%
+Win rate by tier      naive 14.7%   greedy 24.3%   strategic 52.3%
 
-Win rate by agenda    Faith Ascendant: Mystery Cults  43.6%
-                      Faith Ascendant: Old Gods       40.9%
-                      Balance                         39.0%
-                      Barbarian Conquest              33.3%
-                      House Rising: Amonides           9.5%
-                      House Rising: Mitreas            9.3%
-                      House Rising: Argaian            8.8%
+Win rate by agenda    Faith Ascendant: Mystery Cults  41.3%
+                      Faith Ascendant: Old Gods       39.5%
+                      Balance                         37.6%
+                      Barbarian Conquest              32.9%
+                      House Rising: Amonides          11.3%
+                      House Rising: Mitreas           11.0%
+                      House Rising: Argaian           10.9%
 ```
 
-1. **Four of the seven agendas sit in a tight 33–44% band**, and the three
-   houses are within 0.7 points of each other — which is what you want from
-   three copies of one agenda. The whole spread is 9–44%, against 2–53% under
-   the first draft of the rules.
+1. **The seven agendas span 11–41%**, against 2–53% under the first draft of
+   the rules. The top four sit inside 33–41%, and the three houses are within
+   0.5 points of each other — which is what you want from three copies of one
+   agenda.
 
-2. **The houses at ~9% are the hardest thing on the board.** They are the only
+2. **The houses at ~11% are still the hardest thing on the board**, and that
+   looks like the right shape rather than a problem: House Rising is the only
    agenda needing three *specific* courtiers of a six-card subset seated at
-   once, with two of them paired in an estate. Every house is fighting for the
-   same handful of paired seats.
+   once. Dropping the own-estate requirement entirely (`--house-any-three`)
+   only moves them to ~13%, so the constraint is costing about two points —
+   the scarcity of the right courtiers is doing most of the work.
 
-3. **Barbarian Conquest's two routes make it a real agenda again** — 33.3%,
-   up from 25.8% when it was a single strict condition. The generals route
-   (two barbarian generals) is the fast one; the three-seat bloc is the
-   fallback when the Military seats are contested.
+3. **Barbarian Conquest's two routes make it a real agenda** — 32.9%. The
+   generals route (two barbarian generals) is the fast one; the three-seat
+   bloc is the fallback when the Military seats are contested.
 
-4. **Faith Ascendant is now the strongest pair**, because "4 seats" was
-   two-thirds of a six-seat board and is a bare majority of seven.
-   `--faith-seats 5` restores the two-thirds shape — see `docs/RULES.md` for
-   what that does to everything else (short version: it hands the lead to
-   Balance rather than tightening the spread).
+4. **Faith Ascendant is the strongest pair**, because "4 seats" was two-thirds
+   of a six-seat board and is a bare majority of seven. `--faith-seats 5`
+   restores the two-thirds shape — see `docs/RULES.md` for what that does to
+   everything else (short version: it hands the lead to Balance rather than
+   tightening the spread).
 
 5. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 14.7% → 24.4% → 52.5%. A strategic bot at the table
+   really playing the game: 14.7% → 24.3% → 52.3%. A strategic bot at the table
    also suppresses everyone else. Swapping exactly one greedy seat for a
    strategic seat (4,000 games each, everything else held fixed):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 26.4% | 30.2 turns |
-   | with a strategic bot | 17.9% | 43.0 turns |
+   | without a strategic bot | 26.6% | 29.0 turns |
+   | with a strategic bot | 17.9% | 41.9 turns |
 
-   It takes about a third of the other players' equity and makes games ~40%
+   It takes about a third of the other players' equity and makes games ~45%
    longer — it is genuinely denying wins, not just winning faster.
 
 Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
@@ -123,9 +124,9 @@ Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
 
 | Flag | Effect on the batch |
 |---|---|
-| `--faith-seats 5` | faiths 19–23%, Balance 50%, Conquest 43%, houses ~14% |
-| `--house-preferred-estates amonides=church,mitreas=merchant,argaian=military` | houses drop to ~4% each |
-| `--house-any-three` | drops the pair requirement; houses rise to ~14% |
+| `--faith-seats 5` | faiths 18–21%, Balance 48%, Conquest 41%, houses ~17% |
+| `--house-any-three` | drops the own-estate requirement; houses ~13% |
+| `--house-preferred-estates mitreas=church` | reassign a house's own estate |
 | `--removed-out-of-game` | killed courtiers never return |
 | `--defense-matches-target` | an estate Defense may only shield its own estate |
 
@@ -133,15 +134,11 @@ Games always resolve: no timeouts in 16,000 games at the 600-turn cap.
 
 `docs/RULES.md` ends with the open questions. Two of them matter.
 
-**Fixed preferred estates, or emergent?** The seventh seat fixed the hard part
-— Merchant seats a pair now, so Amonides/Church, Mitreas/Merchant and
-Argaian/Military all work, and Mitreas went from 0 wins in 1,086 games to
-winning normally. What is left is a balance call: fixing the mapping roughly
-halves the houses (~9% → ~4%), because a house that draws the wrong courtiers
-can no longer pivot to the estate it *can* pair in. Default is emergent.
-
-**How many seats should a faith need?** Four was two-thirds of six and is a
-bare majority of seven. Both numbers are in `docs/RULES.md`.
+**How many seats should a faith need?** Four was two-thirds of a six-seat
+board and is a bare majority of seven, which is why the faiths lead the table.
+`--faith-seats 5` restores the two-thirds shape; both sets of numbers are in
+`docs/RULES.md`. It is the one threshold the seventh seat changed the meaning
+of without anyone deciding to.
 
 **Event effects.** The bigger one. The brief called out that the source
 document's effects were written for the board-wide version and do not map onto

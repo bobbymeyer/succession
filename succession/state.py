@@ -43,13 +43,12 @@ class Config:
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
-    #: Require two of a House Rising trio to sit in one estate.
-    house_rising_requires_estate_pair: bool = True
+    #: Require one of a House Rising trio to sit in the family's own estate.
+    house_rising_requires_preferred_seat: bool = True
     #: Inner seats a faith must hold for Faith Ascendant.
     faith_seats: int = 4
-    #: Optional fixed family -> estate mapping for that pair, e.g.
-    #: (("Amonides", "Church"), ("Argaian", "Military")). Empty means a family
-    #: may double up in whichever estate it manages to.
+    #: Overrides for a family's own estate, e.g. (("Mitreas", "Church"),).
+    #: Unlisted families use courtiers.FAMILY_PREFERRED_ESTATE.
     house_preferred_estates: tuple[tuple[str, str], ...] = ()
 
     @property

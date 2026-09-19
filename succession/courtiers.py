@@ -84,3 +84,13 @@ COURTIERS: tuple[CourtierDef, ...] = (
 )
 
 COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS}
+
+#: Each house's affiliated estate, from the source document. House Rising asks
+#: for one of its three seats here. Every family fields two courtiers in each
+#: of Church, Military and Merchant, and each of those estates seats a pair, so
+#: no house is short of candidates for its own estate.
+FAMILY_PREFERRED_ESTATE: dict[Family, Estate] = {
+    Family.AMONIDES: Estate.CHURCH,
+    Family.MITREAS: Estate.MERCHANT,
+    Family.ARGAIAN: Estate.MILITARY,
+}

@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .courtiers import FAMILY_PREFERRED_ESTATE
 from .enums import FAITHS, FAMILIES, MILITARY_SEATS, SEAT_ESTATE, Faith, Family, Origin
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -47,8 +48,10 @@ AGENDAS: tuple[Agenda, ...] = (
 AGENDA_KEYS: tuple[str, ...] = tuple(a.key for a in AGENDAS)
 AGENDAS_BY_KEY: dict[str, Agenda] = {a.key: a for a in AGENDAS}
 
-#: House Rising needs this many of the inner seats, two of them in one estate.
+#: House Rising needs this many of the inner seats...
 HOUSE_SEATS = 3
+#: ...of which this many must sit in the family's own estate.
+HOUSE_PREFERRED_SEATS = 1
 #: Faith Ascendant needs this many of the inner seats. Four of seven is a bare
 #: majority; five is the two-thirds the rule meant when the board had six.
 FAITH_SEATS = 4
@@ -56,28 +59,24 @@ FAITH_SEATS = 4
 CONQUEST_BARBARIANS = 3
 #: ...or this many barbarian generals (both Military seats) wins outright.
 CONQUEST_GENERALS = 2
-#: Two of a House Rising trio must sit in the family's preferred estate.
-HOUSE_ESTATE_PAIR = 2
-
 
 @dataclass(frozen=True, slots=True)
 class AgendaRules:
     """The agenda variants; see docs/RULES.md."""
 
-    #: Two of the three House Rising seats must share an estate.
-    house_estate_pair: bool = True
+    #: One of the three House Rising seats must be in the family's own estate.
+    house_preferred_seat: bool = True
     #: Seats a faith must hold to win.
     faith_seats: int = FAITH_SEATS
-    #: Optional fixed family -> estate mapping. When empty, a family's
-    #: preferred estate is whichever one it has doubled up in; when set, only
-    #: that estate's seats count toward the pair.
+    #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
     def preferred_estate(self, family: str) -> str | None:
         for name, estate in self.house_preferred_estate:
             if name == family:
                 return estate
-        return None
+        default = FAMILY_PREFERRED_ESTATE.get(Family(family))
+        return default.value if default is not None else None
 
 
 DEFAULT_RULES = AgendaRules()
@@ -86,7 +85,7 @@ DEFAULT_RULES = AgendaRules()
 def rules_for(state: "GameState") -> AgendaRules:
     config = state.config
     return AgendaRules(
-        house_estate_pair=config.house_rising_requires_estate_pair,
+        house_preferred_seat=config.house_rising_requires_preferred_seat,
         house_preferred_estate=config.house_preferred_estates,
         faith_seats=config.faith_seats,
     )
@@ -163,20 +162,14 @@ def count_board(state: "GameState") -> BoardCounts:
     )
 
 
-def _estate_block(counts: BoardCounts, family: str, rules: AgendaRules) -> int:
-    """Seats this family holds in its preferred estate.
-
-    With no fixed mapping the preferred estate is emergent -- whichever estate
-    the family has most seats in.
-    """
+def _preferred_seats(counts: BoardCounts, family: str, rules: AgendaRules) -> int:
+    """Seats this family holds in its own estate."""
 
     estates = counts.inner_family_estate.get(family)
-    if not estates:
-        return 0
     preferred = rules.preferred_estate(family)
-    if preferred is not None:
-        return estates.get(preferred, 0)
-    return max(estates.values())
+    if not estates or preferred is None:
+        return 0
+    return estates.get(preferred, 0)
 
 
 def satisfied_counts(
@@ -186,8 +179,8 @@ def satisfied_counts(
     if kind == HOUSE_RISING:
         if counts.inner_family.get(agenda.param, 0) < HOUSE_SEATS:
             return False
-        if rules.house_estate_pair:
-            return _estate_block(counts, agenda.param, rules) >= HOUSE_ESTATE_PAIR
+        if rules.house_preferred_seat:
+            return _preferred_seats(counts, agenda.param, rules) >= HOUSE_PREFERRED_SEATS
         return True
     if kind == FAITH_ASCENDANT:
         return counts.inner_faith.get(agenda.param, 0) >= rules.faith_seats
@@ -222,9 +215,9 @@ def progress_counts(
     if kind == HOUSE_RISING:
         seated = counts.inner_family.get(agenda.param, 0)
         core = min(seated, HOUSE_SEATS) / HOUSE_SEATS
-        if rules.house_estate_pair:
-            block = min(_estate_block(counts, agenda.param, rules), HOUSE_ESTATE_PAIR)
-            core = 0.6 * core + 0.4 * block / HOUSE_ESTATE_PAIR
+        if rules.house_preferred_seat:
+            held = min(_preferred_seats(counts, agenda.param, rules), HOUSE_PREFERRED_SEATS)
+            core = 0.75 * core + 0.25 * held / HOUSE_PREFERRED_SEATS
         bench = min(counts.outer_family.get(agenda.param, 0), HOUSE_SEATS) / HOUSE_SEATS
     elif kind == FAITH_ASCENDANT:
         needed = rules.faith_seats

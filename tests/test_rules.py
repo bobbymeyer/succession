@@ -14,7 +14,7 @@ from succession.actions import DISCARD, MOVE, PLAY, Action, card_actions, legal_
 from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
-from succession.courtiers import COURTIERS
+from succession.courtiers import COURTIERS, FAMILY_PREFERRED_ESTATE
 from succession.engine import apply_action, check_winners, draw, play_game, setup_game
 from succession.enums import (
     SEAT_ESTATE,
@@ -448,26 +448,28 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
 
 
 class TestWinConditions(unittest.TestCase):
-    def test_house_rising_needs_three_seats_with_a_pair(self):
+    def test_house_rising_needs_three_seats_including_its_own_estate(self):
         state = fresh()
-        agenda = AGENDAS_BY_KEY["house_amonides"]
+        agenda = AGENDAS_BY_KEY["house_amonides"]           # Amonides: Church
         seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)   # Church
-        seat(state, "Hand of the Oracle", Seat.ORACLE)          # Church
-        self.assertFalse(satisfied(state, agenda))  # the pair alone is not enough
-        seat(state, "Weigher of Grain", Seat.EXCHEQUER)         # Merchant
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)
+        self.assertFalse(satisfied(state, agenda))          # only two seats
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_house_rising_rejects_three_seats_spread_across_estates(self):
+    def test_house_rising_rejects_a_trio_outside_its_own_estate(self):
         state = fresh()
-        agenda = AGENDAS_BY_KEY["house_amonides"]
-        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)      # Church
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)  # Military
-        seat(state, "Weigher of Grain", Seat.EXCHEQUER)            # Merchant
-        self.assertFalse(satisfied(state, agenda))
-        # ...but three spread seats do win under --house-any-three.
+        agenda = AGENDAS_BY_KEY["house_amonides"]           # Amonides: Church
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)     # Military
+        seat(state, "Speaker of the Old Words", Seat.PRAETORIAN_CHIEF)  # Military
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)                 # Merchant
+        self.assertFalse(satisfied(state, agenda))  # three seats, no Church seat
+        # ...but they do win under --house-any-three.
         self.assertTrue(
-            satisfied(judged_as(state, house_rising_requires_estate_pair=False), agenda)
+            satisfied(judged_as(state, house_rising_requires_preferred_seat=False), agenda)
         )
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
+        self.assertTrue(satisfied(state, agenda))
 
     def test_house_rising_counts_only_the_named_family(self):
         state = fresh()
@@ -477,53 +479,45 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Horse Breaker", Seat.FIELD_GENERAL)          # Argaian
         self.assertFalse(satisfied(state, agenda))
 
-    def test_the_pair_may_be_military_instead_of_church(self):
-        state = fresh()
-        agenda = AGENDAS_BY_KEY["house_argaian"]
-        seat(state, "Horse Breaker", Seat.FIELD_GENERAL)          # Military
-        seat(state, "Destroyer of Walls", Seat.PRAETORIAN_CHIEF)  # Military
-        seat(state, "Founder of Markets", Seat.EXCHEQUER)         # Merchant
-        self.assertTrue(satisfied(state, agenda))
+    def test_each_house_has_its_own_estate_to_claim(self):
+        """Amonides/Church, Mitreas/Merchant, Argaian/Military all work."""
 
-    def test_a_fixed_preferred_estate_only_counts_that_estate(self):
-        amonides_church = (("Amonides", "Church"),)
-        state = fresh(house_preferred_estates=amonides_church)
-        agenda = AGENDAS_BY_KEY["house_amonides"]
-        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)   # Military
-        seat(state, "Speaker of the Old Words", Seat.PRAETORIAN_CHIEF)  # Military
-        seat(state, "Weigher of Grain", Seat.EXCHEQUER)               # Merchant
-        # A Military pair does not satisfy a family whose estate is fixed to Church.
-        self.assertFalse(satisfied(state, agenda))
-        self.assertTrue(satisfied(judged_as(state), agenda))  # emergent pair: fine
-        state.seats[Seat.PRAETORIAN_CHIEF] = None
-        seat(state, "Hand of the Oracle", Seat.ORACLE)
-        self.assertFalse(satisfied(state, agenda))  # one Church seat, not two
-        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)
-        self.assertTrue(satisfied(state, agenda))
-
-    def test_every_family_estate_has_a_pair_of_seats_to_take(self):
-        """Church, Military and Merchant each seat two, so no house is locked out."""
-
-        for family, estate, names in (
-            ("Amonides", "Church", ("Beloved of the Gods", "Hand of the Oracle", "Weigher of Grain")),
-            ("Argaian", "Military", ("Horse Breaker", "Destroyer of Walls", "Reader of Omens")),
-            ("Mitreas", "Merchant", ("Golden Thumb", "Buyer of Cities", "Initiate of the Seven Veils")),
+        for family, names in (
+            ("Amonides", ("Beloved of the Gods", "Keeper of the Long Peace", "Weigher of Grain")),
+            ("Mitreas", ("Golden Thumb", "Crosser of Rivers", "Initiate of the Seven Veils")),
+            ("Argaian", ("Horse Breaker", "Reader of Omens", "Founder of Markets")),
         ):
             with self.subTest(family=family):
-                state = fresh(house_preferred_estates=((family, estate),))
+                state = fresh()
                 agenda = AGENDAS_BY_KEY[f"house_{family.lower()}"]
-                pair = [s for s in SEATS if SEAT_ESTATE[s].value == estate]
-                state.seats[pair[0]] = uid(state, names[0])
-                state.seats[pair[1]] = uid(state, names[1])
-                self.assertFalse(satisfied(state, agenda))  # the pair is only two seats
-                spare = next(
+                estate = FAMILY_PREFERRED_ESTATE[Family(family)]
+                for name in names:
+                    spot = next(
+                        s
+                        for s in SEATS
+                        if state.seats[s] is None
+                        and SEAT_ESTATE[s] is state.cstate[uid(state, name)].estate
+                    )
+                    state.seats[spot] = uid(state, name)
+                self.assertTrue(satisfied(state, agenda))
+                held = [
                     s
                     for s in SEATS
-                    if state.seats[s] is None
-                    and SEAT_ESTATE[s] is state.cstate[uid(state, names[2])].estate
-                )
-                state.seats[spare] = uid(state, names[2])
-                self.assertTrue(satisfied(state, agenda))
+                    if state.seats[s] is not None and SEAT_ESTATE[s] is estate
+                ]
+                self.assertTrue(held, f"{family} took no {estate.value} seat")
+
+    def test_a_preferred_estate_override_changes_which_seat_counts(self):
+        state = fresh(house_preferred_estates=(("Amonides", "Merchant"),))
+        agenda = AGENDAS_BY_KEY["house_amonides"]
+        seat(state, "Beloved of the Gods", Seat.CHIEF_PRIEST)            # Church
+        seat(state, "Hand of the Oracle", Seat.ORACLE)                   # Church
+        seat(state, "Keeper of the Long Peace", Seat.FIELD_GENERAL)      # Military
+        self.assertFalse(satisfied(state, agenda))  # no Merchant seat held
+        self.assertTrue(satisfied(judged_as(state), agenda))  # Church by default
+        state.seats[Seat.FIELD_GENERAL] = None
+        seat(state, "Weigher of Grain", Seat.EXCHEQUER)
+        self.assertTrue(satisfied(state, agenda))
 
     def test_faith_ascendant_needs_four_seats(self):
         state = fresh()
@@ -582,7 +576,7 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Initiate of the Seven Veils", Seat.CHIEF_PRIEST)
         seat(state, "Whisperer to the Serpent", Seat.ORACLE)
         seat(state, "Crosser of Rivers", Seat.FIELD_GENERAL)
-        seat(state, "Rider of the Long Road", Seat.PRAETORIAN_CHIEF)
+        seat(state, "Golden Thumb", Seat.EXCHEQUER)  # Mitreas' own estate
         self.assertEqual(check_winners(state), [0, 1])
 
 

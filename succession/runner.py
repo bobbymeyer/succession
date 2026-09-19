@@ -70,7 +70,7 @@ def build_config(args: argparse.Namespace) -> Config:
         outmaneuver_copies=args.outmaneuver_copies,
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
         defense_requires_matching_target=args.defense_matches_target,
-        house_rising_requires_estate_pair=not args.house_any_three,
+        house_rising_requires_preferred_seat=not args.house_any_three,
         house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
         faith_seats=args.faith_seats,
     )
@@ -161,8 +161,8 @@ def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
     parser.add_argument("--faith-seats", type=int, default=4, help="inner seats a faith must hold to win (default 4 of 7)")
-    parser.add_argument("--house-any-three", action="store_true", help="drop the estate-pair requirement: any three seats of a family win")
-    parser.add_argument("--house-preferred-estates", default="", metavar="SPEC", help="fix each family's preferred estate, e.g. amonides=church,argaian=military (default: whichever estate the family doubles up in)")
+    parser.add_argument("--house-any-three", action="store_true", help="drop the preferred-estate requirement: any three seats of a family win")
+    parser.add_argument("--house-preferred-estates", default="", metavar="SPEC", help="override a family's own estate, e.g. mitreas=church (default: amonides=church, mitreas=merchant, argaian=military)")
 
 
 def build_parser() -> argparse.ArgumentParser:
