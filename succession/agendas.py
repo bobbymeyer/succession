@@ -41,6 +41,7 @@ AGENDAS: tuple[Agenda, ...] = (
     Agenda("house_argaian", "House Rising: Argaian", HOUSE_RISING, Family.ARGAIAN.value),
     Agenda("faith_old_gods", "Faith Ascendant: Old Gods", FAITH_ASCENDANT, Faith.OLD_GODS.value),
     Agenda("faith_mystery_cults", "Faith Ascendant: Mystery Cults", FAITH_ASCENDANT, Faith.MYSTERY_CULTS.value),
+    Agenda("faith_one_god", "Faith Ascendant: The One God", FAITH_ASCENDANT, Faith.ONE_GOD.value),
     Agenda("barbarian_conquest", "Barbarian Conquest", CONQUEST),
     Agenda("balance", "Balance", BALANCE),
 )
@@ -245,8 +246,9 @@ def progress_counts(
         met = sum(1 for f in FAMILIES if counts.inner_family.get(f.value, 0) > 0)
         met += sum(1 for f in FAITHS if counts.inner_faith.get(f.value, 0) > 0)
         met += 1 if counts.inner_barbarians else 0
+        wanted = len(FAMILIES) + len(FAITHS) + 1
         seats = min(counts.inner_filled, rules.balance_seats) / rules.balance_seats
-        core = 0.8 * met / 6.0 + 0.2 * seats
+        core = 0.8 * met / wanted + 0.2 * seats
         bench = 0.0
     else:  # pragma: no cover
         raise ValueError(f"unknown agenda kind: {kind}")

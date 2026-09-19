@@ -1,6 +1,6 @@
 """The 40-courtier table.
 
-Four courtiers are Godless. Godlessness is a real faith value, not an absence:
+Three faiths share the roster twelve apiece; four courtiers are Godless. Godlessness is a real faith value, not an absence:
 it has no agenda of its own, so a godless courtier in an inner seat is a seat
 neither faith can count. Only Old Gods and Mystery Cults need to be level with
 each other -- the Godless need no win path, so they can be few.
@@ -44,6 +44,7 @@ class CourtierDef:
 _E, _C, _M, _K = Estate.MILITARY, Estate.CHURCH, Estate.MERCHANT, Estate.COMMONS
 _OG, _MC = Faith.OLD_GODS, Faith.MYSTERY_CULTS
 _GL = Faith.GODLESS
+_1G = Faith.ONE_GOD
 _AM, _MI, _AR, _NF = Family.AMONIDES, Family.MITREAS, Family.ARGAIAN, Family.NONE
 _IMP, _BAR = Origin.IMPERIAL, Origin.BARBARIAN
 
@@ -67,34 +68,34 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Initiate of the Seven Veils", _C, _MC, _MI, _IMP),
     CourtierDef("Crosser of Rivers", _E, _MC, _MI, _IMP),
     CourtierDef("Buyer of Cities", _M, _MC, _MI, _IMP),
-    CourtierDef("Whisperer to the Serpent", _C, _GL, _MI, _IMP),
+    CourtierDef("Whisperer to the Serpent", _C, _MC, _MI, _IMP),
     CourtierDef("Rider of the Long Road", _E, _MC, _MI, _IMP),
     CourtierDef("Creditor of Kings", _M, _MC, _MI, _IMP),
     CourtierDef("Charioteer of the Seven Turns", _K, _MC, _MI, _IMP),
     # --- House Argaian (mixed faith, Military-affiliated) -------------------
     CourtierDef("Horse Breaker", _E, _MC, _AR, _IMP),
     CourtierDef("Destroyer of Walls", _E, _OG, _AR, _IMP),
-    CourtierDef("Reader of Omens", _C, _MC, _AR, _IMP),
-    CourtierDef("Sword of the Assembly", _C, _OG, _AR, _IMP),
-    CourtierDef("Founder of Markets", _M, _OG, _AR, _IMP),
+    CourtierDef("Reader of Omens", _C, _1G, _AR, _IMP),
+    CourtierDef("Sword of the Assembly", _C, _1G, _AR, _IMP),
+    CourtierDef("Founder of Markets", _M, _1G, _AR, _IMP),
     CourtierDef("Uncrowned Victor", _M, _OG, _AR, _IMP),
-    CourtierDef("Taker of the Citadel", _E, _OG, _AR, _IMP),
+    CourtierDef("Taker of the Citadel", _E, _1G, _AR, _IMP),
     CourtierDef("Charioteer of the Iron Wheel", _K, _GL, _AR, _IMP),
     # --- Commoners (unaffiliated, Imperial) ---------------------------------
-    CourtierDef("Silver Tongue", _K, _OG, _NF, _IMP),
-    CourtierDef("Fastest of the Games", _K, _MC, _NF, _IMP),
-    CourtierDef("Mender of Bones", _K, _OG, _NF, _IMP),
+    CourtierDef("Silver Tongue", _K, _1G, _NF, _IMP),
+    CourtierDef("Fastest of the Games", _K, _OG, _NF, _IMP),
+    CourtierDef("Mender of Bones", _K, _MC, _NF, _IMP),
     CourtierDef("Ten Thousand Verses", _K, _GL, _NF, _IMP),
-    CourtierDef("Builder of the Long Aqueduct", _K, _OG, _NF, _IMP),
-    CourtierDef("Risen from the Ranks", _E, _MC, _NF, _IMP),
-    CourtierDef("Coin-Counter of the Assembly", _M, _MC, _NF, _IMP),
-    CourtierDef("Widow of the Temple", _C, _OG, _NF, _IMP),
+    CourtierDef("Builder of the Long Aqueduct", _K, _1G, _NF, _IMP),
+    CourtierDef("Risen from the Ranks", _E, _1G, _NF, _IMP),
+    CourtierDef("Coin-Counter of the Assembly", _M, _1G, _NF, _IMP),
+    CourtierDef("Widow of the Temple", _C, _1G, _NF, _IMP),
     # --- Barbarians (unaffiliated, Barbarian origin, two per people) --------
     CourtierDef("Priest of the Two-Horned God", _C, _MC, _NF, _BAR, People.EGYPTIAN),
-    CourtierDef("Master Mason", _K, _MC, _NF, _BAR, People.EGYPTIAN),
-    CourtierDef("Cataphract of the Iron Bridge", _E, _MC, _NF, _BAR, People.PERSIAN),
-    CourtierDef("Caravan-Lord of the Salt Road", _M, _MC, _NF, _BAR, People.PERSIAN),
-    CourtierDef("Hundred-Kill Rider", _E, _MC, _NF, _BAR, People.SCYTHIAN),
+    CourtierDef("Master Mason", _K, _GL, _NF, _BAR, People.EGYPTIAN),
+    CourtierDef("Cataphract of the Iron Bridge", _E, _1G, _NF, _BAR, People.PERSIAN),
+    CourtierDef("Caravan-Lord of the Salt Road", _M, _1G, _NF, _BAR, People.PERSIAN),
+    CourtierDef("Hundred-Kill Rider", _E, _1G, _NF, _BAR, People.SCYTHIAN),
     CourtierDef("Blade for Any Banner", _E, _MC, _NF, _BAR, People.SCYTHIAN),
     CourtierDef("Warlord of the Iron Grove", _E, _OG, _NF, _BAR, People.GERMAN),
     CourtierDef("Master Swordsmith", _K, _GL, _NF, _BAR, People.GERMAN),

@@ -65,20 +65,28 @@ attribute can be restored later by `Conversion` (the player picks the faith) or
 
 ## Faith and the Godless
 
-There are two faiths -- Old Gods and Mystery Cults -- and a **Godless** value
-that is a real position, not an absence. Only the two faiths need to be level
-with each other; the Godless have no win path, so they can be few. Four of the
-40 courtiers are Godless, one per group:
+Three faiths -- **Old Gods**, **Mystery Cults** and **The One God** -- each with
+its own Faith Ascendant agenda, plus a **Godless** value that is a real
+position rather than an absence. The three faiths are level with each other;
+the Godless have no win path, so they can be few.
 
-| Courtier | Group | Estate |
-|---|---|---|
-| Whisperer to the Serpent | Mitreas | Church |
-| Charioteer of the Iron Wheel | Argaian | Commons |
-| Ten Thousand Verses | Commoner | Commons |
-| Master Swordsmith | Barbarian | Commons |
+The roster splits 12 / 12 / 12 / 4, and each faith fields exactly the same
+bench, so none is short of candidates for any seat:
 
-That leaves the roster at 18 Old Gods, 18 Mystery Cults, 4 Godless. Parity
-between the two faiths is about *benches*, not head count -- see the README.
+| | Church | Military | Merchant | Commons |
+|---|---|---|---|---|
+| Old Gods | 3 | 4 | 3 | 2 |
+| Mystery Cults | 3 | 4 | 3 | 2 |
+| The One God | 3 | 4 | 3 | 2 |
+| Godless | 0 | 0 | 0 | 4 |
+
+That symmetry is what keeping all four Godless in Commons buys: the Commons
+estate seats one courtier, so it is the only estate with slack to spare.
+
+House Amonides remains wholly Old Gods and House Mitreas wholly Mystery Cults.
+The One God is a newer faith: it has spread among the commoners and the
+frontier peoples, and House Argaian -- the mixed-faith house -- is the only one
+that has taken it up.
 
 Godlessness has no agenda. There is no Faith Ascendant: Godless, and Balance
 still asks only for the two faiths, so **a godless courtier in an inner seat is
@@ -90,8 +98,8 @@ Two cards move a courtier across that line, and each spends the courtier's one
 faith mutation, so nobody crosses it twice:
 
 * **Apostasy** (mutation) -- target's faith becomes Godless.
-* **Conversion** (mutation) -- flips Old Gods and Mystery Cults, and brings a
-  godless (or an excommunicated) courtier to a faith of the player's choosing.
+* **Conversion** (mutation) -- moves a courtier to any faith but their own; a
+  godless or excommunicated courtier can be brought to any of the three.
 
 Godless is distinct from the `None` an `Excommunication` leaves: `None` is an
 empty slot, godlessness is a conviction. Both count for no faith agenda; only
@@ -111,9 +119,9 @@ state, **both** players win and the game is logged as a double win.
 | Agenda | Copies | Condition |
 |---|---|---|
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
-| Faith Ascendant | 2 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
+| Faith Ascendant | 3 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
 | Barbarian Conquest | 1 | **3 barbarians in the inner circle**, *or* both Military seats held by barbarians |
-| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, both faiths, and a barbarian (`--balance-seats`) |
+| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and a barbarian (`--balance-seats`) |
 
 Barbarian Conquest has two routes and either one wins outright: a bloc of
 three seated barbarians anywhere in the inner circle, or both generals. Two
@@ -138,7 +146,7 @@ Military plus the Exchequer for Amonides, say -- is not a win.
 `--house-preferred-estates mitreas=church` overrides one family's estate;
 `--house-any-three` drops the requirement altogether.
 
-Four of the seven agendas are dealt out; the other three stay in fog and are
+Four of the eight agendas are dealt out; the other four stay in fog and are
 the pool `Schismatic Event` draws from.
 
 ## Deck
@@ -159,8 +167,8 @@ first; the flag flips it.
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
 | 2 | **Barbarian Conquest's "both generals" route means barbarian generals.** Merely occupied seats would make it near-automatic. | barbarians | -- |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
-| 2f | **All seven agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all seven | `--drop-agendas` |
-| 2d | **Balance asks only for the two faiths**, not for a godless courtier as well, since godlessness has no agenda. | two faiths | -- |
+| 2f | **All eight agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all eight | `--drop-agendas` |
+| 2d | **Balance asks for all three faiths**, but not for a godless courtier, since godlessness has no agenda. | three faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2g | **Balance needs the whole court seated.** Vacating any seat lapses it, however diverse the rest. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |

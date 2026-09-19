@@ -25,7 +25,7 @@ from .cards import (
     EFFECT_REMOVE,
     EFFECT_STRIP_FAITH,
 )
-from .enums import SEAT_ESTATE, SEATS, CardKind, Estate, Faith, Family, Seat
+from .enums import FAITHS, SEAT_ESTATE, SEATS, CardKind, Estate, Faith, Family, Seat
 from .state import GameState
 
 PLAY = "play"
@@ -204,19 +204,15 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
     out: list[Action] = []
 
     if attribute == "faith" and card.value is None:  # Conversion
+        # Any faith but the one they already hold. A godless or excommunicated
+        # courtier can be brought to any of the three.
         for cand in state.uids_in_play():
             cs = state.cstate[cand]
             if cs.mutated_faith:
                 continue
-            if cs.faith is Faith.OLD_GODS:
-                out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.MYSTERY_CULTS.value))
-            elif cs.faith is Faith.MYSTERY_CULTS:
-                out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
-            else:
-                # A godless or a stripped courtier comes to a faith of the
-                # player's choosing.
-                out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.OLD_GODS.value))
-                out.append(Action(PLAY, card=uid, courtier=cand, value=Faith.MYSTERY_CULTS.value))
+            for faith in FAITHS:
+                if faith is not cs.faith:
+                    out.append(Action(PLAY, card=uid, courtier=cand, value=faith.value))
         return out
 
     if attribute == "family":  # Adoption

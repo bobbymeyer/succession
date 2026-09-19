@@ -19,6 +19,7 @@ class Estate(str, Enum):
 class Faith(str, Enum):
     OLD_GODS = "Old Gods"
     MYSTERY_CULTS = "Mystery Cults"
+    ONE_GOD = "The One God"
     #: Actively godless. A real faith value a courtier can be born with or be
     #: pushed into by Apostasy -- distinct from NONE, which is the empty slot
     #: an Excommunication leaves behind.
@@ -76,9 +77,9 @@ SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
 #: Barbarian Conquest's "both generals" route reads these two seats.
 MILITARY_SEATS: tuple[Seat, ...] = (Seat.FIELD_GENERAL, Seat.PRAETORIAN_CHIEF)
 
-#: The faiths an agenda can be built on. Godlessness deliberately has none: an
-#: godless in a seat is a seat neither faith can count.
-FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS)
+#: The faiths an agenda can be built on. Godlessness deliberately has none: a
+#: godless courtier in a seat is a seat no faith can count.
+FAITHS: tuple[Faith, ...] = (Faith.OLD_GODS, Faith.MYSTERY_CULTS, Faith.ONE_GOD)
 FAMILIES: tuple[Family, ...] = (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN)
 
 

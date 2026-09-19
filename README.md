@@ -27,7 +27,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `succession/state.py` | `Config` (every rules knob) and `GameState` (cheap to clone) |
 | `succession/actions.py` | Legal-move generation, including hand-vs-promotion enforcement |
 | `succession/engine.py` | Card resolution, the turn loop, win checking |
-| `succession/agendas.py` | The seven agendas: win predicates and the bots' progress metric |
+| `succession/agendas.py` | The eight agendas: win predicates and the bots' progress metric |
 | `succession/bots.py` | Naive, greedy, and strategic bots |
 | `succession/logsink.py` | CSV and SQLite writers, one row per game |
 | `succession/analysis.py` | Batch summary statistics |
@@ -69,86 +69,102 @@ works: run one batch with a strategic seat and one without, then pool them.
 6,000 games, default mix (`naive, greedy, strategic, naive`, seats shuffled):
 
 ```
-Game length: mean 44.6 player-turns (11.5 rounds), median 42, max 167
-Double wins: 9.6%          Timeouts: 0%
+Game length: mean 53.3 player-turns (13.7 rounds), median 49, max 259
+Double wins: 6.3%          Timeouts: 0%
 
-Win rate by tier      naive 13.5%   greedy 24.9%   strategic 57.8%
+Win rate by tier      naive 12.3%   greedy 23.9%   strategic 57.9%
 
-Win rate by agenda    Faith Ascendant: Mystery Cults  40.0%
-                      Faith Ascendant: Old Gods       38.5%
-                      Barbarian Conquest              31.5%
-                      Balance                         24.1%
-                      House Rising: Amonides          20.5%
-                      House Rising: Argaian           18.9%
-                      House Rising: Mitreas           18.7%
+Win rate by agenda    Barbarian Conquest              36.7%
+                      Balance                         34.4%
+                      House Rising: Mitreas           27.2%
+                      House Rising: Argaian           26.8%
+                      House Rising: Amonides          26.6%
+                      Faith Ascendant: Mystery Cults  20.7%
+                      Faith Ascendant: The One God    20.5%
+                      Faith Ascendant: Old Gods       19.4%
 ```
 
-1. **The seven agendas span 19–40%**, against 2–53% under the first draft of
-   the rules. The faiths are within 1.5 points of each other and the houses
-   within 1.8.
+1. **The eight agendas span 19–37%**, against 2–53% under the first draft of
+   the rules. The three faiths sit within 1.3 points of each other and the three
+   houses within 0.7.
 
-2. **Balance is no longer the agenda you win by accident.** At the full seven
-   seats a bot playing at random wins it 12.7% of the time, against 25.5% when
-   it only needed five — in line with the houses now, and below the faiths.
+2. **The third faith is what finally lifted the houses.** They went from ~19%
+   to ~27% without being touched: three faiths of twelve courtiers each, all
+   chasing four of the same seven seats, no longer sweep the board the way two
+   faiths of eighteen did. Adding house courtiers had only reached ~25%, and
+   cost Barbarian Conquest twelve points to do it.
 
-3. **Double wins are up to 9.6%**, from 7.1% at five seats. A court full enough
-   to satisfy Balance is usually full enough to hand somebody a faith as well,
-   so the two agendas land together more often.
+3. **The faiths and the houses swapped places.** Faith Ascendant went from the
+   strongest agenda at ~39% to the weakest at ~20%. Four of seven seats was
+   calibrated for an eighteen-courtier faith; at twelve it is a hard ask.
+   `--faith-seats 3` overshoots badly — the faiths jump to ~40% and everything
+   else collapses — so four is the right number for a three-faith board.
 
-4. **The tiers separate cleanly**, which is the sanity check that the bots are
-   really playing the game: 13.5% → 24.9% → 57.8%. A strategic bot at the table
+4. **Games run a fifth longer** (44.6 → 53.3 turns) and end fuller (5.8 of 7
+   seats occupied, up from 5.5), because no single faith can close the board out
+   early.
+
+5. **The tiers separate cleanly**, which is the sanity check that the bots are
+   really playing the game: 12.3% → 23.9% → 57.9%. A strategic bot at the table
    also suppresses everyone else. Swapping exactly one greedy seat for a
    strategic seat (6,000 games each, everything else held fixed):
 
    | | other three players' win rate | mean game length |
    |---|---|---|
-   | without a strategic bot | 27.4% | 31.8 turns |
-   | with a strategic bot | 17.3% | 44.6 turns |
+   | without a strategic bot | 26.7% | 39.4 turns |
+   | with a strategic bot | 16.2% | 53.3 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
+
+### Every faith gets the same bench
+
+Three faiths at twelve courtiers each, with identical estate spreads:
+
+| | Church | Military | Merchant | Commons |
+|---|---|---|---|---|
+| Old Gods | 3 | 4 | 3 | 2 |
+| Mystery Cults | 3 | 4 | 3 | 2 |
+| The One God | 3 | 4 | 3 | 2 |
+| Godless | 0 | 0 | 0 | 4 |
+
+Earlier rounds established that faith parity is about benches rather than head
+count, so the roster was built to that shape directly. Keeping all four Godless
+in Commons is what makes it possible — Commons seats one courtier, so it is the
+only estate with slack to spare. The result: the three faiths land within 1.3
+points of each other.
+
+Balance now asks for all three faiths. Letting it settle for any two is worth
+about three points to it (34.4% → 37.3%).
 
 ### What the Balance threshold buys
 
 `--balance-seats` sets how full the court must be before Balance counts. The
-board averages 5.3 filled seats at a win, so anything up to five is a rule that
-is usually already true. 6,000 games each:
+board averages 5.8 filled seats at a win, so anything up to five is a rule that
+is usually already true. 6,000 games each, on the three-faith board:
 
-| Threshold | Balance | naive wins Balance | mean turns | double wins |
-|---|---|---|---|---|
-| 4 of 7 | 42.4% | 26.2% | 40.1 | 6.8% |
-| 5 of 7 | 41.2% | 25.5% | 40.8 | 7.1% |
-| 6 of 7 | 36.0% | 21.8% | 42.6 | 8.7% |
-| **7 of 7 (current)** | **24.1%** | **12.7%** | 44.6 | 9.6% |
+| Threshold | Balance | naive wins Balance | mean turns |
+|---|---|---|---|
+| 4 of 7 | 45.5% | 28.9% | 49.4 |
+| 5 of 7 | 44.2% | 29.2% | 50.0 |
+| 6 of 7 | 41.5% | 25.5% | 51.1 |
+| **7 of 7 (current)** | **34.3%** | **20.1%** | 53.3 |
 
 The middle column is the one that matters: it is how often a player who is not
-trying wins Balance. Only the full seven brings that into line with the rest of
-the board.
+trying wins Balance. Only the full seven brings it into line with the rest of
+the board — at 20.1% it now sits alongside Barbarian Conquest's 18.8%, where at
+five seats it was nearly double anything else.
 
-It also inverts what kind of agenda Balance is. At five seats it was easy to
-stumble into and nearly impossible to deny, since any seat anybody filled might
-complete it. At seven it is the hardest agenda on the board for the strategic
-bot too — 50.2%, against 63% for Conquest and 76% for the faiths — because a
-full court takes real work to assemble and one removal anywhere undoes it.
+Win rate per deal by tier, on the current board:
 
-### Faith parity is about benches, not head count
+| Agenda | naive | greedy | strategic |
+|---|---|---|---|
+| Barbarian Conquest | 18.8% | 38.8% | 69.9% |
+| Balance | 20.1% | 28.6% | 66.1% |
+| House Rising (mean) | 12.9% | 23.5% | 58.9% |
+| Faith Ascendant (mean) | 6.9% | 17.6% | 49.7% |
 
-The charioteers are one Commons courtier per house, and adding them quietly
-cost Old Gods 3.8 points against Mystery Cults across three separate 6,000-game
-runs. Head count was level at 18/18 the whole time. The cause was the shape of
-the benches:
-
-| | Church | Military | Merchant | Commons |
-|---|---|---|---|---|
-| Old Gods | 5 | 5 | **3** | 5 |
-| Mystery Cults | 3 | 7 | 6 | 2 |
-
-Seats run Church 2, Military 2, Merchant 2, Commons 1. Mystery Cults had 13
-courtiers for the four Military and Merchant seats; Old Gods had 8, with only
-three Merchant courtiers for two seats — the thinnest pool on the board — and
-five commoners queuing for a single seat. Moving *Uncrowned Victor* to Old Gods
-(Argaian is the mixed-faith house, so it can carry either) and paying for it
-with *Fastest of the Games* closes the gap from 3.8 points to 0.6 without
-changing a single head count.
+The faiths have become the board's skill agendas: a bot playing at random
+almost never lands one, and even the greedy bot only manages 17.6%.
 
 ### Apostasy is the first card only one tier will play
 
