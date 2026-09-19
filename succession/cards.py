@@ -1,6 +1,6 @@
 """Card definitions and deck construction.
 
-The play deck is 77 cards: the 34 courtiers plus 43 action cards (10 events,
+The play deck is 80 cards: the 37 courtiers plus 43 action cards (10 events,
 5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 8 mutations,
 1 pivot, and N copies of Outmaneuver -- one by default).
 

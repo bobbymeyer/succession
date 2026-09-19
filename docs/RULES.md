@@ -48,7 +48,7 @@ courtier is bumped to the outer circle.
 
 | Kind | Effect |
 |---|---|
-| Courtier (34) | Enters the outer circle. |
+| Courtier (37) | Enters the outer circle. |
 | Promotion (5) | Outer courtier → an *occupied* matching seat; occupant bumped to outer. Wildcard `Promotion` works on any estate. |
 | Demotion (5) | Inner courtier → outer; seat left empty. |
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
@@ -92,9 +92,9 @@ lives in `FAMILY_PREFERRED_ESTATE` in `succession/courtiers.py`:
 | Mitreas | Merchant | Master of the Exchequer, Harbormaster |
 | Argaian | Military | Field General, Praetorian Chief |
 
-Every family fields two courtiers in each of Church, Military and Merchant,
-and each of those estates seats a pair, so no house is short of candidates for
-its own estate. Three seats that avoid the family's estate entirely -- two
+Every family fields **three** courtiers in its own estate and two in each of
+the other two, and every estate that a house can be affiliated with seats a
+pair, so no house is short of candidates for its own estate. Three seats that avoid the family's estate entirely -- two
 Military plus the Exchequer for Amonides, say -- is not a win.
 `--house-preferred-estates mitreas=church` overrides one family's estate;
 `--house-any-three` drops the requirement altogether.
@@ -104,7 +104,7 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-77 cards: 34 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
+80 cards: 37 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
 5 defenses + 2 strips + 8 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
 

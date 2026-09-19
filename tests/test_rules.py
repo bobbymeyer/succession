@@ -95,26 +95,34 @@ def outer(state: GameState, *names: str) -> list[int]:
 
 class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
-        self.assertEqual(len(COURTIERS), 34)
+        self.assertEqual(len(COURTIERS), 37)
         faith = collections.Counter(c.faith for c in COURTIERS)
-        self.assertEqual(faith[Faith.OLD_GODS], 17)
-        self.assertEqual(faith[Faith.MYSTERY_CULTS], 17)
+        self.assertEqual(faith[Faith.OLD_GODS], 19)
+        self.assertEqual(faith[Faith.MYSTERY_CULTS], 18)
         origin = collections.Counter(c.origin for c in COURTIERS)
-        self.assertEqual(origin[Origin.IMPERIAL], 26)
+        self.assertEqual(origin[Origin.IMPERIAL], 29)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
         estate = collections.Counter(c.estate for c in COURTIERS)
-        self.assertEqual(estate[Estate.MILITARY], 11)
-        self.assertEqual(estate[Estate.CHURCH], 8)
-        self.assertEqual(estate[Estate.MERCHANT], 8)
+        self.assertEqual(estate[Estate.MILITARY], 12)
+        self.assertEqual(estate[Estate.CHURCH], 9)
+        self.assertEqual(estate[Estate.MERCHANT], 9)
         self.assertEqual(estate[Estate.COMMONS], 7)
         family = collections.Counter(c.family for c in COURTIERS)
         for house in (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN):
-            self.assertEqual(family[house], 6)
+            self.assertEqual(family[house], 7)
+
+    def test_each_house_fields_three_courtiers_in_its_own_estate(self):
+        for family, estate in FAMILY_PREFERRED_ESTATE.items():
+            with self.subTest(family=family.value):
+                own = [c for c in COURTIERS if c.family is family and c.estate is estate]
+                self.assertEqual(len(own), 3)
+                other = [c for c in COURTIERS if c.family is family and c.estate is not estate]
+                self.assertEqual(len(other), 4)
 
     def test_deck_composition(self):
         cards = build_cards(outmaneuver_copies=1)
         kinds = collections.Counter(c.kind for c in cards)
-        self.assertEqual(kinds[CardKind.COURTIER], 34)
+        self.assertEqual(kinds[CardKind.COURTIER], 37)
         self.assertEqual(kinds[CardKind.EVENT], 10)
         self.assertEqual(kinds[CardKind.PROMOTION], 5)
         self.assertEqual(kinds[CardKind.DEMOTION], 5)
@@ -124,7 +132,7 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.MUTATION], 8)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
-        self.assertEqual(len(cards), 77)
+        self.assertEqual(len(cards), 80)
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
