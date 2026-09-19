@@ -187,20 +187,3 @@ someone else's. The bots split exactly as their definitions say they should
 | `--house-preferred-estates mitreas=church` | reassign a house's own estate |
 | `--removed-out-of-game` | killed courtiers never return |
 | `--defense-matches-target` | an estate Defense may only shield its own estate |
-
-## What still needs you
-
-`docs/RULES.md` ends with the open questions. Two of them matter.
-
-**How many seats should a faith need?** Four was two-thirds of a six-seat
-board and is a bare majority of seven, which is why the faiths lead the table.
-`--faith-seats 5` restores the two-thirds shape; both sets of numbers are in
-`docs/RULES.md`. It is the one threshold the seventh seat changed the meaning
-of without anyone deciding to.
-
-**How the bots value events.** Four of the five event pairs touch hands and the
-deck rather than the board, and the bots score boards, so they need a heuristic
-to rate a Caravan above discarding it. `ThinkingBot.event_bonus` supplies one —
-crude on purpose, and the first thing to revisit if the event numbers look
-wrong. `docs/RULES.md` lists the other edges the brief left open, such as how
-long a freeze runs and what Meteor deals back.
