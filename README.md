@@ -62,6 +62,11 @@ pip install pillow          # the only dependency in the repo, and only for this
 python tools/mpcfill.py     # -> build/mpc/cards/*.png and build/mpc/succession.xml
 ```
 
+92 cards: the 84-card play deck plus the eight agendas, which are the one part
+with no art and are set as type on parchment. Each estate takes a border in its
+own darkened colour so a hand sorts by edge, and the text plates are translucent
+over the illustration.
+
 The deck it prints is read out of `succession/cards.py`, so the cards on the
 table are the cards the bots played. Art file `NN_...` goes to deck slot
 `NN - 1` and its kind and slug are checked against the card, so a gap in the

@@ -25,8 +25,13 @@ build/mpc/
     cards/00 Cardback.png              the shared back
     cards/01 Beloved of the Gods.png   one front per deck slot, 84 of them
     ...
+    cards/85 House Rising -- Amonides.png   the 8 agenda cards
+    ...
     succession.xml                     the order file
 ```
+
+92 cards: the 84-card play deck plus the eight agendas. `--no-agendas` drops
+them back to 84.
 
 `build/` is gitignored -- the fronts are large and entirely derived from
 `assets/` plus the deck, so there is no reason to commit them.
@@ -56,9 +61,10 @@ means the file is only good on the machine that generated it -- regenerate it
 rather than copying it to another box.
 
 The tool reads the available bracket sizes off the MPC page and picks the
-smallest one the order fits, so 84 cards land in MPC's 90-card bracket. The six
-spare slots cost the same as the deck does; `--include-agendas` fills eight of
-them with the agenda cards and pushes the order into the next bracket up.
+smallest one the order fits. You pay by bracket, not by card, so the eight
+agendas are not free: 84 cards fit MPC's 90 bracket and 92 push into the next
+one up. If that matters more than having the agendas printed, `--no-agendas`
+takes them out and writes the eight conditions on index cards instead.
 
 When it finishes, it leaves you in the MPC cart with the project saved. **Check
 the preview before paying** -- that is the last point at which a cropping
@@ -74,10 +80,30 @@ MakePlayingCards' standard poker card, which is what these numbers are:
 | Trimmed (what you hold) | 2.48 x 3.46 | 63 x 88 | 1488 x 2076 |
 | Safe area (nothing important outside it) | 2.32 x 3.30 | 59 x 84 | 1392 x 1980 |
 
-The cut wanders by a millimetre or so, which is why the title and text plates
-sit 0.20 in inside the bleed edge and why there is no frame around the card --
-a keyline that close to the trim shows every wobble, a full-bleed illustration
-shows none.
+## The border
+
+The cut wanders by a millimetre or so in any direction, and the border is what
+absorbs it. It is drawn from the bleed edge inwards over 0.22 in, so the trim
+lands *inside* the border and takes 0.12 in off: what you hold has roughly a
+0.10 in (2.5 mm) border, about what a Magic card carries. A millimetre of drift
+changes that width by a millimetre, which nobody notices. The same millimetre
+against a thin keyline set in from the trim is glaring -- one edge fat, the
+opposite edge thin -- which is why the border is thick and runs off the edge
+rather than being a hairline in from it.
+
+The art is fitted to the window inside the border rather than being run full
+bleed and then covered over, so no part of an illustration disappears under the
+frame.
+
+Each estate borders in a darkened mix of ink and its own colour -- Church
+indigo, Military wine, Merchant teal, Commons olive, and plain ink for the
+cards that belong to no estate -- so a hand sorts by edge alone. A gold keyline
+marks the seam between border and art.
+
+Text plates are translucent (`--panel-alpha`, 186 of 255 by default). The patch
+of art under each one is blurred and dimmed before the parchment goes over it,
+which is what lets the plate sit that far below opaque with the type still
+crisp over both a bright sky and a dark interior.
 
 MPC needs 300 DPI. The desktop tool works an image's DPI out from its height
 (300 DPI per 1110 px) and downscales anything above 800 before upload, so the
@@ -92,7 +118,8 @@ crisp, since the source art is only just above 300 DPI on its own.
 | `--format jpg --quality 95` | ~10x smaller files, much faster to upload. |
 | `--stock "(M31) Linen"` | Cardstock. Also `(S27) Smooth`, `(S30) Standard Smooth`, `(S33) Superior Smooth`, `(P10) Plastic`. |
 | `--foil` | Foil fronts. Not available on plastic stock. |
-| `--include-agendas` | Add the 8 agenda cards. They are text-only -- no art was drawn for them. |
+| `--no-agendas` | Leave out the 8 agenda cards: 84 cards, one bracket cheaper. |
+| `--panel-alpha 220` | Make the text plates more opaque (255) or more transparent (0). |
 | `--outmaneuver-copies 3` | Match a deck built with `--outmaneuver-copies 3`. |
 | `--only 26,44` | Re-render just those asset numbers, for iterating on layout. |
 | `--font-dir ~/fonts` | Search somewhere else for a serif face first. |
@@ -104,11 +131,12 @@ directory and point `--font-dir` at it.
 ## What the box still does not contain
 
 * **A d6.** Targeted Poisoning and Poisoning at the Feast need one.
-* **Agenda cards**, unless you pass `--include-agendas`. Eight agendas, four
-  dealt and four left in the fog for `Schismatic Event` to draw from. The
-  printed conditions are the defaults in `succession/agendas.py`; a table
-  running `--faith-seats 5` or any other variant should treat the print as
-  wrong and play off `docs/RULES.md`.
+* **Anything but the default rules on the agenda cards.** Four agendas are
+  dealt and four stay in the fog for `Schismatic Event` to draw from; the
+  conditions printed on them are the defaults in `succession/agendas.py`. A
+  table running `--faith-seats 5` or any other variant should treat the print
+  as wrong and play off `docs/RULES.md`. The agendas are also the one part of
+  the deck with no art -- they are set type on parchment.
 * **A board.** Seven seats, named in `docs/RULES.md`. Index cards work.
 
 ## Alternate art

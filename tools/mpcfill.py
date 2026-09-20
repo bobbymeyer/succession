@@ -7,7 +7,7 @@ that MPC Autofill's desktop tool feeds to MakePlayingCards.
 
     python tools/mpcfill.py                       # build everything into build/mpc/
     python tools/mpcfill.py --dpi 300 --format jpg
-    python tools/mpcfill.py --include-agendas     # add the 8 text-only agenda cards
+    python tools/mpcfill.py --no-agendas          # 84 cards instead of 92
     python tools/mpcfill.py --only 26,41          # re-render two cards while tweaking
 
 What comes out of `build/mpc/`:
@@ -63,6 +63,15 @@ BLEED_W_IN = 2.72
 BLEED_H_IN = 3.70
 SAFE_IN = 0.20
 
+#: The border is drawn from the bleed edge inwards, so the cut lands *inside*
+#: it and takes 0.12 in off: 0.22 here prints as a 0.10 in (2.5 mm) border, in
+#: the range a Magic card uses. That is the whole point of a thick border -- a
+#: millimetre of drift changes its width by a millimetre, which nobody sees,
+#: where the same drift against a thin keyline set in from the trim is glaring.
+BORDER_IN = 0.22
+#: Where the plates start: just inside the border, not at the bleed edge.
+CONTENT_IN = BORDER_IN + 0.05
+
 #: The desktop tool reads an image's DPI as `300 * height / 1110`, i.e. it
 #: expects exactly the 3.70 in of bleed height we render to, and downscales
 #: anything above 800 DPI before upload.
@@ -72,9 +81,9 @@ MAX_USEFUL_DPI = 800
 # Plate metrics, in inches. Everything else is derived from these.
 PLATE_PAD_IN = 0.075
 PLATE_RADIUS_IN = 0.055
-NAME_SIZE_IN = 0.165
-NAME_MIN_SIZE_IN = 0.098
-TYPE_SIZE_IN = 0.070
+NAME_SIZE_IN = 0.122
+NAME_MIN_SIZE_IN = 0.082
+TYPE_SIZE_IN = 0.060
 BODY_SIZE_IN = 0.086
 BODY_MIN_SIZE_IN = 0.066
 REMINDER_SIZE_IN = 0.066
@@ -83,6 +92,10 @@ VALUE_SIZE_IN = 0.093
 LINE_SPACING = 1.30
 TRACKING_IN = 0.018
 BODY_PANEL_MAX_IN = 1.52
+#: How opaque the parchment plates are over the art. The backdrop under each
+#: plate is blurred and dimmed first, which is what keeps text readable at an
+#: alpha this low -- raise it with --panel-alpha if a table finds it thin.
+PANEL_ALPHA = 186
 
 # --- Palette ----------------------------------------------------------------
 # Lifted off the card back: indigo ink, aged parchment, worn gold.
@@ -252,39 +265,89 @@ def fit_title(
     return font, wrap(draw, name, font, max_width)
 
 
+def blend(base: tuple[int, int, int], tint: tuple[int, int, int], amount: float) -> tuple[int, int, int]:
+    return tuple(round(b + (t - b) * amount) for b, t in zip(base, tint))  # type: ignore[return-value]
+
+
+def border_colour(accent: tuple[int, int, int]) -> tuple[int, int, int]:
+    """A darkened ink, pulled towards the estate, so a hand sorts by edge alone.
+
+    Mixing ink and the estate colour at full strength lands on a washed-out
+    mid-tone; taking the mix down to roughly three-quarters brightness keeps
+    each estate distinguishable while the border still reads as near-black at
+    arm's length, which is what a border is for.
+    """
+
+    return blend(blend(INK, accent, 0.45), (0, 0, 0), 0.28)
+
+
+def window_size(layout: Layout) -> tuple[int, int]:
+    """The area inside the border -- what the art actually gets to fill."""
+
+    band = layout.px(BORDER_IN)
+    width, height = layout.size
+    return width - 2 * band, height - 2 * band
+
+
+def framed(layout: Layout, accent: tuple[int, int, int], window: Image.Image) -> Image.Image:
+    """Border fill, `window` inset into it, and a gold keyline along the seam.
+
+    The art is fitted to the window rather than to the whole card and then
+    covered over: painting a border on top of a full-bleed image throws away
+    the outer 0.22 in of every illustration, which on the card back was enough
+    to eat the last letter of the title.
+    """
+
+    width, height = layout.size
+    band = layout.px(BORDER_IN)
+    canvas = Image.new("RGBA", (width, height), border_colour(accent) + (255,))
+    canvas.paste(window.convert("RGBA"), (band, band))
+
+    keyline = max(2, layout.px(0.011))
+    gold = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    ImageDraw.Draw(gold).rectangle(
+        (band - keyline, band - keyline, width - band + keyline - 1, height - band + keyline - 1),
+        outline=GOLD + (255,),
+        width=keyline,
+    )
+    canvas.alpha_composite(gold)
+    return canvas
+
+
 def plate(
     canvas: Image.Image,
     box: tuple[int, int, int, int],
     radius: int,
     accent: tuple[int, int, int],
-    alpha: int = 243,
+    alpha: int = PANEL_ALPHA,
 ) -> None:
-    """A parchment panel with a dropped shadow and a coloured hairline."""
+    """A translucent parchment panel over a blurred, dimmed patch of the art.
+
+    Treating the backdrop is what makes the translucency work: the art still
+    reads through the panel, but it stops competing with the text on top of it,
+    so the parchment can sit well below opaque and the type stays crisp.
+    """
 
     x0, y0, x1, y1 = box
     blur = max(2, radius // 2)
+
     shadow = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
-        (x0, y0 + blur, x1, y1 + blur), radius=radius, fill=SHADOW + (128,)
+        (x0, y0 + blur, x1, y1 + blur), radius=radius, fill=SHADOW + (110,)
     )
     canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(blur)))
+
+    mask = Image.new("L", (x1 - x0, y1 - y0), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, x1 - x0 - 1, y1 - y0 - 1), radius=radius, fill=255)
+    backdrop = canvas.crop(box).filter(ImageFilter.GaussianBlur(max(3, radius)))
+    backdrop = Image.blend(backdrop, Image.new("RGBA", backdrop.size, INK + (255,)), 0.22)
+    canvas.paste(backdrop, (x0, y0), mask)
 
     panel = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(panel)
     draw.rounded_rectangle(box, radius=radius, fill=PARCHMENT + (alpha,))
-    draw.rounded_rectangle(box, radius=radius, outline=accent + (255,), width=max(2, radius // 8))
+    draw.rounded_rectangle(box, radius=radius, outline=accent + (235,), width=max(2, radius // 7))
     canvas.alpha_composite(panel)
-
-
-def scrim(canvas: Image.Image, top: int, bottom: int, strength: int, invert: bool) -> None:
-    """A vertical ink gradient, so a pale patch of art never swallows a plate."""
-
-    height = max(1, bottom - top)
-    gradient = Image.new("L", (1, height))
-    gradient.putdata([round(strength * (i / height if invert else 1 - i / height)) for i in range(height)])
-    band = Image.new("RGBA", (canvas.width, height), INK + (0,))
-    band.putalpha(gradient.resize((canvas.width, height)))
-    canvas.alpha_composite(band, (0, top))
 
 
 # --- Card composition -------------------------------------------------------
@@ -321,39 +384,48 @@ def courtier_attributes(card: CardDef) -> list[tuple[str, str]]:
     ]
 
 
-def render_front(card: CardDef, art_path: Path, layout: Layout, fonts: Fonts) -> Image.Image:
+def render_front(card: CardDef, art_path: Path, layout: Layout, fonts: Fonts, alpha: int) -> Image.Image:
     width, height = layout.size
-    safe = layout.px(SAFE_IN)
+    content = layout.px(CONTENT_IN)
     pad = layout.px(PLATE_PAD_IN)
     radius = layout.px(PLATE_RADIUS_IN)
     tracking = layout.px(TRACKING_IN)
     accent = accent_for(card)
 
     with Image.open(art_path) as art:
-        canvas = cover(art.convert("RGB"), (width, height)).convert("RGBA")
+        window = cover(art.convert("RGB"), window_size(layout))
+    canvas = framed(layout, accent, window)
 
     measure = ImageDraw.Draw(canvas)
-    inner_width = width - 2 * safe - 2 * pad
+    content_width = width - 2 * content
+    inner_width = content_width - 2 * pad
 
     # --- Title plate: name, then the type line in tracked small caps --------
+    # The plate is only as wide as the longer of the two lines needs, so a
+    # short name covers a strip of the portrait rather than the whole band.
     name_font, name_lines = fit_title(
         measure, card.name, fonts, inner_width, layout.px(NAME_SIZE_IN), layout.px(NAME_MIN_SIZE_IN)
     )
     type_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
-    name_leading = round(name_font.size * 1.14)
-    title_height = pad + len(name_lines) * name_leading + round(type_font.size * 1.5) + pad
-    title_box = (safe, safe, width - safe, safe + title_height)
+    type_text = card_text.type_line(card).upper()
+    name_leading = round(name_font.size * 1.16)
 
-    scrim(canvas, 0, title_box[3] + layout.px(0.22), 150, invert=False)
-    plate(canvas, title_box, radius, accent)
+    text_width = max(
+        max(measure.textlength(line, font=name_font) for line in name_lines),
+        tracked_width(measure, type_text, type_font, tracking),
+    )
+    title_width = min(content_width, round(text_width) + 2 * pad + layout.px(0.14))
+    title_x0 = round((width - title_width) / 2)
+    title_height = pad + len(name_lines) * name_leading + round(type_font.size * 1.6) + pad
+    title_box = (title_x0, content, title_x0 + title_width, content + title_height)
+    plate(canvas, title_box, radius, accent, alpha)
 
     draw = ImageDraw.Draw(canvas)
-    y = safe + pad
+    y = content + pad
     for line in name_lines:
         draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=INK)
         y += name_leading
-    type_text = card_text.type_line(card).upper()
-    y += round(type_font.size * 0.18)
+    y += round(type_font.size * 0.22)
     draw_tracked(
         draw,
         ((width - tracked_width(draw, type_text, type_font, tracking)) / 2, y),
@@ -369,8 +441,7 @@ def render_front(card: CardDef, art_path: Path, layout: Layout, fonts: Fonts) ->
     else:
         body = render_rules_plate(canvas, card, layout, fonts, accent)
 
-    scrim(canvas, body[1] - layout.px(0.28), height, 150, invert=True)
-    plate(canvas, body, radius, accent)
+    plate(canvas, body, radius, accent, alpha)
     if card.is_courtier:
         fill_attribute_plate(canvas, card, body, layout, fonts, accent)
     else:
@@ -403,16 +474,16 @@ def rules_block(card: CardDef, layout: Layout, fonts: Fonts, measure: ImageDraw.
 
 def render_rules_plate(canvas, card, layout, fonts, accent) -> tuple[int, int, int, int]:
     width, height = canvas.size
-    safe, pad = layout.px(SAFE_IN), layout.px(PLATE_PAD_IN)
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
     measure = ImageDraw.Draw(canvas)
-    *_, plate_height = rules_block(card, layout, fonts, measure, width - 2 * safe - 2 * pad)
-    return (safe, height - safe - plate_height, width - safe, height - safe)
+    *_, plate_height = rules_block(card, layout, fonts, measure, width - 2 * content - 2 * pad)
+    return (content, height - content - plate_height, width - content, height - content)
 
 
 def fill_rules_plate(canvas, card, box, layout, fonts, accent) -> None:
     draw = ImageDraw.Draw(canvas)
-    safe, pad = layout.px(SAFE_IN), layout.px(PLATE_PAD_IN)
-    inner_width = canvas.width - 2 * safe - 2 * pad
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    inner_width = canvas.width - 2 * content - 2 * pad
     font, lines, leading, reminder_font, reminder_lines, _ = rules_block(card, layout, fonts, draw, inner_width)
 
     x, y = box[0] + pad, box[1] + pad
@@ -431,10 +502,10 @@ def fill_rules_plate(canvas, card, box, layout, fonts, accent) -> None:
 
 def render_attribute_plate(canvas, card, layout, fonts, accent) -> tuple[int, int, int, int]:
     width, height = canvas.size
-    safe, pad = layout.px(SAFE_IN), layout.px(PLATE_PAD_IN)
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
     row = layout.px(LABEL_SIZE_IN) + layout.px(VALUE_SIZE_IN) + layout.px(0.086)
     plate_height = pad + 2 * row - layout.px(0.034) + pad
-    return (safe, height - safe - plate_height, width - safe, height - safe)
+    return (content, height - content - plate_height, width - content, height - content)
 
 
 def fill_attribute_plate(canvas, card, box, layout, fonts, accent) -> None:
@@ -468,33 +539,36 @@ def fill_attribute_plate(canvas, card, box, layout, fonts, accent) -> None:
 
 
 def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fonts) -> Image.Image:
-    """A text-only agenda card: parchment under an ink band, since no art exists.
+    """A text-only agenda card: parchment inside the same border as the rest.
 
-    The band and its rule run off the edge rather than stopping short of it. A
-    keyline set in from the trim advertises every millimetre the cutter wanders;
-    one that bleeds off cannot be misaligned against anything.
+    No art was drawn for the agendas, so these are set type on parchment. They
+    take the border anyway, both so a revealed agenda looks like it belongs to
+    the deck and so the backs line up in the same order.
     """
 
     width, height = layout.size
-    safe, pad = layout.px(SAFE_IN), layout.px(PLATE_PAD_IN)
-    inner_width = width - 2 * safe
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    inner_width = width - 2 * content
     tracking = layout.px(TRACKING_IN)
 
-    canvas = Image.new("RGB", (width, height), PARCHMENT)
+    canvas = framed(layout, NEUTRAL_ACCENT, Image.new("RGB", window_size(layout), PARCHMENT))
     draw = ImageDraw.Draw(canvas)
 
     label_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
     name_font, name_lines = fit_title(
-        draw, name, fonts, inner_width - 2 * pad, layout.px(NAME_SIZE_IN), layout.px(NAME_MIN_SIZE_IN)
+        draw, name, fonts, inner_width - 2 * pad, layout.px(NAME_SIZE_IN * 1.15), layout.px(NAME_MIN_SIZE_IN)
     )
-    name_leading = round(name_font.size * 1.16)
-    band_height = safe + round(label_font.size * 2.1) + len(name_lines) * name_leading + layout.px(0.14)
-    draw.rectangle((0, 0, width, band_height), fill=INK)
+    name_leading = round(name_font.size * 1.18)
+    band_top = layout.px(BORDER_IN)
+    band_height = round(label_font.size * 2.4) + len(name_lines) * name_leading + layout.px(0.16)
+    draw.rectangle((band_top, band_top, width - band_top, band_top + band_height), fill=INK)
     rule = max(2, layout.px(0.010))
-    draw.rectangle((0, band_height, width, band_height + rule), fill=GOLD)
+    draw.rectangle(
+        (band_top, band_top + band_height, width - band_top, band_top + band_height + rule), fill=GOLD
+    )
 
     label = "AGENDA"
-    y = safe + layout.px(0.04)
+    y = band_top + layout.px(0.10)
     draw_tracked(
         draw,
         ((width - tracked_width(draw, label, label_font, tracking)) / 2, y),
@@ -503,13 +577,11 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
         GOLD,
         tracking,
     )
-    y += round(label_font.size * 2.0)
+    y += round(label_font.size * 2.2)
     for line in name_lines:
         draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=PARCHMENT)
         y += name_leading
 
-    # The win condition sits in the upper half of the parchment, where the eye
-    # goes; the flavour line anchors the bottom.
     body_font = fonts.at("regular", layout.px(BODY_SIZE_IN * 1.18))
     body_leading = round(body_font.size * LINE_SPACING)
     lines = wrap(draw, text, body_font, inner_width - 2 * pad)
@@ -521,25 +593,25 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
     reminder_lines = wrap(draw, reminder, reminder_font, inner_width - 2 * pad)
     sub_font = fonts.at("italic", layout.px(BODY_SIZE_IN * 1.25))
 
-    # Flavour is pinned to the bottom; the condition floats in what is left,
+    # Flavour is pinned above the border; the condition floats in what is left,
     # a little above centre so the card does not read as bottom-heavy.
-    subtitle_y = height - safe - round(sub_font.size * 1.6)
+    subtitle_y = height - content - round(sub_font.size * 1.6)
     block = (
         len(lines) * body_leading
         + layout.px(0.30)
         + len(reminder_lines) * round(reminder_font.size * 1.28)
     )
-    region_top = band_height + rule
+    region_top = band_top + band_height + rule
     y = region_top + max(layout.px(0.22), round((subtitle_y - region_top - block) * 0.42))
     for line in lines:
-        draw.text((safe + pad, y), line, font=body_font, fill=INK)
+        draw.text((content + pad, y), line, font=body_font, fill=INK)
         y += body_leading
 
     y += layout.px(0.15)
-    draw.line((safe + pad, y, width - safe - pad, y), fill=GOLD, width=max(1, layout.px(0.005)))
+    draw.line((content + pad, y, width - content - pad, y), fill=GOLD, width=max(1, layout.px(0.005)))
     y += layout.px(0.15)
     for line in reminder_lines:
-        draw.text((safe + pad, y), line, font=reminder_font, fill=INK_SOFT)
+        draw.text((content + pad, y), line, font=reminder_font, fill=INK_SOFT)
         y += round(reminder_font.size * 1.28)
 
     draw.text(
@@ -548,7 +620,7 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
         font=sub_font,
         fill=INK_SOFT,
     )
-    return canvas
+    return canvas.convert("RGB")
 
 
 # --- Order file -------------------------------------------------------------
@@ -618,9 +690,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--foil", action="store_true", help="order foil fronts")
     parser.add_argument("--outmaneuver-copies", type=int, default=1, help="copies of Outmaneuver in the deck")
     parser.add_argument(
-        "--include-agendas",
-        action="store_true",
-        help="append the 8 text-only agenda cards (no art exists for them)",
+        "--no-agendas",
+        dest="include_agendas",
+        action="store_false",
+        help="leave out the 8 agenda cards, for an 84-card order in a smaller bracket",
+    )
+    parser.add_argument(
+        "--panel-alpha",
+        type=int,
+        default=PANEL_ALPHA,
+        metavar="0-255",
+        help=f"how opaque the text plates are over the art (default {PANEL_ALPHA})",
     )
     parser.add_argument("--only", help="comma-separated asset numbers to re-render, e.g. 26,41")
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
@@ -628,6 +708,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dpi < 300:
         parser.error(f"--dpi {args.dpi} is below MakePlayingCards' 300 DPI minimum")
+    if not 0 <= args.panel_alpha <= 255:
+        parser.error("--panel-alpha takes a value from 0 (invisible) to 255 (opaque)")
     if args.dpi > MAX_USEFUL_DPI:
         print(f"note: the desktop tool downscales above {MAX_USEFUL_DPI} DPI, so {args.dpi} buys nothing")
 
@@ -654,7 +736,7 @@ def main(argv: list[str] | None = None) -> int:
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
         out_path = (cards_dir / f"{asset.index:02d} {card.name}").with_suffix(f".{args.format}")
         if only is None or asset.index in only:
-            image = render_front(card, asset.path, layout, fonts)
+            image = render_front(card, asset.path, layout, fonts, args.panel_alpha)
             out_path = save(image, out_path, args.format, args.quality, args.dpi)
             print(f"  [{slot:>2}] {out_path.name}")
         if len(by_index[asset.index]) > 1:
@@ -679,8 +761,9 @@ def main(argv: list[str] | None = None) -> int:
     back_path = (cards_dir / "00 Cardback").with_suffix(f".{args.format}")
     if only is None or 0 in only:
         with Image.open(back_asset.path) as art:
-            back = cover(art.convert("RGB"), layout.size, top_bias=0.5)
-            back_path = save(back, back_path, args.format, args.quality, args.dpi)
+            window = cover(art.convert("RGB"), window_size(layout), top_bias=0.5)
+        back = framed(layout, NEUTRAL_ACCENT, window)
+        back_path = save(back.convert("RGB"), back_path, args.format, args.quality, args.dpi)
 
     xml_path = args.out / "succession.xml"
     xml_path.write_text(build_xml(slots, back_path.resolve(), args.stock, args.foil), encoding="utf-8")
