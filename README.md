@@ -11,15 +11,17 @@ alpha about it is that none of it has been played by a human yet — the numbers
 come from bots, and the open questions in `docs/RULES.md` are the ones a table
 will answer faster than a batch run.
 
-Stdlib only, Python 3.10+. It runs the same from a terminal or from a chat
-code-execution sandbox — no install step, no packages to fetch.
+The simulator is stdlib only, Python 3.10+. It runs the same from a terminal
+or from a chat code-execution sandbox — no install step, no packages to fetch.
+(The one exception is the print tooling in `tools/`, which needs Pillow to draw
+cards; nothing in `succession/` imports it.)
 
 ```bash
 python -m succession demo --seed 42                    # watch one game, move by move
 python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
-python -m unittest discover -s tests                   # 47 rule tests
+python -m unittest discover -s tests                   # 96 rule and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -39,10 +41,33 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `succession/logsink.py` | CSV and SQLite writers, one row per game |
 | `succession/analysis.py` | Batch summary statistics |
 | `succession/runner.py` | CLI (`run`, `analyze`, `demo`) |
+| `tools/mpcfill.py` | Composes printable card fronts and an MPC Autofill order file |
+| `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
+| `docs/PRINTING.md` | Turning `assets/` into a deck you can order |
 
 Read `docs/RULES.md` before changing anything — it lists what the brief left
 open, what the code assumed, and which flag flips each assumption.
+
+## Printing a deck
+
+`assets/` holds an illustration for every card and the back. The art carries no
+name, no attributes and no rules text, so `tools/mpcfill.py` composes those
+over it and writes the XML order file that
+[MPC Autofill](https://github.com/chilli-axe/mpc-autofill) feeds to
+MakePlayingCards:
+
+```bash
+pip install pillow          # the only dependency in the repo, and only for this
+python tools/mpcfill.py     # -> build/mpc/cards/*.png and build/mpc/succession.xml
+```
+
+The deck it prints is read out of `succession/cards.py`, so the cards on the
+table are the cards the bots played. Art file `NN_...` goes to deck slot
+`NN - 1` and its kind and slug are checked against the card, so a gap in the
+numbering stops the build instead of shifting forty portraits by one seat.
+`docs/PRINTING.md` has the rest: card geometry, cardstock, the agenda cards,
+and what is still not in the box.
 
 ## The bots
 
