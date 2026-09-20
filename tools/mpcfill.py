@@ -110,7 +110,7 @@ ESTATE_COLOURS: dict[str, tuple[int, int, int]] = {
     "Church": (122, 92, 158),
     "Military": (158, 62, 54),
     "Merchant": (42, 106, 112),
-    "Commons": (140, 112, 56),
+    "Commons": (150, 90, 42),
 }
 NEUTRAL_ACCENT = (96, 106, 126)
 

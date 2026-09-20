@@ -96,7 +96,7 @@ bleed and then covered over, so no part of an illustration disappears under the
 frame.
 
 Each estate borders in a darkened mix of ink and its own colour -- Church
-indigo, Military wine, Merchant teal, Commons olive, and plain ink for the
+indigo, Military wine, Merchant teal, Commons bronze, and plain ink for the
 cards that belong to no estate -- so a hand sorts by edge alone. A gold keyline
 marks the seam between border and art.
 
