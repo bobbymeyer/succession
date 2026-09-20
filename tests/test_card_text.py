@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import build_cards
 from succession.courtiers import COURTIERS_BY_NAME
 from succession.enums import CardKind
-from tools import assets, card_text, gallery
+from tools import assets, card_text, cardlist, gallery
 
 ASSETS_DIR = REPO_ROOT / "assets"
 
@@ -137,6 +137,46 @@ class TestGallery(unittest.TestCase):
     def test_every_group_the_deck_can_produce_has_a_note(self) -> None:
         groups = {card.kind.value for card in build_cards()} | {"Agenda", "Card back"}
         self.assertEqual(groups - set(gallery.GROUP_NOTES), set())
+
+
+class TestCardList(unittest.TestCase):
+    """docs/CARDS.md, the deck as Markdown. Stdlib only, so no Pillow needed."""
+
+    def setUp(self) -> None:
+        self.rows = [
+            cardlist.Row("Card 01", "Beloved of the Gods", "Courtier \u00b7 Church",
+                         "Church \u00b7 Old Gods", "cards/01-a.jpg", "Courtier"),
+            cardlist.Row("Card 41", "Quarantine", "Event \u00b7 Minor",
+                         "The seats are sealed.", "cards/41-q.jpg", "Event"),
+        ]
+
+    def test_every_card_reaches_the_page(self) -> None:
+        page = cardlist.render(self.rows, None)
+        for row in self.rows:
+            self.assertIn(row.image, page)
+            self.assertIn(row.name, page)
+
+    def test_a_pipe_in_the_text_cannot_break_the_table(self) -> None:
+        """An unescaped pipe would silently split a row into extra columns."""
+
+        row = cardlist.Row("Card 01", "A|B", "Courtier", "one | two\nthree", "a.jpg", "Courtier")
+        line = next(ln for ln in cardlist.render([row], None).splitlines() if "a.jpg" in ln)
+        self.assertEqual(line.count("|") - line.count("\\|"), 5)
+
+    def test_the_download_line_appears_only_with_a_link(self) -> None:
+        self.assertNotIn("Download the print-ready deck", cardlist.render(self.rows, None))
+        page = cardlist.render(self.rows, None, "https://example.test/deck.zip")
+        self.assertIn("https://example.test/deck.zip", page)
+
+    def test_contents_anchors_match_the_headings(self) -> None:
+        page = cardlist.render(self.rows, None)
+        for group in ("Courtier", "Event"):
+            self.assertIn(f"## {group}", page)
+            self.assertIn(f"(#{cardlist.slugify(group)})", page)
+
+    def test_every_group_the_deck_can_produce_has_a_note(self) -> None:
+        groups = {card.kind.value for card in build_cards()} | {"Agenda", "Card back"}
+        self.assertEqual(groups - set(cardlist.GROUP_NOTES), set())
 
 
 if __name__ == "__main__":

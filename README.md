@@ -4,6 +4,14 @@ A dependency-free Python simulator for the card-driven succession game: full
 card and board model, a rules engine, three tiers of bot, and a CLI that runs
 N games and logs each one to CSV or SQLite for balance analysis.
 
+**[The deck](docs/CARDS.md)** — all 92 cards as images, with every courtier's
+printed attributes and every action card's rules text.
+**[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)**
+— the card images plus the MPC Autofill order file, sized and bled the way
+MakePlayingCards wants them. Unzip it anywhere, drop the `autofill` executable
+beside `succession.xml`, run it, and it fills the order for you;
+[docs/PRINTING.md](docs/PRINTING.md) has the detail.
+
 **Playtest alpha.** The rules are settled enough to put in front of players:
 every agenda is winnable, the eight of them sit inside seven points of each
 other, and 24,000 simulated games resolve without a single stall. What is
@@ -21,7 +29,7 @@ python -m succession demo --seed 42                    # watch one game, move by
 python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
-python -m unittest discover -s tests                   # 100 rule and print tests
+python -m unittest discover -s tests                   # 105 rule and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -43,9 +51,11 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `succession/runner.py` | CLI (`run`, `analyze`, `demo`) |
 | `tools/mpcfill.py` | Composes the print and web card renditions and the MPC Autofill order |
 | `tools/gallery.py` | The web rendition's self-contained index page |
+| `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
 | `docs/PRINTING.md` | Turning `assets/` into a deck you can order |
+| `docs/CARDS.md` | **Every card, with its picture, attributes and rules text** |
 
 Read `docs/RULES.md` before changing anything — it lists what the brief left
 open, what the code assumed, and which flag flips each assumption.
@@ -59,9 +69,16 @@ over it and writes the XML order file that
 MakePlayingCards:
 
 ```bash
-pip install pillow          # the only dependency in the repo, and only for this
-python tools/mpcfill.py     # -> build/mpc (print) and build/web (browser)
+pip install pillow                       # the only dependency, and only for this
+python tools/mpcfill.py                  # -> build/mpc (print) and build/web (browser)
+python tools/mpcfill.py --profile all --zip --format jpg --quality 95
 ```
+
+The second command builds everything: the print cards, the browsable gallery,
+`docs/CARDS.md` with its thumbnails, and the downloadable zip. The zip is the
+one artifact meant to leave this machine, so the order file inside it points at
+`cards/...` relative to itself rather than at absolute paths — unzip it
+anywhere and it still finds its cards.
 
 Two renditions of the same 92 cards -- the 84-card play deck plus the eight
 agendas. **Print** is full bleed at 600 DPI with the MPC Autofill order file
