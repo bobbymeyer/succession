@@ -5,8 +5,8 @@ The art in `assets/` is illustration only -- no name, no attributes, no rules
 text -- so this script lays the printed card over it and then writes the XML
 that MPC Autofill's desktop tool feeds to MakePlayingCards.
 
-    python tools/mpcfill.py                       # build everything into build/mpc/
-    python tools/mpcfill.py --dpi 300 --format jpg
+    python tools/mpcfill.py                       # both renditions into build/
+    python tools/mpcfill.py --profile web         # just the browsable one
     python tools/mpcfill.py --no-agendas          # 84 cards instead of 92
     python tools/mpcfill.py --only 26,41          # re-render two cards while tweaking
 
@@ -41,7 +41,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import Family, Origin, People  # noqa: E402
-from tools import card_text  # noqa: E402
+from tools import card_text, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
 
@@ -61,6 +61,10 @@ except ImportError:  # pragma: no cover - environment guard
 # so nothing that matters goes within SAFE_IN of the edge.
 BLEED_W_IN = 2.72
 BLEED_H_IN = 3.70
+#: What survives the cutter, and what the web version shows.
+TRIM_W_IN = 2.48
+TRIM_H_IN = 3.46
+BLEED_MARGIN_IN = (BLEED_W_IN - TRIM_W_IN) / 2
 SAFE_IN = 0.20
 
 #: The border is drawn from the bleed edge inwards, so the cut lands *inside*
@@ -653,6 +657,23 @@ def build_xml(slots: list[tuple[Path, str]], cardback: Path, stock: str, foil: b
 
 
 # --- CLI --------------------------------------------------------------------
+def trimmed(full: Image.Image, layout: Layout, target_dpi: int) -> Image.Image:
+    """The card as it comes back from the cutter, at a size a browser wants.
+
+    The bleed is there for the blade, not for a reader: on screen it just adds
+    a band of art that nobody's copy of the card has. So the web rendition
+    crops it off and scales what is left.
+    """
+
+    bleed = layout.px(BLEED_MARGIN_IN)
+    width, height = full.size
+    card = full.crop((bleed, bleed, width - bleed, height - bleed))
+    if target_dpi != layout.dpi:
+        scale = target_dpi / layout.dpi
+        card = card.resize((round(card.width * scale), round(card.height * scale)), Image.LANCZOS)
+    return card
+
+
 def save(image: Image.Image, path: Path, fmt: str, quality: int, dpi: int) -> Path:
     """Write the file, stamping the DPI it was actually rendered at.
 
@@ -670,18 +691,28 @@ def save(image: Image.Image, path: Path, fmt: str, quality: int, dpi: int) -> Pa
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Compose card fronts from assets/ and write an MPC Autofill order.",
+        description="Compose card fronts from assets/ into a print and a web rendition.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "After running this, put the MPC Autofill `autofill` executable next to\n"
-            "the generated .xml and run it. See docs/PRINTING.md."
+            "The print rendition goes to <out>/mpc: full bleed, for the MPC Autofill\n"
+            "`autofill` executable, which you put next to the generated .xml and run.\n"
+            "The web rendition goes to <out>/web: trimmed, browser-sized, with an\n"
+            "index.html that shows the deck. See docs/PRINTING.md."
         ),
     )
     parser.add_argument("--assets", type=Path, default=REPO_ROOT / "assets", help="where the art lives")
-    parser.add_argument("--out", type=Path, default=REPO_ROOT / "build" / "mpc", help="output directory")
-    parser.add_argument("--dpi", type=int, default=600, help="render resolution (default 600; MPC needs 300+)")
-    parser.add_argument("--format", choices=("png", "jpg"), default="png", help="output image format")
+    parser.add_argument("--out", type=Path, default=REPO_ROOT / "build", help="output directory")
+    parser.add_argument(
+        "--profile",
+        choices=("both", "print", "web"),
+        default="both",
+        help="which renditions to build (default both)",
+    )
+    parser.add_argument("--dpi", type=int, default=600, help="print resolution (default 600; MPC needs 300+)")
+    parser.add_argument("--format", choices=("png", "jpg"), default="png", help="print image format")
     parser.add_argument("--quality", type=int, default=95, help="JPEG quality when --format jpg")
+    parser.add_argument("--web-dpi", type=int, default=300, help="web resolution (default 300: 744px wide)")
+    parser.add_argument("--web-quality", type=int, default=85, help="JPEG quality for the web rendition")
     parser.add_argument(
         "--stock",
         default="(S30) Standard Smooth",
@@ -706,14 +737,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    if args.dpi < 300:
+    want_print = args.profile in ("both", "print")
+    want_web = args.profile in ("both", "web")
+    if want_print and args.dpi < 300:
         parser.error(f"--dpi {args.dpi} is below MakePlayingCards' 300 DPI minimum")
     if not 0 <= args.panel_alpha <= 255:
         parser.error("--panel-alpha takes a value from 0 (invisible) to 255 (opaque)")
-    if args.dpi > MAX_USEFUL_DPI:
+    if want_print and args.dpi > MAX_USEFUL_DPI:
         print(f"note: the desktop tool downscales above {MAX_USEFUL_DPI} DPI, so {args.dpi} buys nothing")
 
-    layout = Layout(args.dpi)
+    # Compose once, at whichever resolution is the more demanding, and let the
+    # web rendition be a trim and a downscale of it. Rendering the deck twice
+    # would cost twice the time and risk the two drifting apart.
+    layout = Layout(args.dpi if want_print else args.web_dpi)
     fonts = Fonts(tuple(args.font_dir))
     if fonts.regular is None:
         print("warning: no serif TrueType font found; text will fall back to a bitmap face")
@@ -727,58 +763,110 @@ def main(argv: list[str] | None = None) -> int:
     except AssetMismatch as mismatch:
         raise SystemExit(str(mismatch)) from None
 
-    cards_dir = args.out / "cards"
-    cards_dir.mkdir(parents=True, exist_ok=True)
+    print_dir = args.out / "mpc" / "cards"
+    web_dir = args.out / "web" / "cards"
+    if want_print:
+        print_dir.mkdir(parents=True, exist_ok=True)
+    if want_web:
+        web_dir.mkdir(parents=True, exist_ok=True)
     only = {int(n) for n in args.only.split(",")} if args.only else None
 
+    def emit(image: Image.Image | None, stem: str) -> tuple[Path, str]:
+        """Write a composed card to whichever renditions were asked for."""
+
+        printed = (print_dir / stem).with_suffix(f".{args.format}")
+        web = (web_dir / stem).with_suffix(".jpg")
+        if image is not None:
+            if want_print:
+                printed = save(image, printed, args.format, args.quality, args.dpi)
+            if want_web:
+                web = save(
+                    trimmed(image, layout, args.web_dpi), web, "jpg", args.web_quality, args.web_dpi
+                )
+        return printed.resolve(), web.name
+
     slots: list[tuple[Path, str]] = []
+    entries: list[gallery.Entry] = []
     alternates: list[str] = []
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
-        out_path = (cards_dir / f"{asset.index:02d} {card.name}").with_suffix(f".{args.format}")
-        if only is None or asset.index in only:
-            image = render_front(card, asset.path, layout, fonts, args.panel_alpha)
-            out_path = save(image, out_path, args.format, args.quality, args.dpi)
-            print(f"  [{slot:>2}] {out_path.name}")
+        stem = f"{asset.index:02d} {card.name}"
+        wanted = only is None or asset.index in only
+        image = render_front(card, asset.path, layout, fonts, args.panel_alpha) if wanted else None
+        printed, web_name = emit(image, stem)
+        if wanted:
+            print(f"  [{slot:>2}] {stem}")
         if len(by_index[asset.index]) > 1:
             alternates.append(f"{asset.index:02d} {card.name} ({len(by_index[asset.index])} versions)")
-        slots.append((out_path.resolve(), card.name.lower()))
+        slots.append((printed, card.name.lower()))
+        entries.append(
+            gallery.Entry(
+                slot=slot,
+                label=f"{asset.index:02d}",
+                name=card.name,
+                type_line=card_text.type_line(card),
+                filename=web_name,
+                group=card.kind.value,
+            )
+        )
 
     if args.include_agendas:
         for i, (name, subtitle, text) in enumerate(card_text.AGENDA_TEXT, start=85):
-            out_path = (cards_dir / f"{i:02d} {name.replace(':', ' --')}").with_suffix(f".{args.format}")
-            if only is None or i in only:
-                out_path = save(
-                    render_agenda(name, subtitle, text, layout, fonts),
-                    out_path,
-                    args.format,
-                    args.quality,
-                    args.dpi,
+            stem = f"{i:02d} {name.replace(':', ' --')}"
+            wanted = only is None or i in only
+            image = render_agenda(name, subtitle, text, layout, fonts) if wanted else None
+            printed, web_name = emit(image, stem)
+            if wanted:
+                print(f"  [{len(slots):>2}] {stem}")
+            slots.append((printed, name.lower()))
+            entries.append(
+                gallery.Entry(
+                    slot=len(entries),
+                    label=f"{i:02d}",
+                    name=name,
+                    type_line=subtitle,
+                    filename=web_name,
+                    group="Agenda",
                 )
-                print(f"  [{len(slots):>2}] {out_path.name}")
-            slots.append((out_path.resolve(), name.lower()))
+            )
 
     back_asset = by_index[0][0]
-    back_path = (cards_dir / "00 Cardback").with_suffix(f".{args.format}")
+    back_image = None
     if only is None or 0 in only:
         with Image.open(back_asset.path) as art:
             window = cover(art.convert("RGB"), window_size(layout), top_bias=0.5)
-        back = framed(layout, NEUTRAL_ACCENT, window)
-        back_path = save(back.convert("RGB"), back_path, args.format, args.quality, args.dpi)
+        back_image = framed(layout, NEUTRAL_ACCENT, window).convert("RGB")
+    back_path, back_web = emit(back_image, "00 Cardback")
 
-    xml_path = args.out / "succession.xml"
-    xml_path.write_text(build_xml(slots, back_path.resolve(), args.stock, args.foil), encoding="utf-8")
+    if want_print:
+        xml_path = args.out / "mpc" / "succession.xml"
+        xml_path.write_text(build_xml(slots, back_path, args.stock, args.foil), encoding="utf-8")
+        total_mb = sum(p.stat().st_size for p, _ in slots if p.exists()) / 1e6
+        print(f"\nPrint: {len(slots)} fronts + 1 back at {args.dpi} DPI, full bleed ({total_mb:.0f} MB)")
+        print(f"       {print_dir}")
+        print(f"       order file -> {xml_path}")
 
-    total_mb = sum(p.stat().st_size for p, _ in slots if p.exists()) / 1e6
-    print(f"\n{len(slots)} fronts + 1 back at {args.dpi} DPI ({total_mb:.0f} MB) -> {cards_dir}")
-    print(f"Order file -> {xml_path}")
+    if want_web:
+        index = gallery.write(
+            args.out / "web" / "index.html",
+            "Court of Succession",
+            f"Playtest alpha \u00b7 {len(entries)} cards, trimmed as printed",
+            entries,
+            back_web,
+        )
+        web_mb = sum(f.stat().st_size for f in web_dir.glob("*.jpg")) / 1e6
+        card_px = round(TRIM_W_IN * args.web_dpi)
+        print(f"\nWeb:   {len(entries)} cards + 1 back at {card_px}px wide, trimmed ({web_mb:.0f} MB)")
+        print(f"       {index}")
+
     if alternates:
         print("\nCards with more than one version of the art (the lowest-numbered one was used):")
         for line in alternates:
             print(f"  {line}")
-    print(
-        "\nNext: put the MPC Autofill `autofill` executable in "
-        f"{args.out}, run it, and pick succession.xml."
-    )
+    if want_print:
+        print(
+            "\nNext: put the MPC Autofill `autofill` executable in "
+            f"{args.out / 'mpc'}, run it, and pick succession.xml."
+        )
     return 0
 
 

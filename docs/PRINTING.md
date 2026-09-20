@@ -1,11 +1,18 @@
 # Printing a playtest deck
 
-`tools/mpcfill.py` turns the art in `assets/` into a deck you can order from
-[MakePlayingCards](https://www.makeplayingcards.com) with
-[MPC Autofill](https://github.com/chilli-axe/mpc-autofill). It composes each
-card front -- name, type line, and either the courtier's attributes or the
-card's rules text -- over the illustration, then writes the XML order file that
-MPC Autofill's desktop tool feeds to the MPC site.
+`tools/mpcfill.py` turns the art in `assets/` into a deck. It composes each card
+front -- name, type line, and either the courtier's attributes or the card's
+rules text -- over the illustration, and writes two renditions of the result:
+
+* **print**, full bleed, plus the XML order file that
+  [MPC Autofill](https://github.com/chilli-axe/mpc-autofill)'s desktop tool
+  feeds to [MakePlayingCards](https://www.makeplayingcards.com);
+* **web**, trimmed as the cutter leaves it and sized for a browser, with an
+  `index.html` that shows the whole deck.
+
+Each card is composed once and the web rendition is a trim and a downscale of
+the print one, so the two cannot drift apart. `--profile print` or
+`--profile web` builds just one.
 
 The art alone is not a deck. None of it carries a name, an estate or a line of
 rules, and a courtier's four printed attributes are the whole of what an agenda
@@ -21,17 +28,23 @@ python tools/mpcfill.py
 That writes, by default:
 
 ```
-build/mpc/
-    cards/00 Cardback.png              the shared back
-    cards/01 Beloved of the Gods.png   one front per deck slot, 84 of them
-    ...
-    cards/85 House Rising -- Amonides.png   the 8 agenda cards
-    ...
-    succession.xml                     the order file
+build/
+    mpc/cards/00 Cardback.png                   the shared back
+    mpc/cards/01 Beloved of the Gods.png        one front per deck slot
+    mpc/cards/85 House Rising -- Amonides.png   the 8 agenda cards
+    mpc/succession.xml                          the order file
+    web/cards/01 Beloved of the Gods.jpg        the same cards, trimmed
+    web/index.html                              the deck in a browser
 ```
 
 92 cards: the 84-card play deck plus the eight agendas. `--no-agendas` drops
 them back to 84.
+
+The print cards are 2.72 x 3.70 in with bleed at 600 DPI. The web cards are the
+trimmed 2.48 x 3.46 in card at 744 px wide -- no bleed, because the bleed is
+for the blade and nobody's copy of the card has it. `index.html` is one
+self-contained file: no CDN, no fonts to fetch, so it works off a USB stick or
+any static host.
 
 `build/` is gitignored -- the fronts are large and entirely derived from
 `assets/` plus the deck, so there is no reason to commit them.
@@ -114,8 +127,10 @@ crisp, since the source art is only just above 300 DPI on its own.
 
 | Flag | What it does |
 |---|---|
-| `--dpi 300` | Render smaller. 300 is MPC's floor; text gets chunky. |
-| `--format jpg --quality 95` | ~10x smaller files, much faster to upload. |
+| `--profile print` / `--profile web` | Build one rendition instead of both. |
+| `--dpi 300` | Render the print cards smaller. 300 is MPC's floor; text gets chunky. |
+| `--format jpg --quality 95` | ~10x smaller print files, much faster to upload. |
+| `--web-dpi 220` | Smaller web cards (546 px wide); `--web-quality` tunes the JPEG. |
 | `--stock "(M31) Linen"` | Cardstock. Also `(S27) Smooth`, `(S30) Standard Smooth`, `(S33) Superior Smooth`, `(P10) Plastic`. |
 | `--foil` | Foil fronts. Not available on plastic stock. |
 | `--no-agendas` | Leave out the 8 agenda cards: 84 cards, one bracket cheaper. |

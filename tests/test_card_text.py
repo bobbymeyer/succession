@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import build_cards
 from succession.courtiers import COURTIERS_BY_NAME
 from succession.enums import CardKind
-from tools import assets, card_text
+from tools import assets, card_text, gallery
 
 ASSETS_DIR = REPO_ROOT / "assets"
 
@@ -106,6 +106,37 @@ class TestArtMapping(unittest.TestCase):
         shifted = {i: a for i, a in self.by_index.items() if i != 1}
         with self.assertRaises(assets.AssetMismatch):
             assets.map_to_deck(self.cards, shifted)
+
+
+class TestGallery(unittest.TestCase):
+    """The web rendition's index page. Stdlib only, so no Pillow needed."""
+
+    def setUp(self) -> None:
+        self.entries = [
+            gallery.Entry(0, "01", "Beloved of the Gods", "Courtier \u00b7 Church", "01 a.jpg", "Courtier"),
+            gallery.Entry(1, "41", "Quarantine", "Event \u00b7 Minor", "41 q.jpg", "Event"),
+        ]
+
+    def test_every_card_reaches_the_page(self) -> None:
+        page = gallery.render("Deck", "sub", self.entries, "00 back.jpg")
+        for entry in self.entries:
+            self.assertIn(entry.filename, page)
+            self.assertIn(entry.name, page)
+        self.assertIn("00 back.jpg", page)
+
+    def test_names_with_markup_characters_are_escaped(self) -> None:
+        entry = gallery.Entry(0, "01", "Hand & <Oracle>", "Courtier", "a.jpg", "Courtier")
+        page = gallery.render("Deck", "sub", [entry], None)
+        self.assertNotIn("<Oracle>", page)
+        self.assertIn("&amp;", page)
+
+    def test_sections_follow_deck_order(self) -> None:
+        page = gallery.render("Deck", "sub", self.entries, None)
+        self.assertLess(page.index('id="courtier"'), page.index('id="event"'))
+
+    def test_every_group_the_deck_can_produce_has_a_note(self) -> None:
+        groups = {card.kind.value for card in build_cards()} | {"Agenda", "Card back"}
+        self.assertEqual(groups - set(gallery.GROUP_NOTES), set())
 
 
 if __name__ == "__main__":
