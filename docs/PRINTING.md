@@ -10,9 +10,15 @@ rules text -- over the illustration, and writes two renditions of the result:
 * **web**, trimmed as the cutter leaves it and sized for a browser, with an
   `index.html` that shows the whole deck.
 
-Each card is composed once and the web rendition is a trim and a downscale of
-the print one, so the two cannot drift apart. `--profile print` or
-`--profile web` builds just one.
+* **docs**, the thumbnails and the Markdown in [CARDS.md](CARDS.md).
+
+Each card is composed once and the other renditions are a trim and a downscale
+of the print one, so they cannot drift apart. `--profile` takes a comma-separated
+list (`print`, `web`, `docs`, or `all`) and defaults to `print,web`.
+
+**If you only want to order a deck, you do not need any of this.**
+[Download the print-ready zip](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip),
+unzip it, and skip to step 2 -- the cards and the order file are already in it.
 
 The art alone is not a deck. None of it carries a name, an estate or a line of
 rules, and a courtier's four printed attributes are the whole of what an agenda
@@ -22,7 +28,8 @@ reads off the board, so they have to be on the card.
 
 ```bash
 pip install pillow          # the only dependency, and only for this script
-python tools/mpcfill.py
+python tools/mpcfill.py                  # print and web
+python tools/mpcfill.py --profile all --zip --format jpg --quality 95
 ```
 
 That writes, by default:
@@ -35,6 +42,10 @@ build/
     mpc/succession.xml                          the order file
     web/cards/01 Beloved of the Gods.jpg        the same cards, trimmed
     web/index.html                              the deck in a browser
+    succession-print-deck.zip                   with --zip: the portable bundle
+docs/
+    cards/01-beloved-of-the-gods.jpg            with --profile docs: thumbnails
+    CARDS.md                                    ...and the deck as Markdown
 ```
 
 92 cards: the 84-card play deck plus the eight agendas. `--no-agendas` drops
@@ -55,6 +66,20 @@ script checks each file's kind and slug against the card before using it: if
 the numbering ever slips, it stops and names the slots rather than printing
 forty portraits one seat to the left. `tests/test_card_text.py` pins the same
 check.
+
+## The zip
+
+`--zip` writes `build/succession-print-deck.zip`: the card images, an order
+file, and a plain-text page of instructions. It is the one artifact meant to
+leave the machine that built it, so the order file inside points at
+`cards/...` **relative to itself** rather than at absolute paths. The desktop
+tool resolves a local path against its own working directory, so an order
+unzipped anywhere still finds its cards -- as long as you run the executable
+from the folder holding `succession.xml`.
+
+At `--format jpg --quality 95` the bundle is about 78 MB, against 210 MB as
+PNG. At 600 DPI and that quality the difference does not survive being printed
+on card stock, and it is the difference between a download and a chore.
 
 ## 2. Run MPC Autofill
 
@@ -127,7 +152,10 @@ crisp, since the source art is only just above 300 DPI on its own.
 
 | Flag | What it does |
 |---|---|
-| `--profile print` / `--profile web` | Build one rendition instead of both. |
+| `--profile all` | Build print, web and docs. Takes any comma-separated subset. |
+| `--zip` | Also write the portable bundle. Needs `print` in `--profile`. |
+| `--docs-dpi 150` | Bigger thumbnails in `docs/CARDS.md` (default 110, 273 px wide). |
+| `--zip-link URL` | The download line at the top of `docs/CARDS.md`. |
 | `--dpi 300` | Render the print cards smaller. 300 is MPC's floor; text gets chunky. |
 | `--format jpg --quality 95` | ~10x smaller print files, much faster to upload. |
 | `--web-dpi 220` | Smaller web cards (546 px wide); `--web-quality` tunes the JPEG. |

@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import sys
 import xml.etree.ElementTree as ET
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 from xml.dom import minidom
@@ -41,7 +42,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import Family, Origin, People  # noqa: E402
-from tools import card_text, gallery  # noqa: E402
+from tools import card_text, cardlist, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
 
@@ -628,13 +629,55 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
 
 
 # --- Order file -------------------------------------------------------------
-def build_xml(slots: list[tuple[Path, str]], cardback: Path, stock: str, foil: bool) -> str:
+#: What goes in the zip beside the cards, so somebody who has never used the
+#: desktop tool can still get from download to order.
+ZIP_README = """Court of Succession -- print-ready deck
+======================================
+
+{count} cards for MakePlayingCards, {dpi} DPI, 2.72 x 3.70 in with bleed.
+
+1. Download the `autofill` executable for your platform:
+   https://github.com/chilli-axe/mpc-autofill/releases
+2. Put it in this folder, beside succession.xml.
+3. Run it. On Linux, from a terminal: ./autofill-linux.bin
+   On macOS, allow it once in System Settings > Privacy & Security.
+4. Sign in to MakePlayingCards with an account made on their site --
+   the automated browser cannot do a Google sign-in.
+
+It uploads every card, sets the stock and the bracket, and leaves the
+project in your MPC cart. Check the preview before you pay.
+
+succession.xml points at `cards/...` relative to itself, so keep the two
+together and run the executable from this folder.
+
+Cardstock is set to {stock}. To change it, edit the <stock> line in
+succession.xml, or rebuild with: python tools/mpcfill.py --stock "..."
+"""
+
+
+def build_xml(
+    slots: list[tuple[Path, str]],
+    cardback: Path,
+    stock: str,
+    foil: bool,
+    relative_to: Path | None = None,
+) -> str:
     """One `<card>` per slot, pointing at an absolute path on this machine.
 
     `sourceType` of `Local File` is what stops the desktop tool treating the
     path as a Google Drive id; the cardback tag has no room for a source type,
     but the tool infers one when the text is a path that exists.
+
+    `relative_to` writes each path relative to that directory instead of
+    absolute, which is what makes the zip portable: the desktop tool resolves a
+    local path against its own working directory, so an order unzipped anywhere
+    still finds its cards as long as the executable is run beside the XML.
     """
+
+    def reference(path: Path) -> str:
+        if relative_to is None:
+            return str(path)
+        return path.relative_to(relative_to).as_posix()
 
     order = ET.Element("order")
     details = ET.SubElement(order, "details")
@@ -645,15 +688,48 @@ def build_xml(slots: list[tuple[Path, str]], cardback: Path, stock: str, foil: b
     fronts = ET.SubElement(order, "fronts")
     for slot, (path, query) in enumerate(slots):
         card = ET.SubElement(fronts, "card")
-        ET.SubElement(card, "id").text = str(path)
+        ET.SubElement(card, "id").text = reference(path)
         ET.SubElement(card, "sourceType").text = "Local File"
         ET.SubElement(card, "slots").text = str(slot)
         ET.SubElement(card, "name").text = path.name
         ET.SubElement(card, "query").text = query
-    ET.SubElement(order, "cardback").text = str(cardback)
+    ET.SubElement(order, "cardback").text = reference(cardback)
 
     raw = ET.tostring(order, encoding="unicode")
     return minidom.parseString(raw).toprettyxml(indent="    ")
+
+
+def write_zip(
+    path: Path,
+    mpc_dir: Path,
+    slots: list[tuple[Path, str]],
+    cardback: Path,
+    stock: str,
+    foil: bool,
+    dpi: int,
+) -> Path:
+    """A folder somebody can download, unzip anywhere, and order from.
+
+    The order file inside points at `cards/...` relative to itself rather than
+    at absolute paths on the machine that built it, which is the whole reason
+    this is a separate artifact and not just a zip of `build/mpc`.
+    """
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    order = build_xml(slots, cardback, stock, foil, relative_to=mpc_dir)
+    readme = ZIP_README.format(count=len(slots) + 1, dpi=dpi, stock=stock)
+
+    seen: set[str] = set()
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+        archive.writestr("succession.xml", order)
+        archive.writestr("HOW TO PRINT.txt", readme)
+        for card_path, _ in list(slots) + [(cardback, "")]:
+            name = f"cards/{card_path.name}"
+            if name in seen:  # the one cardback is shared by every slot
+                continue
+            seen.add(name)
+            archive.write(card_path, name)
+    return path
 
 
 # --- CLI --------------------------------------------------------------------
@@ -704,9 +780,33 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=REPO_ROOT / "build", help="output directory")
     parser.add_argument(
         "--profile",
-        choices=("both", "print", "web"),
-        default="both",
-        help="which renditions to build (default both)",
+        default="print,web",
+        metavar="print,web,docs",
+        help=(
+            "comma-separated renditions to build: print (full bleed for MPC), "
+            "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md). "
+            "'all' builds every one. Default print,web"
+        ),
+    )
+    parser.add_argument(
+        "--zip",
+        dest="make_zip",
+        action="store_true",
+        help="also write a portable zip of the print cards and a relative-path order file",
+    )
+    parser.add_argument(
+        "--docs-dir",
+        type=Path,
+        default=REPO_ROOT / "docs",
+        help="where the docs rendition writes CARDS.md and its thumbnails",
+    )
+    parser.add_argument(
+        "--docs-dpi", type=int, default=110, help="thumbnail resolution for the docs rendition"
+    )
+    parser.add_argument(
+        "--zip-link",
+        default="",
+        help="URL for the download line at the top of docs/CARDS.md",
     )
     parser.add_argument("--dpi", type=int, default=600, help="print resolution (default 600; MPC needs 300+)")
     parser.add_argument("--format", choices=("png", "jpg"), default="png", help="print image format")
@@ -737,8 +837,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    want_print = args.profile in ("both", "print")
-    want_web = args.profile in ("both", "web")
+    known = {"print", "web", "docs"}
+    chosen = known if args.profile == "all" else {p.strip() for p in args.profile.split(",") if p.strip()}
+    if args.profile == "both":  # the spelling this flag used to take
+        chosen = {"print", "web"}
+    if chosen - known:
+        parser.error(f"unknown profile: {', '.join(sorted(chosen - known))}")
+    want_print, want_web, want_docs = ("print" in chosen), ("web" in chosen), ("docs" in chosen)
+    if not chosen:
+        parser.error("--profile needs at least one of print, web, docs")
+    if args.make_zip and not want_print:
+        parser.error("--zip needs the print rendition; add print to --profile")
     if want_print and args.dpi < 300:
         parser.error(f"--dpi {args.dpi} is below MakePlayingCards' 300 DPI minimum")
     if not 0 <= args.panel_alpha <= 255:
@@ -749,7 +858,7 @@ def main(argv: list[str] | None = None) -> int:
     # Compose once, at whichever resolution is the more demanding, and let the
     # web rendition be a trim and a downscale of it. Rendering the deck twice
     # would cost twice the time and risk the two drifting apart.
-    layout = Layout(args.dpi if want_print else args.web_dpi)
+    layout = Layout(args.dpi if want_print else max(args.web_dpi if want_web else 0, args.docs_dpi))
     fonts = Fonts(tuple(args.font_dir))
     if fonts.regular is None:
         print("warning: no serif TrueType font found; text will fall back to a bitmap face")
@@ -765,17 +874,23 @@ def main(argv: list[str] | None = None) -> int:
 
     print_dir = args.out / "mpc" / "cards"
     web_dir = args.out / "web" / "cards"
-    if want_print:
-        print_dir.mkdir(parents=True, exist_ok=True)
-    if want_web:
-        web_dir.mkdir(parents=True, exist_ok=True)
+    docs_dir = args.docs_dir / "cards"
+    for directory, wanted in ((print_dir, want_print), (web_dir, want_web), (docs_dir, want_docs)):
+        if wanted:
+            directory.mkdir(parents=True, exist_ok=True)
     only = {int(n) for n in args.only.split(",")} if args.only else None
 
-    def emit(image: Image.Image | None, stem: str) -> tuple[Path, str]:
-        """Write a composed card to whichever renditions were asked for."""
+    def emit(image: Image.Image | None, stem: str, slug: str) -> tuple[Path, str, str]:
+        """Write a composed card to whichever renditions were asked for.
+
+        The docs thumbnails take a slugged name rather than the printed one:
+        they end up in a Markdown table committed to the repository, where a
+        filename with spaces in it is a URL nobody wants to read.
+        """
 
         printed = (print_dir / stem).with_suffix(f".{args.format}")
         web = (web_dir / stem).with_suffix(".jpg")
+        doc = (docs_dir / slug).with_suffix(".jpg")
         if image is not None:
             if want_print:
                 printed = save(image, printed, args.format, args.quality, args.dpi)
@@ -783,28 +898,51 @@ def main(argv: list[str] | None = None) -> int:
                 web = save(
                     trimmed(image, layout, args.web_dpi), web, "jpg", args.web_quality, args.web_dpi
                 )
-        return printed.resolve(), web.name
+            if want_docs:
+                # Rendered at twice the width it is displayed at, so the table
+                # stays sharp on a high-density screen.
+                doc = save(
+                    trimmed(image, layout, args.docs_dpi), doc, "jpg", args.web_quality, args.docs_dpi
+                )
+        return printed.resolve(), web.name, doc.name
 
     slots: list[tuple[Path, str]] = []
     entries: list[gallery.Entry] = []
+    rows: list[cardlist.Row] = []
     alternates: list[str] = []
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
         stem = f"{asset.index:02d} {card.name}"
+        slug = f"{asset.index:02d}-{cardlist.slugify(card.name)}"
         wanted = only is None or asset.index in only
         image = render_front(card, asset.path, layout, fonts, args.panel_alpha) if wanted else None
-        printed, web_name = emit(image, stem)
+        printed, web_name, doc_name = emit(image, stem, slug)
         if wanted:
             print(f"  [{slot:>2}] {stem}")
         if len(by_index[asset.index]) > 1:
             alternates.append(f"{asset.index:02d} {card.name} ({len(by_index[asset.index])} versions)")
         slots.append((printed, card.name.lower()))
+        type_line = card_text.type_line(card)
         entries.append(
             gallery.Entry(
                 slot=slot,
                 label=f"{asset.index:02d}",
                 name=card.name,
-                type_line=card_text.type_line(card),
+                type_line=type_line,
                 filename=web_name,
+                group=card.kind.value,
+            )
+        )
+        rows.append(
+            cardlist.Row(
+                label=f"Card {asset.index:02d}",
+                name=card.name,
+                type_line=type_line,
+                detail=(
+                    " \u00b7 ".join(value for _, value in courtier_attributes(card))
+                    if card.is_courtier
+                    else card_text.rules_for(card)
+                ),
+                image=f"cards/{doc_name}",
                 group=card.kind.value,
             )
         )
@@ -812,9 +950,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.include_agendas:
         for i, (name, subtitle, text) in enumerate(card_text.AGENDA_TEXT, start=85):
             stem = f"{i:02d} {name.replace(':', ' --')}"
+            slug = f"{i:02d}-{cardlist.slugify(name)}"
             wanted = only is None or i in only
             image = render_agenda(name, subtitle, text, layout, fonts) if wanted else None
-            printed, web_name = emit(image, stem)
+            printed, web_name, doc_name = emit(image, stem, slug)
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
             slots.append((printed, name.lower()))
@@ -828,6 +967,16 @@ def main(argv: list[str] | None = None) -> int:
                     group="Agenda",
                 )
             )
+            rows.append(
+                cardlist.Row(
+                    label=f"Card {i:02d}",
+                    name=name,
+                    type_line=subtitle,
+                    detail=text,
+                    image=f"cards/{doc_name}",
+                    group="Agenda",
+                )
+            )
 
     back_asset = by_index[0][0]
     back_image = None
@@ -835,15 +984,45 @@ def main(argv: list[str] | None = None) -> int:
         with Image.open(back_asset.path) as art:
             window = cover(art.convert("RGB"), window_size(layout), top_bias=0.5)
         back_image = framed(layout, NEUTRAL_ACCENT, window).convert("RGB")
-    back_path, back_web = emit(back_image, "00 Cardback")
+    back_path, back_web, back_doc = emit(back_image, "00 Cardback", "00-cardback")
 
     if want_print:
-        xml_path = args.out / "mpc" / "succession.xml"
+        mpc_dir = args.out / "mpc"
+        xml_path = mpc_dir / "succession.xml"
         xml_path.write_text(build_xml(slots, back_path, args.stock, args.foil), encoding="utf-8")
         total_mb = sum(p.stat().st_size for p, _ in slots if p.exists()) / 1e6
         print(f"\nPrint: {len(slots)} fronts + 1 back at {args.dpi} DPI, full bleed ({total_mb:.0f} MB)")
         print(f"       {print_dir}")
         print(f"       order file -> {xml_path}")
+
+        if args.make_zip:
+            bundle = write_zip(
+                args.out / "succession-print-deck.zip",
+                mpc_dir,
+                slots,
+                back_path,
+                args.stock,
+                args.foil,
+                args.dpi,
+            )
+            print(
+                f"\nZip:   {bundle} ({bundle.stat().st_size / 1e6:.0f} MB)"
+                "\n       cards + a relative-path order file, portable to any machine"
+            )
+
+    if want_docs:
+        listing = cardlist.write(
+            args.docs_dir / "CARDS.md",
+            rows,
+            cardlist.Row("Card 00", "Card back", "", "Shared by every card in the deck.",
+                         f"cards/{back_doc}", "Card back"),
+            args.zip_link or None,
+        )
+        docs_mb = sum(f.stat().st_size for f in docs_dir.glob("*.jpg")) / 1e6
+        print(
+            f"\nDocs:  {len(rows)} cards + 1 back at {round(TRIM_W_IN * args.docs_dpi)}px wide "
+            f"({docs_mb:.0f} MB)\n       {listing}"
+        )
 
     if want_web:
         index = gallery.write(
