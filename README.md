@@ -29,7 +29,7 @@ python -m succession demo --seed 42                    # watch one game, move by
 python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
-python -m unittest discover -s tests                   # 105 rule and print tests
+python -m unittest discover -s tests                   # 110 rule and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -52,10 +52,12 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/mpcfill.py` | Composes the print and web card renditions and the MPC Autofill order |
 | `tools/gallery.py` | The web rendition's self-contained index page |
 | `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
+| `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
 | `docs/PRINTING.md` | Turning `assets/` into a deck you can order |
 | `docs/CARDS.md` | **Every card, with its picture, attributes and rules text** |
+| `art/` | The prompts, output names and negative prompt behind `assets/` |
 
 Read `docs/RULES.md` before changing anything — it lists what the brief left
 open, what the code assumed, and which flag flips each assumption.

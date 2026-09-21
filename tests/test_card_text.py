@@ -8,6 +8,7 @@ here does.
 
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -18,7 +19,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import build_cards
 from succession.courtiers import COURTIERS_BY_NAME
 from succession.enums import CardKind
-from tools import assets, card_text, cardlist, gallery
+from tools import assets, card_text, cardlist, gallery, make_art_prompts
 
 ASSETS_DIR = REPO_ROOT / "assets"
 
@@ -177,6 +178,59 @@ class TestCardList(unittest.TestCase):
     def test_every_group_the_deck_can_produce_has_a_note(self) -> None:
         groups = {card.kind.value for card in build_cards()} | {"Agenda", "Card back"}
         self.assertEqual(groups - set(cardlist.GROUP_NOTES), set())
+
+
+class TestArtPrompts(unittest.TestCase):
+    """The generator in tools/ and the files in art/ have to stay in step.
+
+    art/filenames.txt is where the naming in assets/ comes from, and
+    tools/assets.py checks every asset against the card at its deck slot. If
+    the generator drifts from the committed files, or either drifts from the
+    art on disk, the deck stops building -- so all three are pinned here.
+    """
+
+    def setUp(self) -> None:
+        self.prompts, self.filenames = make_art_prompts.build_lines()
+
+    def test_one_prompt_and_one_name_per_card(self) -> None:
+        deck = build_cards()
+        self.assertEqual(len(self.prompts), len(deck))
+        self.assertEqual(len(self.filenames), len(deck))
+
+    def test_committed_files_match_the_generator(self) -> None:
+        """Regenerating must reproduce what is in the repository, byte for byte."""
+
+        art = REPO_ROOT / "art"
+        if not art.is_dir():
+            self.skipTest("no art/ directory in this checkout")
+        for name, lines in (("prompts.txt", self.prompts), ("filenames.txt", self.filenames)):
+            with self.subTest(file=name):
+                committed = (art / name).read_text(encoding="utf-8").splitlines()
+                self.assertEqual(committed, lines)
+
+    def test_the_negative_prompt_is_committed_as_one_line(self) -> None:
+        art = REPO_ROOT / "art"
+        if not art.is_dir():
+            self.skipTest("no art/ directory in this checkout")
+        committed = (art / "negative.txt").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(committed, [make_art_prompts.NEGATIVE])
+
+    def test_filenames_match_the_art_on_disk(self) -> None:
+        """Every generated name has art, and no art is missing from the list."""
+
+        if not ASSETS_DIR.is_dir():
+            self.skipTest("no assets/ directory in this checkout")
+        stems = {
+            re.sub(r"_\d+_$", "", path.stem)
+            for path in ASSETS_DIR.glob("*.png")
+            if path.stem != assets.CARDBACK_STEM
+        }
+        self.assertEqual(set(self.filenames), stems)
+
+    def test_a_card_with_no_art_details_is_refused(self) -> None:
+        """A new card must fail loudly here rather than print without art."""
+
+        self.assertNotIn("Nonesuch of Nowhere", make_art_prompts.DETAILS)
 
 
 if __name__ == "__main__":
