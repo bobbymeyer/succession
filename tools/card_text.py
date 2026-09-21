@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from succession.cards import CardDef  # noqa: E402
-from succession.enums import CardKind  # noqa: E402
+from succession.enums import SEAT_ESTATE, CardKind, Estate, Seat  # noqa: E402
 
 #: Shown under the name of every card that is not a courtier, in small caps.
 ANY_ESTATE = "Any Estate"
@@ -92,7 +92,7 @@ RULES: dict[str, str] = {
         "seat. The sitting courtier is bumped to the outer circle."
     ),
     "Acclamation": (
-        "Move an outer-circle Commons courtier into the Guildmaster's seat. "
+        "Move an outer-circle Commons courtier into the Voice of the People's seat. "
         "The sitting courtier is bumped to the outer circle."
     ),
     # --- Demotions ----------------------------------------------------------
@@ -113,7 +113,7 @@ RULES: dict[str, str] = {
         "seat is left empty."
     ),
     "Ostracism": (
-        "Send the Guildmaster to the outer circle. The seat is left empty."
+        "Send the Voice of the People to the outer circle. The seat is left empty."
     ),
     # --- Removals -----------------------------------------------------------
     # A killed courtier goes to the discard and may be shuffled back in as a
@@ -296,6 +296,67 @@ AGENDA_TEXT: tuple[tuple[str, str, str], ...] = (
 
 #: Separates the kind from its qualifier on a printed type line.
 SEP = " \u00b7 "
+
+
+#: The line on a seat card, under the name. Paired seats say so, because the
+#: engine treats the two members of a pair as interchangeable and a table
+#: should not waste time deciding which Church chair somebody is sitting in.
+SEAT_TEXT: dict[Seat, str] = {
+    Seat.ARCHPRIEST: (
+        "One of the two Church seats, which are interchangeable. Only a "
+        "courtier whose current estate is Church may sit here."
+    ),
+    Seat.ORACLE: (
+        "One of the two Church seats, which are interchangeable. Only a "
+        "courtier whose current estate is Church may sit here."
+    ),
+    Seat.LORD_GENERAL: (
+        "One of the two Military seats, which are interchangeable. Only a "
+        "courtier whose current estate is Military may sit here."
+    ),
+    Seat.CAPTAIN_OF_THE_GUARD: (
+        "One of the two Military seats, which are interchangeable. Only a "
+        "courtier whose current estate is Military may sit here."
+    ),
+    Seat.KEEPER_OF_THE_TREASURY: (
+        "One of the two Merchant seats, which are interchangeable. Only a "
+        "courtier whose current estate is Merchant may sit here."
+    ),
+    Seat.MASTER_OF_THE_MARKET: (
+        "One of the two Merchant seats, which are interchangeable. Only a "
+        "courtier whose current estate is Merchant may sit here."
+    ),
+    Seat.VOICE_OF_THE_PEOPLE: (
+        "The court's only Commons seat. A house reaches it solely through its "
+        "charioteer, the one commoner it fields."
+    ),
+}
+
+#: Printed on every seat card, under a rule. The rules that govern a chair
+#: rather than the person in it.
+SEAT_REMINDER = (
+    "Move a matching outer courtier into this seat for free when it is empty. "
+    "A Promotion takes it while filled, bumping the sitter out. A Demotion "
+    "empties it. A courtier mutated out of this estate is demoted at once."
+)
+
+
+def seat_type_line(seat: Seat) -> str:
+    """e.g. "Seat . Church"."""
+
+    return f"Seat{SEP}{SEAT_ESTATE[seat].value}"
+
+
+def seats_by_estate() -> list[tuple[Estate, list[Seat]]]:
+    """The seven seats grouped by estate, in board order."""
+
+    grouped: list[tuple[Estate, list[Seat]]] = []
+    for seat, estate in SEAT_ESTATE.items():
+        if grouped and grouped[-1][0] is estate:
+            grouped[-1][1].append(seat)
+        else:
+            grouped.append((estate, [seat]))
+    return grouped
 
 
 def type_line(card: CardDef) -> str:

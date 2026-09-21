@@ -10,7 +10,9 @@ printed attributes and every action card's rules text.
 — the card images plus the MPC Autofill order file, sized and bled the way
 MakePlayingCards wants them. Unzip it anywhere, drop the `autofill` executable
 beside `succession.xml`, run it, and it fills the order for you;
-[docs/PRINTING.md](docs/PRINTING.md) has the detail.
+[docs/PRINTING.md](docs/PRINTING.md) has the detail. Not ordering anything?
+The board prints at home: [A4](docs/board-a4.pdf) or
+[Letter](docs/board-letter.pdf), two pages, cut out the seven seats.
 
 **Playtest alpha.** The rules are settled enough to put in front of players:
 every agenda is winnable, the eight of them sit inside seven points of each
@@ -29,7 +31,7 @@ python -m succession demo --seed 42                    # watch one game, move by
 python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
-python -m unittest discover -s tests                   # 110 rule and print tests
+python -m unittest discover -s tests                   # 116 rule and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -52,6 +54,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/mpcfill.py` | Composes the print and web card renditions and the MPC Autofill order |
 | `tools/gallery.py` | The web rendition's self-contained index page |
 | `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
+| `tools/boardsheet.py` | Lays the seat cards out as a print-at-home PDF |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |

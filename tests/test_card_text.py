@@ -18,7 +18,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from succession.cards import build_cards
 from succession.courtiers import COURTIERS_BY_NAME
-from succession.enums import CardKind
+from succession.enums import SEAT_ESTATE, CardKind
 from tools import assets, card_text, cardlist, gallery, make_art_prompts
 
 ASSETS_DIR = REPO_ROOT / "assets"
@@ -192,10 +192,19 @@ class TestArtPrompts(unittest.TestCase):
     def setUp(self) -> None:
         self.prompts, self.filenames = make_art_prompts.build_lines()
 
-    def test_one_prompt_and_one_name_per_card(self) -> None:
-        deck = build_cards()
-        self.assertEqual(len(self.prompts), len(deck))
-        self.assertEqual(len(self.filenames), len(deck))
+    def test_one_prompt_and_one_name_per_card_and_seat(self) -> None:
+        expected = len(build_cards()) + len(SEAT_ESTATE)
+        self.assertEqual(len(self.prompts), expected)
+        self.assertEqual(len(self.filenames), expected)
+
+    def test_every_seat_gets_an_empty_throne(self) -> None:
+        """A seat card is a place to put a courtier, so its art needs none in it."""
+
+        for seat in SEAT_ESTATE:
+            with self.subTest(seat=seat.value):
+                self.assertIn(seat.value, make_art_prompts.SEAT_DETAILS)
+        for prompt in self.prompts[-len(SEAT_ESTATE):]:
+            self.assertIn("no person present", prompt)
 
     def test_committed_files_match_the_generator(self) -> None:
         """Regenerating must reproduce what is in the repository, byte for byte."""
@@ -215,8 +224,12 @@ class TestArtPrompts(unittest.TestCase):
         committed = (art / "negative.txt").read_text(encoding="utf-8").splitlines()
         self.assertEqual(committed, [make_art_prompts.NEGATIVE])
 
-    def test_filenames_match_the_art_on_disk(self) -> None:
-        """Every generated name has art, and no art is missing from the list."""
+    def test_no_art_on_disk_is_missing_from_the_list(self) -> None:
+        """Every asset must be named here.
+
+        Not the reverse: the list runs ahead of the art whenever prompts have
+        been written for cards nobody has generated images for yet.
+        """
 
         if not ASSETS_DIR.is_dir():
             self.skipTest("no assets/ directory in this checkout")
@@ -225,7 +238,7 @@ class TestArtPrompts(unittest.TestCase):
             for path in ASSETS_DIR.glob("*.png")
             if path.stem != assets.CARDBACK_STEM
         }
-        self.assertEqual(set(self.filenames), stems)
+        self.assertEqual(stems - set(self.filenames), set())
 
     def test_a_card_with_no_art_details_is_refused(self) -> None:
         """A new card must fail loudly here rather than print without art."""

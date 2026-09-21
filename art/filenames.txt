@@ -82,3 +82,10 @@
 82_mutation_adoption
 83_pivot_schismatic-event
 84_outmaneuver_outmaneuver
+93_seat_archpriest
+94_seat_oracle
+95_seat_lord-general
+96_seat_captain-of-the-guard
+97_seat_keeper-of-the-treasury
+98_seat_master-of-the-market
+99_seat_voice-of-the-people

@@ -10,7 +10,8 @@ rules text -- over the illustration, and writes two renditions of the result:
 * **web**, trimmed as the cutter leaves it and sized for a browser, with an
   `index.html` that shows the whole deck.
 
-* **docs**, the thumbnails and the Markdown in [CARDS.md](CARDS.md).
+* **docs**, the thumbnails and the Markdown in [CARDS.md](CARDS.md);
+* **board**, the seven seat cards as a PDF to print at home and cut out.
 
 Each card is composed once and the other renditions are a trim and a downscale
 of the print one, so they cannot drift apart. `--profile` takes a comma-separated
@@ -80,6 +81,26 @@ from the folder holding `succession.xml`.
 At `--format jpg --quality 95` the bundle is about 78 MB, against 210 MB as
 PNG. At 600 DPI and that quality the difference does not survive being printed
 on card stock, and it is the difference between a download and a chore.
+
+## The board
+
+Seven seat cards, one per chair, each bordered in its estate's colour like the
+courtiers that may sit in it -- so a chair and its candidates match by edge
+without either being read. The lower half of each card is deliberately empty:
+that is where the seated courtier goes.
+
+They ride along in the print order for nothing. MPC charges by bracket, and 92
+cards and 99 sit in the same one. `--no-seats` drops them.
+
+For a playtester who is not ordering a deck, `--profile board` writes
+[board-a4.pdf](board-a4.pdf) and [board-letter.pdf](board-letter.pdf): the same
+seven cards at true size with corner cut guides. True size is the point -- a
+seat card sits beside the courtier cards it receives, so the paper is
+paginated to fit the cards rather than the cards scaled to fit the paper. At
+2.48 x 3.46 in that is six to a page either way, but not the same six: A4 is
+the narrower sheet and takes two across by three down, Letter the shorter one
+and takes three across by two. Seven cards run to two pages on both, split four
+and three.
 
 ## 2. Run MPC Autofill
 
@@ -154,6 +175,8 @@ crisp, since the source art is only just above 300 DPI on its own.
 |---|---|
 | `--profile all` | Build print, web and docs. Takes any comma-separated subset. |
 | `--zip` | Also write the portable bundle. Needs `print` in `--profile`. |
+| `--no-seats` | Drop the 7 seat cards. Incompatible with `--profile board`. |
+| `--board-dpi 600` | Resolution of the printable board PDF (default 300). |
 | `--docs-dpi 150` | Bigger thumbnails in `docs/CARDS.md` (default 110, 273 px wide). |
 | `--zip-link URL` | The download line at the top of `docs/CARDS.md`. |
 | `--dpi 300` | Render the print cards smaller. 300 is MPC's floor; text gets chunky. |

@@ -29,6 +29,7 @@ Needs Pillow (`pip install pillow`); the simulator itself stays stdlib-only.
 from __future__ import annotations
 
 import argparse
+import pathlib
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -41,8 +42,8 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
-from succession.enums import Family, Origin, People  # noqa: E402
-from tools import card_text, cardlist, gallery  # noqa: E402
+from succession.enums import SEAT_ESTATE, Family, Origin, People, Seat  # noqa: E402
+from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
 
@@ -628,6 +629,166 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
     return canvas.convert("RGB")
 
 
+def render_seat(
+    seat: Seat,
+    layout: Layout,
+    fonts: Fonts,
+    art_path: Path | None = None,
+    alpha: int = PANEL_ALPHA,
+) -> Image.Image:
+    """A seat card: the chair itself, laid on the table for courtiers to fill.
+
+    Bordered in its estate's colour like the courtiers that may sit in it, so
+    a player matches card to chair by edge without reading either.
+
+    With `art_path` -- an empty throne, per the prompts in `art/` -- it is laid
+    out like any other card. Without, it falls back to type on parchment, so
+    the board is printable before the seat art has been generated.
+    """
+
+    if art_path is not None:
+        return render_seat_with_art(seat, art_path, layout, fonts, alpha)
+
+    width, height = layout.size
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    inner_width = width - 2 * content
+    tracking = layout.px(TRACKING_IN)
+    accent = ESTATE_COLOURS[SEAT_ESTATE[seat].value]
+
+    canvas = framed(layout, accent, Image.new("RGB", window_size(layout), PARCHMENT))
+    draw = ImageDraw.Draw(canvas)
+
+    label_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
+    name_font, name_lines = fit_title(
+        draw, seat.value, fonts, inner_width - 2 * pad, layout.px(NAME_SIZE_IN * 1.2),
+        layout.px(NAME_MIN_SIZE_IN),
+    )
+    name_leading = round(name_font.size * 1.18)
+    band_top = layout.px(BORDER_IN)
+    band_height = round(label_font.size * 2.4) + len(name_lines) * name_leading + layout.px(0.16)
+    draw.rectangle((band_top, band_top, width - band_top, band_top + band_height), fill=INK)
+    rule = max(2, layout.px(0.010))
+    draw.rectangle(
+        (band_top, band_top + band_height, width - band_top, band_top + band_height + rule),
+        fill=accent,
+    )
+
+    label = card_text.seat_type_line(seat).upper()
+    y = band_top + layout.px(0.10)
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, label, label_font, tracking)) / 2, y),
+        label,
+        label_font,
+        blend(accent, PARCHMENT, 0.45),
+        tracking,
+    )
+    y += round(label_font.size * 2.2)
+    for line in name_lines:
+        draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=PARCHMENT)
+        y += name_leading
+
+    body_font = fonts.at("regular", layout.px(BODY_SIZE_IN * 1.12))
+    body_leading = round(body_font.size * LINE_SPACING)
+    lines = wrap(draw, card_text.SEAT_TEXT[seat], body_font, inner_width - 2 * pad)
+    reminder_font = fonts.at("italic", layout.px(REMINDER_SIZE_IN))
+    reminder_lines = wrap(draw, card_text.SEAT_REMINDER, reminder_font, inner_width - 2 * pad)
+
+    # The lower half is left clear: this is where the courtier goes.
+    y = band_top + band_height + rule + layout.px(0.26)
+    for line in lines:
+        draw.text((content + pad, y), line, font=body_font, fill=INK)
+        y += body_leading
+    y += layout.px(0.16)
+    draw.line((content + pad, y, width - content - pad, y), fill=accent, width=max(1, layout.px(0.005)))
+    y += layout.px(0.15)
+    for line in reminder_lines:
+        draw.text((content + pad, y), line, font=reminder_font, fill=INK_SOFT)
+        y += round(reminder_font.size * 1.28)
+
+    place = "PLACE THE SEATED COURTIER HERE"
+    place_font = fonts.at("regular", layout.px(LABEL_SIZE_IN))
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, place, place_font, tracking)) / 2,
+         height - content - round(place_font.size * 2.0)),
+        place,
+        place_font,
+        blend(INK_SOFT, PARCHMENT, 0.35),
+        tracking,
+    )
+    return canvas.convert("RGB")
+
+
+def render_seat_with_art(
+    seat: Seat, art_path: Path, layout: Layout, fonts: Fonts, alpha: int
+) -> Image.Image:
+    """The seat card once its empty throne has been drawn.
+
+    Same furniture as an action card -- title plate above, rules plate below,
+    art between -- so a seat reads as part of the same deck.
+    """
+
+    width, height = layout.size
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    radius = layout.px(PLATE_RADIUS_IN)
+    tracking = layout.px(TRACKING_IN)
+    accent = ESTATE_COLOURS[SEAT_ESTATE[seat].value]
+
+    with Image.open(art_path) as art:
+        window = cover(art.convert("RGB"), window_size(layout))
+    canvas = framed(layout, accent, window)
+
+    measure = ImageDraw.Draw(canvas)
+    content_width = width - 2 * content
+    inner_width = content_width - 2 * pad
+
+    name_font, name_lines = fit_title(
+        measure, seat.value, fonts, inner_width, layout.px(NAME_SIZE_IN), layout.px(NAME_MIN_SIZE_IN)
+    )
+    type_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
+    type_text = card_text.seat_type_line(seat).upper()
+    name_leading = round(name_font.size * 1.16)
+    text_width = max(
+        max(measure.textlength(line, font=name_font) for line in name_lines),
+        tracked_width(measure, type_text, type_font, tracking),
+    )
+    title_width = min(content_width, round(text_width) + 2 * pad + layout.px(0.14))
+    title_x0 = round((width - title_width) / 2)
+    title_height = pad + len(name_lines) * name_leading + round(type_font.size * 1.6) + pad
+    title_box = (title_x0, content, title_x0 + title_width, content + title_height)
+    plate(canvas, title_box, radius, accent, alpha)
+
+    draw = ImageDraw.Draw(canvas)
+    y = content + pad
+    for line in name_lines:
+        draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=INK)
+        y += name_leading
+    y += round(type_font.size * 0.22)
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, type_text, type_font, tracking)) / 2, y),
+        type_text,
+        type_font,
+        accent,
+        tracking,
+    )
+
+    body_font = fonts.at("regular", layout.px(BODY_SIZE_IN))
+    leading = round(body_font.size * LINE_SPACING)
+    lines = wrap(draw, card_text.SEAT_TEXT[seat], body_font, inner_width)
+    body_height = pad + len(lines) * leading + pad
+    body = (content, height - content - body_height, width - content, height - content)
+    plate(canvas, body, radius, accent, alpha)
+
+    draw = ImageDraw.Draw(canvas)
+    y = body[1] + pad
+    for line in lines:
+        draw.text((content + pad, y), line, font=body_font, fill=INK)
+        y += leading
+    return canvas.convert("RGB")
+
+
 # --- Order file -------------------------------------------------------------
 #: What goes in the zip beside the cards, so somebody who has never used the
 #: desktop tool can still get from download to order.
@@ -784,8 +945,9 @@ def main(argv: list[str] | None = None) -> int:
         metavar="print,web,docs",
         help=(
             "comma-separated renditions to build: print (full bleed for MPC), "
-            "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md). "
-            "'all' builds every one. Default print,web"
+            "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md), "
+            "board (a print-at-home PDF of the seat cards). 'all' builds every "
+            "one. Default print,web"
         ),
     )
     parser.add_argument(
@@ -827,6 +989,15 @@ def main(argv: list[str] | None = None) -> int:
         help="leave out the 8 agenda cards, for an 84-card order in a smaller bracket",
     )
     parser.add_argument(
+        "--board-dpi", type=int, default=300, help="resolution of the printable board PDF"
+    )
+    parser.add_argument(
+        "--no-seats",
+        dest="include_seats",
+        action="store_false",
+        help="leave out the 7 seat cards that make up the board",
+    )
+    parser.add_argument(
         "--panel-alpha",
         type=int,
         default=PANEL_ALPHA,
@@ -837,13 +1008,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    known = {"print", "web", "docs"}
+    known = {"print", "web", "docs", "board"}
     chosen = known if args.profile == "all" else {p.strip() for p in args.profile.split(",") if p.strip()}
     if args.profile == "both":  # the spelling this flag used to take
         chosen = {"print", "web"}
     if chosen - known:
         parser.error(f"unknown profile: {', '.join(sorted(chosen - known))}")
     want_print, want_web, want_docs = ("print" in chosen), ("web" in chosen), ("docs" in chosen)
+    want_board = "board" in chosen
+    if want_board and not args.include_seats:
+        parser.error("--profile board is the seat cards; it cannot be used with --no-seats")
     if not chosen:
         parser.error("--profile needs at least one of print, web, docs")
     if args.make_zip and not want_print:
@@ -858,7 +1032,15 @@ def main(argv: list[str] | None = None) -> int:
     # Compose once, at whichever resolution is the more demanding, and let the
     # web rendition be a trim and a downscale of it. Rendering the deck twice
     # would cost twice the time and risk the two drifting apart.
-    layout = Layout(args.dpi if want_print else max(args.web_dpi if want_web else 0, args.docs_dpi))
+    layout = Layout(
+        args.dpi
+        if want_print
+        else max(
+            args.web_dpi if want_web else 0,
+            args.docs_dpi if want_docs else 0,
+            args.board_dpi if want_board else 0,
+        )
+    )
     fonts = Fonts(tuple(args.font_dir))
     if fonts.regular is None:
         print("warning: no serif TrueType font found; text will fall back to a bitmap face")
@@ -909,6 +1091,7 @@ def main(argv: list[str] | None = None) -> int:
     slots: list[tuple[Path, str]] = []
     entries: list[gallery.Entry] = []
     rows: list[cardlist.Row] = []
+    seat_images: list[Image.Image] = []
     alternates: list[str] = []
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
         stem = f"{asset.index:02d} {card.name}"
@@ -978,6 +1161,51 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
 
+    if args.include_seats:
+        # The board. Seven chairs, laid out on the table for courtiers to fill,
+        # printed with the deck because the order is paid for by bracket: 92
+        # cards and 99 both sit in the same one, so these cost nothing.
+        for i, seat in enumerate(SEAT_ESTATE, start=len(slots) + 1):
+            stem = f"{i:02d} Seat -- {seat.value}"
+            slug = f"{i:02d}-seat-{cardlist.slugify(seat.value)}"
+            wanted = only is None or i in only
+            seat_art = by_index.get(i)
+            image = (
+                render_seat(
+                    seat, layout, fonts,
+                    seat_art[0].path if seat_art else None,
+                    args.panel_alpha,
+                )
+                if wanted
+                else None
+            )
+            printed, web_name, doc_name = emit(image, stem, slug)
+            if wanted:
+                print(f"  [{len(slots):>2}] {stem}")
+            if image is not None:
+                seat_images.append(trimmed(image, layout, args.board_dpi))
+            slots.append((printed, seat.value.lower()))
+            entries.append(
+                gallery.Entry(
+                    slot=len(entries),
+                    label=f"{i:02d}",
+                    name=seat.value,
+                    type_line=card_text.seat_type_line(seat),
+                    filename=web_name,
+                    group="Seat",
+                )
+            )
+            rows.append(
+                cardlist.Row(
+                    label=f"Card {i:02d}",
+                    name=seat.value,
+                    type_line=card_text.seat_type_line(seat),
+                    detail=card_text.SEAT_TEXT[seat],
+                    image=f"cards/{doc_name}",
+                    group="Seat",
+                )
+            )
+
     back_asset = by_index[0][0]
     back_image = None
     if only is None or 0 in only:
@@ -1009,6 +1237,31 @@ def main(argv: list[str] | None = None) -> int:
                 f"\nZip:   {bundle} ({bundle.stat().st_size / 1e6:.0f} MB)"
                 "\n       cards + a relative-path order file, portable to any machine"
             )
+
+    if want_board and seat_images:
+        for paper in ("a4", "letter"):
+            sheet = boardsheet.write(
+                args.docs_dir / f"board-{paper}.pdf",
+                seat_images,
+                paper,
+                args.board_dpi,
+                fonts,
+                "Court of Succession -- the board. Cut out and lay in a row.",
+            )
+            pages = len(boardsheet.build_pages(
+                seat_images, boardsheet.Sheet(paper, args.board_dpi), fonts, ""
+            ))
+            print(f"\nBoard: {paper.upper()}, {pages} page{'s' if pages > 1 else ''} -> {sheet}")
+    elif want_board:
+        print("\nBoard: skipped -- no seat cards were rendered (--only excluded them?)")
+
+    if want_docs and only is None:
+        # A rename leaves the old thumbnail behind, and nothing downstream
+        # would notice a stale file sitting in a committed directory.
+        keep = {pathlib.Path(row.image).name for row in rows} | {back_doc}
+        for orphan in sorted(p for p in docs_dir.glob("*.jpg") if p.name not in keep):
+            orphan.unlink()
+            print(f"  removed orphaned thumbnail: {orphan.name}")
 
     if want_docs:
         listing = cardlist.write(

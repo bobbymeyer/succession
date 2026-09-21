@@ -82,6 +82,12 @@ GROUP_NOTES: dict[str, str] = {
         "`succession/agendas.py`; a table running a variant should play off "
         "`docs/RULES.md` instead."
     ),
+    "Seat": (
+        "The board: seven chairs, laid out on the table for courtiers to be "
+        "moved into. Each is bordered in its estate's colour, so a courtier "
+        "matches its chair by edge alone. Church, Military and Merchant each "
+        "seat an interchangeable pair; Commons seats one."
+    ),
     "Card back": "Shared by every card in the deck.",
 }
 

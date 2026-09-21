@@ -50,26 +50,26 @@ class People(str, Enum):
 
 
 class Seat(str, Enum):
-    CHIEF_PRIEST = "Chief Priest"
+    ARCHPRIEST = "Archpriest"
     ORACLE = "Oracle"
-    FIELD_GENERAL = "Field General"
-    PRAETORIAN_CHIEF = "Praetorian Chief"
-    EXCHEQUER = "Master of the Exchequer"
-    HARBORMASTER = "Harbormaster"
-    GUILDMASTER = "Guildmaster"
+    LORD_GENERAL = "Lord General"
+    CAPTAIN_OF_THE_GUARD = "Captain of the Guard"
+    KEEPER_OF_THE_TREASURY = "Keeper of the Treasury"
+    MASTER_OF_THE_MARKET = "Master of the Market"
+    VOICE_OF_THE_PEOPLE = "Voice of the People"
 
 
 #: Only a courtier whose estate matches may occupy a seat. Church, Military
 #: and Merchant each have a pair of mechanically identical seats; Commons has
 #: one.
 SEAT_ESTATE: dict[Seat, Estate] = {
-    Seat.CHIEF_PRIEST: Estate.CHURCH,
+    Seat.ARCHPRIEST: Estate.CHURCH,
     Seat.ORACLE: Estate.CHURCH,
-    Seat.FIELD_GENERAL: Estate.MILITARY,
-    Seat.PRAETORIAN_CHIEF: Estate.MILITARY,
-    Seat.EXCHEQUER: Estate.MERCHANT,
-    Seat.HARBORMASTER: Estate.MERCHANT,
-    Seat.GUILDMASTER: Estate.COMMONS,
+    Seat.LORD_GENERAL: Estate.MILITARY,
+    Seat.CAPTAIN_OF_THE_GUARD: Estate.MILITARY,
+    Seat.KEEPER_OF_THE_TREASURY: Estate.MERCHANT,
+    Seat.MASTER_OF_THE_MARKET: Estate.MERCHANT,
+    Seat.VOICE_OF_THE_PEOPLE: Estate.COMMONS,
 }
 
 SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)
