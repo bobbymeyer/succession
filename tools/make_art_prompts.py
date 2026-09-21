@@ -32,7 +32,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from succession.cards import build_cards  # noqa: E402
-from succession.enums import CardKind  # noqa: E402
+from succession.enums import SEAT_ESTATE, CardKind  # noqa: E402
+from tools import card_text  # noqa: E402
 
 #: Shared positive tail. Purely an anchor for the period and the medium -- every
 #: exclusion lives in `NEGATIVE` and is written to negative.txt instead, so no
@@ -77,6 +78,10 @@ FRAMING = {
     "spectacle": (
         "Epic large-scale event, vast panoramic vertical composition, "
         "tiny human figures far below for scale"
+    ),
+    "throne": (
+        "An empty throne, absolutely no person present, nobody seated, the "
+        "unoccupied seat of office centred and waiting, vertical composition"
     ),
 }
 
@@ -720,6 +725,72 @@ DETAILS: dict[str, tuple[str, str, str]] = {
     ),
 }
 
+#: The board. Each seat is drawn as the chair itself, empty, surrounded by the
+#: instruments of the office it stands for -- the card is a place to put a
+#: courtier, so the art must not already have one sitting in it.
+SEAT_DETAILS: dict[str, tuple[str, str, str]] = {
+    "Archpriest": (
+        "an empty high-backed throne of ivory and cedar on a temple dais, its "
+        "arms worn smooth by generations of hands, a bronze censer smoking beside it",
+        "the throne's back is a pair of folded bronze wings, and the censer smoke "
+        "holds the shape of a seated figure who is not there",
+        "the empty chair's own shadow has knelt on the floor in front of it",
+    ),
+    "Oracle": (
+        "an empty tripod seat of blackened bronze standing over a cleft in bare "
+        "rock, laurel scattered across the stone floor",
+        "vapour rising through the tripod freezes into hanging ribbons of glass, "
+        "each ribbon showing a different sky",
+        "the chasm beneath the seat is full of stars instead of darkness",
+    ),
+    "Lord General": (
+        "an empty campaign chair of iron and stretched hide on a field of snapped "
+        "sarissas, a bronze muscle cuirass propped against its leg",
+        "the chair is assembled entirely from captured spears, and a map of a war "
+        "burns slowly across its seat without ever being consumed",
+        "the folding stool casts the shadow of an entire army",
+    ),
+    "Captain of the Guard": (
+        "an empty stone seat in a palace antechamber, a tall shield and a sheathed "
+        "kopis leaned against the wall on either side of it",
+        "the shields ranked along the corridor have open watching eyes, and the "
+        "seat's armrests end in bronze hands still gripping",
+        "every doorway in the corridor behind the chair opens onto the same doorway",
+    ),
+    "Keeper of the Treasury": (
+        "an empty seat of dark oiled wood behind a counting-table, bronze scales "
+        "and stacked tetradrachms, ledgers racked on the wall",
+        "the chair's legs are struck coins fused into columns, and the scales hang "
+        "level weighing light against light",
+        "coins pour upward off the floor into a jar that never fills",
+    ),
+    "Master of the Market": (
+        "an empty overseer's chair on a stone platform above an emptied agora, "
+        "measuring vessels and a standard weight chained to its arm",
+        "the awnings over the stalls below are woven from trade routes drawn in "
+        "coloured thread, and the standard weight floats a finger above its chain",
+        "every stall in the market below is a reflection of the same single stall",
+    ),
+    "Voice of the People": (
+        "an empty speaker's seat of plain limestone at the top of the assembly "
+        "steps, a worn rostrum stone set before it",
+        "the amphitheatre behind is filled with cloaks that hold their shape with "
+        "nobody inside them, all leaning forward to listen",
+        "the chair is the only thing in the scene casting sound where it should "
+        "cast a shadow",
+    ),
+}
+
+#: The shared negative cannot exclude people -- forty of the cards are
+#: portraits. The seats are the opposite problem: a model shown a throne will
+#: put somebody on it unless told twice, so they get their own negative, which
+#: is the shared one plus everything that means "occupied".
+SEAT_NEGATIVE_EXTRA = (
+    "person, people, figure, human, man, woman, king, queen, emperor, priest, "
+    "soldier, crowd in foreground, seated figure, enthroned ruler, portrait, "
+    "face, hands on the armrests, occupied seat, someone sitting"
+)
+
 KIND_FRAMING = {
     CardKind.COURTIER: "portrait",
     CardKind.EVENT: "spectacle",
@@ -752,6 +823,17 @@ def build_lines() -> tuple[list[str], list[str]]:
         n = len(filenames) + 1
         filenames.append(f"{n:02d}_{slug(card.kind.value)}_{slug(card.name)}")
 
+    # The seat cards come after the agendas in the printed order, and the art
+    # is numbered to match the slot it lands in. The agendas are the gap: they
+    # are set type on parchment and have no illustration to generate.
+    start = len(filenames) + len(card_text.AGENDA_TEXT) + 1
+    for offset, seat in enumerate(SEAT_ESTATE):
+        historical, fantastic, surreal = SEAT_DETAILS[seat.value]
+        prompts.append(
+            f"{FRAMING['throne']}. {historical}. {fantastic}. {surreal}. {STYLE}"
+        )
+        filenames.append(f"{start + offset:02d}_seat_{slug(seat.value)}")
+
     return prompts, filenames
 
 
@@ -765,7 +847,13 @@ def main() -> None:
     # line by line alongside the positives, repeat it 84 times:
     #   yes "$(cat art/negative.txt)" | head -n $(wc -l < art/prompts.txt) > batch.txt
     (out / "negative.txt").write_text(NEGATIVE + "\n", encoding="utf-8")
-    print(f"wrote {len(prompts)} prompts, {len(filenames)} filenames, 1 negative")
+    (out / "negative-seats.txt").write_text(
+        NEGATIVE + ", " + SEAT_NEGATIVE_EXTRA + "\n", encoding="utf-8"
+    )
+    print(
+        f"wrote {len(prompts)} prompts, {len(filenames)} filenames, "
+        f"2 negatives (the seats need their own)"
+    )
 
 
 if __name__ == "__main__":

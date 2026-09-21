@@ -71,13 +71,13 @@ def fresh(**overrides) -> GameState:
 #: A legal seven-seat court showing all three families, both faiths and a
 #: barbarian -- the minimum board that satisfies Balance.
 BALANCED_COURT = {
-    Seat.ARCHIEREUS: "Beloved of the Gods",          # Amonides / Old Gods
+    Seat.ARCHPRIEST: "Beloved of the Gods",          # Amonides / Old Gods
     Seat.ORACLE: "Initiate of the Seven Veils",        # Mitreas / Mystery Cults
-    Seat.STRATEGUS: "Horse Breaker",               # Argaian
-    Seat.SOMATOPHYLAX: "Hundred-Kill Rider",       # Barbarian
-    Seat.DIOECETES: "Golden Thumb",                    # Mitreas
-    Seat.AGORANOMUS: "Weigher of Grain",             # Amonides / Old Gods
-    Seat.DEMARCHUS: "Master Mason",                  # Barbarian
+    Seat.LORD_GENERAL: "Horse Breaker",               # Argaian
+    Seat.CAPTAIN_OF_THE_GUARD: "Hundred-Kill Rider",       # Barbarian
+    Seat.KEEPER_OF_THE_TREASURY: "Golden Thumb",                    # Mitreas
+    Seat.MASTER_OF_THE_MARKET: "Weigher of Grain",             # Amonides / Old Gods
+    Seat.VOICE_OF_THE_PEOPLE: "Master Mason",                  # Barbarian
 }
 
 
@@ -190,7 +190,7 @@ class TestData(unittest.TestCase):
         self.assertEqual(len(cards), 84)
 
     def test_every_house_fields_one_charioteer(self):
-        """A house's charioteer is its only route to the Agoranomus's seat."""
+        """A house's charioteer is its only route to the Master of the Market's seat."""
 
         for family in (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN):
             commoners = [
@@ -215,7 +215,7 @@ class TestHandVsPromotion(unittest.TestCase):
         self.assertEqual(actions, [Action(PLAY, card=u)])
         apply_action(state, 0, actions[0], FixedRng())
         self.assertIn(u, state.outer)
-        self.assertIsNone(state.seats[Seat.ARCHIEREUS])
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
 
     def test_no_action_puts_a_hand_card_into_a_seat(self):
         state = fresh()
@@ -229,40 +229,40 @@ class TestHandVsPromotion(unittest.TestCase):
         state = fresh()
         u = outer(state, "Beloved of the Gods")[0]
         move = next(a for a in legal_actions(state, 0) if a.kind == MOVE)
-        self.assertEqual(move, Action(MOVE, courtier=u, seat=Seat.ARCHIEREUS))
+        self.assertEqual(move, Action(MOVE, courtier=u, seat=Seat.ARCHPRIEST))
         apply_action(state, 0, move, FixedRng())
-        self.assertEqual(state.seats[Seat.ARCHIEREUS], u)
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], u)
         self.assertNotIn(u, state.outer)
 
     def test_move_requires_matching_estate(self):
         state = fresh()
         outer(state, "Golden Thumb")  # Merchant
         seats = {a.seat for a in legal_actions(state, 0) if a.kind == MOVE}
-        self.assertEqual(seats, {Seat.DIOECETES, Seat.AGORANOMUS})
+        self.assertEqual(seats, {Seat.KEEPER_OF_THE_TREASURY, Seat.MASTER_OF_THE_MARKET})
 
     def test_promotion_needs_an_occupied_seat(self):
         state = fresh()
         promo = give(state, 0, "Promotion")[0]
         outer(state, "Beloved of the Gods")
         self.assertEqual(card_actions(state, 0, promo), [])
-        seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         self.assertTrue(card_actions(state, 0, promo))
 
     def test_promotion_bumps_the_sitting_courtier(self):
         state = fresh()
         promo = give(state, 0, "Consecration")[0]
-        sitting = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        sitting = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         climber = outer(state, "Beloved of the Gods")[0]
-        action = Action(PLAY, card=promo, courtier=climber, seat=Seat.ARCHIEREUS)
+        action = Action(PLAY, card=promo, courtier=climber, seat=Seat.ARCHPRIEST)
         apply_action(state, 0, action, FixedRng())
-        self.assertEqual(state.seats[Seat.ARCHIEREUS], climber)
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], climber)
         self.assertIn(sitting, state.outer)
 
     def test_estate_specific_promotion_only_targets_its_estate(self):
         state = fresh()
         promo = give(state, 0, "Battlefield Promotion")[0]
-        seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)
+        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
         outer(state, "Beloved of the Gods", "Crosser of Rivers")
         actions = card_actions(state, 0, promo)
         self.assertTrue(actions)
@@ -274,9 +274,9 @@ class TestRemovalsAndDefenses(unittest.TestCase):
     def test_removal_takes_a_courtier_out_of_play(self):
         state = fresh()
         card = give(state, 0, "Assassination")[0]
-        victim = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        victim = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         apply_action(state, 0, Action(PLAY, card=card, courtier=victim), FixedRng())
-        self.assertIsNone(state.seats[Seat.ARCHIEREUS])
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
         self.assertNotIn(victim, state.outer)
         self.assertIn(victim, state.discard)  # may reshuffle back as a new person
 
@@ -301,7 +301,7 @@ class TestRemovalsAndDefenses(unittest.TestCase):
 
     def test_defense_negates_one_attack_then_is_spent(self):
         state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        defended = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         cost, shield, kill1, kill2 = give(
             state, 0, "Beloved of the Gods", "Sanctuary", "Assassination", "Martyrdom"
         )
@@ -312,15 +312,15 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         self.assertIn(cost, state.discard)
 
         apply_action(state, 0, Action(PLAY, card=kill1, courtier=defended), FixedRng())
-        self.assertEqual(state.seats[Seat.ARCHIEREUS], defended)  # negated
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], defended)  # negated
         self.assertNotIn(defended, state.defenses)
 
         apply_action(state, 0, Action(PLAY, card=kill2, courtier=defended), FixedRng())
-        self.assertIsNone(state.seats[Seat.ARCHIEREUS])  # second one lands
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])  # second one lands
 
     def test_defense_costs_a_matching_estate_courtier(self):
         state = fresh()
-        seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Bodyguard")[0]  # Military
         give(state, 0, "Beloved of the Gods")  # Church: cannot pay
         self.assertEqual(card_actions(state, 0, shield), [])
@@ -329,7 +329,7 @@ class TestRemovalsAndDefenses(unittest.TestCase):
 
     def test_patron_protection_accepts_any_estate(self):
         state = fresh()
-        seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Patron Protection")[0]
         give(state, 0, "Golden Thumb")
         self.assertTrue(card_actions(state, 0, shield))
@@ -339,24 +339,24 @@ class TestDemotionsStripsMutations(unittest.TestCase):
     def test_demotion_empties_the_seat(self):
         state = fresh()
         card = give(state, 0, "Heresy Accusation")[0]
-        sitting = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        sitting = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         apply_action(
-            state, 0, Action(PLAY, card=card, courtier=sitting, seat=Seat.ARCHIEREUS), FixedRng()
+            state, 0, Action(PLAY, card=card, courtier=sitting, seat=Seat.ARCHPRIEST), FixedRng()
         )
-        self.assertIsNone(state.seats[Seat.ARCHIEREUS])
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
         self.assertIn(sitting, state.outer)
 
     def test_estate_mutation_that_unmatches_a_seat_demotes(self):
         state = fresh()
         card = give(state, 0, "Enter Trade")[0]
-        sitting = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        sitting = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         apply_action(
             state,
             0,
             Action(PLAY, card=card, courtier=sitting, value=Estate.MERCHANT.value),
             FixedRng(),
         )
-        self.assertIsNone(state.seats[Seat.ARCHIEREUS])
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
         self.assertIn(sitting, state.outer)
         self.assertIs(state.cstate[sitting].estate, Estate.MERCHANT)
 
@@ -457,22 +457,22 @@ class TestGodlessness(unittest.TestCase):
         for agenda_key in ("faith_old_gods", "faith_mystery_cults"):
             agenda = AGENDAS_BY_KEY[agenda_key]
             self.assertFalse(satisfied(state, agenda))
-        seat(state, "The Dog of the Agora", Seat.DEMARCHUS)      # godless
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)         # Old Gods
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)   # Old Gods
-        seat(state, "Destroyer of Walls", Seat.SOMATOPHYLAX)      # Old Gods
+        seat(state, "The Dog of the Agora", Seat.VOICE_OF_THE_PEOPLE)      # godless
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)         # Old Gods
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)   # Old Gods
+        seat(state, "Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD)      # Old Gods
         # Four seats are filled, but the godless one counts for nobody.
         self.assertFalse(satisfied(state, AGENDAS_BY_KEY["faith_old_gods"]))
-        seat(state, "Weigher of Grain", Seat.DIOECETES)               # Old Gods
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)               # Old Gods
         self.assertTrue(satisfied(state, AGENDAS_BY_KEY["faith_old_gods"]))
 
     def test_apostasy_can_deny_a_faith_its_fourth_seat(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["faith_old_gods"]
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
         seat(state, "Hand of the Oracle", Seat.ORACLE)
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)
-        victim = seat(state, "Destroyer of Walls", Seat.SOMATOPHYLAX)
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        victim = seat(state, "Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD)
         self.assertTrue(satisfied(state, agenda))
         card = give(state, 0, "Apostasy")[0]
         apply_action(
@@ -485,7 +485,7 @@ class TestGodlessness(unittest.TestCase):
 
     def test_a_defense_stops_apostasy(self):
         state = fresh()
-        defended = seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)
+        defended = seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
         cost, shield, card = give(
             state, 0, "Hand of the Oracle", "Sanctuary", "Apostasy"
         )
@@ -503,10 +503,10 @@ class TestGodlessness(unittest.TestCase):
     def test_balance_does_not_ask_for_a_godless_courtier(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["balance"]
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)        # Amonides / Old Gods
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)        # Amonides / Old Gods
         seat(state, "Initiate of the Seven Veils", Seat.ORACLE)      # Mitreas / Mystery
-        seat(state, "Horse Breaker", Seat.STRATEGUS)             # Argaian / Mystery
-        seat(state, "Hundred-Kill Rider", Seat.SOMATOPHYLAX)     # Barbarian
+        seat(state, "Horse Breaker", Seat.LORD_GENERAL)             # Argaian / Mystery
+        seat(state, "Hundred-Kill Rider", Seat.CAPTAIN_OF_THE_GUARD)     # Barbarian
         fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))  # no godless courtier needed
 
@@ -546,7 +546,7 @@ class TestEvents(unittest.TestCase):
     # --- Quarantine / Siege: the freezes -----------------------------------
     def test_quarantine_seals_the_inner_circle(self):
         state = fresh()
-        sitting = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        sitting = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         climber = outer(state, "Beloved of the Gods")[0]
         promo, demo = give(state, 0, "Consecration", "Heresy Accusation")
         self.assertTrue(card_actions(state, 0, promo))
@@ -574,7 +574,7 @@ class TestEvents(unittest.TestCase):
 
     def test_siege_seals_the_whole_board(self):
         state = fresh()
-        seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         outer(state, "Beloved of the Gods")
         self.play(state, "Siege")
 
@@ -608,11 +608,11 @@ class TestEvents(unittest.TestCase):
 
     def test_a_purge_cannot_reach_a_sealed_inner_circle(self):
         state = fresh()
-        sitting = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        sitting = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         outer(state, "Beloved of the Gods")
         self.play(state, "Quarantine")
         self.play(state, "Plague")
-        self.assertEqual(state.seats[Seat.ARCHIEREUS], sitting)  # sealed in
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], sitting)  # sealed in
         self.assertEqual(state.outer, [])                          # the rest die
 
     def test_a_purge_needs_somebody_to_kill(self):
@@ -681,7 +681,7 @@ class TestEvents(unittest.TestCase):
 
     def test_no_defense_stops_an_event(self):
         state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.ARCHIEREUS)
+        defended = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
         apply_action(
             state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
@@ -743,32 +743,32 @@ class TestWinConditions(unittest.TestCase):
     def test_house_rising_needs_three_seats_including_its_own_estate(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["house_amonides"]           # Amonides: Church
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)   # Church
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)   # Church
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
         self.assertFalse(satisfied(state, agenda))          # only two seats
-        seat(state, "Weigher of Grain", Seat.DIOECETES)
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)
         self.assertTrue(satisfied(state, agenda))
 
     def test_house_rising_rejects_a_trio_outside_its_own_estate(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["house_amonides"]           # Amonides: Church
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)     # Military
-        seat(state, "Speaker of the Old Words", Seat.SOMATOPHYLAX)  # Military
-        seat(state, "Weigher of Grain", Seat.DIOECETES)                 # Merchant
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)     # Military
+        seat(state, "Speaker of the Old Words", Seat.CAPTAIN_OF_THE_GUARD)  # Military
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)                 # Merchant
         self.assertFalse(satisfied(state, agenda))  # three seats, no Church seat
         # ...but they do win under --house-any-three.
         self.assertTrue(
             satisfied(judged_as(state, house_rising_requires_preferred_seat=False), agenda)
         )
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
         self.assertTrue(satisfied(state, agenda))
 
     def test_house_rising_counts_only_the_named_family(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["house_amonides"]
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
         seat(state, "Initiate of the Seven Veils", Seat.ORACLE)   # Mitreas
-        seat(state, "Horse Breaker", Seat.STRATEGUS)          # Argaian
+        seat(state, "Horse Breaker", Seat.LORD_GENERAL)          # Argaian
         self.assertFalse(satisfied(state, agenda))
 
     def test_each_house_has_its_own_estate_to_claim(self):
@@ -802,31 +802,31 @@ class TestWinConditions(unittest.TestCase):
     def test_a_preferred_estate_override_changes_which_seat_counts(self):
         state = fresh(house_preferred_estates=(("Amonides", "Merchant"),))
         agenda = AGENDAS_BY_KEY["house_amonides"]
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)            # Church
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)            # Church
         seat(state, "Hand of the Oracle", Seat.ORACLE)                   # Church
-        seat(state, "Keeper of the Long Peace", Seat.STRATEGUS)      # Military
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)      # Military
         self.assertFalse(satisfied(state, agenda))  # no Merchant seat held
         self.assertTrue(satisfied(judged_as(state), agenda))  # Church by default
-        state.seats[Seat.STRATEGUS] = None
-        seat(state, "Weigher of Grain", Seat.DIOECETES)
+        state.seats[Seat.LORD_GENERAL] = None
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)
         self.assertTrue(satisfied(state, agenda))
 
     def test_faith_ascendant_needs_four_seats(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["faith_mystery_cults"]
-        seat(state, "Initiate of the Seven Veils", Seat.ARCHIEREUS)
+        seat(state, "Initiate of the Seven Veils", Seat.ARCHPRIEST)
         seat(state, "Whisperer to the Serpent", Seat.ORACLE)
-        seat(state, "Crosser of Rivers", Seat.STRATEGUS)
-        seat(state, "Rider of the Long Road", Seat.SOMATOPHYLAX)
+        seat(state, "Crosser of Rivers", Seat.LORD_GENERAL)
+        seat(state, "Rider of the Long Road", Seat.CAPTAIN_OF_THE_GUARD)
         self.assertTrue(satisfied(state, agenda))
 
     def test_barbarian_conquest_wins_on_three_seated_barbarians(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["barbarian_conquest"]
-        seat(state, "Priest of the Two-Horned God", Seat.ARCHIEREUS)
-        seat(state, "Caravan-Lord of the Salt Road", Seat.DIOECETES)
+        seat(state, "Priest of the Two-Horned God", Seat.ARCHPRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.KEEPER_OF_THE_TREASURY)
         self.assertFalse(satisfied(state, agenda))
-        seat(state, "Master Mason", Seat.DEMARCHUS)
+        seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
         self.assertTrue(satisfied(state, agenda))
 
     def test_barbarian_conquest_has_no_generals_shortcut(self):
@@ -834,10 +834,10 @@ class TestWinConditions(unittest.TestCase):
 
         state = fresh()
         agenda = AGENDAS_BY_KEY["barbarian_conquest"]
-        seat(state, "Cataphract of the Iron Bridge", Seat.STRATEGUS)
-        seat(state, "Hundred-Kill Rider", Seat.SOMATOPHYLAX)
+        seat(state, "Cataphract of the Iron Bridge", Seat.LORD_GENERAL)
+        seat(state, "Hundred-Kill Rider", Seat.CAPTAIN_OF_THE_GUARD)
         self.assertFalse(satisfied(state, agenda))
-        seat(state, "Master Mason", Seat.DEMARCHUS)
+        seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
         self.assertTrue(satisfied(state, agenda))
 
     def test_barbarian_conquest_ignores_the_outer_circle(self):
@@ -849,11 +849,11 @@ class TestWinConditions(unittest.TestCase):
     def test_balance_needs_every_family_both_faiths_and_a_barbarian(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["balance"]
-        seat(state, "Beloved of the Gods", Seat.ARCHIEREUS)          # Amonides / Old Gods
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)          # Amonides / Old Gods
         seat(state, "Initiate of the Seven Veils", Seat.ORACLE)        # Mitreas / Mystery
-        seat(state, "Horse Breaker", Seat.STRATEGUS)               # Argaian / Mystery
+        seat(state, "Horse Breaker", Seat.LORD_GENERAL)               # Argaian / Mystery
         self.assertFalse(satisfied(state, agenda))
-        seat(state, "Hundred-Kill Rider", Seat.SOMATOPHYLAX)       # Barbarian
+        seat(state, "Hundred-Kill Rider", Seat.CAPTAIN_OF_THE_GUARD)       # Barbarian
         self.assertFalse(satisfied(state, agenda))  # diverse, but a thin court
         fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))
@@ -866,7 +866,7 @@ class TestWinConditions(unittest.TestCase):
         fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))
         # One empty chair is allowed; a second is not.
-        state.seats[Seat.AGORANOMUS] = None
+        state.seats[Seat.MASTER_OF_THE_MARKET] = None
         self.assertTrue(satisfied(state, agenda))
         self.assertFalse(satisfied(judged_as(state, balance_seats=7), agenda))
         state.seats[Seat.ORACLE] = None
@@ -875,10 +875,10 @@ class TestWinConditions(unittest.TestCase):
     def test_simultaneous_agendas_both_win(self):
         state = fresh()
         state.agendas = ["faith_mystery_cults", "house_mitreas", "barbarian_conquest", "balance"]
-        seat(state, "Initiate of the Seven Veils", Seat.ARCHIEREUS)
-        seat(state, "Rider of the Long Road", Seat.SOMATOPHYLAX)
-        seat(state, "Crosser of Rivers", Seat.STRATEGUS)
-        seat(state, "Golden Thumb", Seat.DIOECETES)  # Mitreas' own estate
+        seat(state, "Initiate of the Seven Veils", Seat.ARCHPRIEST)
+        seat(state, "Rider of the Long Road", Seat.CAPTAIN_OF_THE_GUARD)
+        seat(state, "Crosser of Rivers", Seat.LORD_GENERAL)
+        seat(state, "Golden Thumb", Seat.KEEPER_OF_THE_TREASURY)  # Mitreas' own estate
         self.assertEqual(check_winners(state), [0, 1])
 
 

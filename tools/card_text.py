@@ -92,7 +92,7 @@ RULES: dict[str, str] = {
         "seat. The sitting courtier is bumped to the outer circle."
     ),
     "Acclamation": (
-        "Move an outer-circle Commons courtier into the Demarchus's seat. "
+        "Move an outer-circle Commons courtier into the Voice of the People's seat. "
         "The sitting courtier is bumped to the outer circle."
     ),
     # --- Demotions ----------------------------------------------------------
@@ -113,7 +113,7 @@ RULES: dict[str, str] = {
         "seat is left empty."
     ),
     "Ostracism": (
-        "Send the Demarchus to the outer circle. The seat is left empty."
+        "Send the Voice of the People to the outer circle. The seat is left empty."
     ),
     # --- Removals -----------------------------------------------------------
     # A killed courtier goes to the discard and may be shuffled back in as a
@@ -302,7 +302,7 @@ SEP = " \u00b7 "
 #: engine treats the two members of a pair as interchangeable and a table
 #: should not waste time deciding which Church chair somebody is sitting in.
 SEAT_TEXT: dict[Seat, str] = {
-    Seat.ARCHIEREUS: (
+    Seat.ARCHPRIEST: (
         "One of the two Church seats, which are interchangeable. Only a "
         "courtier whose current estate is Church may sit here."
     ),
@@ -310,23 +310,23 @@ SEAT_TEXT: dict[Seat, str] = {
         "One of the two Church seats, which are interchangeable. Only a "
         "courtier whose current estate is Church may sit here."
     ),
-    Seat.STRATEGUS: (
+    Seat.LORD_GENERAL: (
         "One of the two Military seats, which are interchangeable. Only a "
         "courtier whose current estate is Military may sit here."
     ),
-    Seat.SOMATOPHYLAX: (
+    Seat.CAPTAIN_OF_THE_GUARD: (
         "One of the two Military seats, which are interchangeable. Only a "
         "courtier whose current estate is Military may sit here."
     ),
-    Seat.DIOECETES: (
+    Seat.KEEPER_OF_THE_TREASURY: (
         "One of the two Merchant seats, which are interchangeable. Only a "
         "courtier whose current estate is Merchant may sit here."
     ),
-    Seat.AGORANOMUS: (
+    Seat.MASTER_OF_THE_MARKET: (
         "One of the two Merchant seats, which are interchangeable. Only a "
         "courtier whose current estate is Merchant may sit here."
     ),
-    Seat.DEMARCHUS: (
+    Seat.VOICE_OF_THE_PEOPLE: (
         "The court's only Commons seat. A house reaches it solely through its "
         "charioteer, the one commoner it fields."
     ),

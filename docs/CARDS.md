@@ -96,7 +96,7 @@ Takes an *occupied* seat of the named estate, bumping the sitting courtier out t
 | <img src="cards/52-battlefield-promotion.jpg" alt="Battlefield Promotion" width="132"> | **Battlefield Promotion**<br><sub>Card 52</sub> | Promotion · Military | Move an outer-circle Military courtier into an occupied Military seat. The sitting courtier is bumped to the outer circle. |
 | <img src="cards/53-consecration.jpg" alt="Consecration" width="132"> | **Consecration**<br><sub>Card 53</sub> | Promotion · Church | Move an outer-circle Church courtier into an occupied Church seat. The sitting courtier is bumped to the outer circle. |
 | <img src="cards/54-royal-charter.jpg" alt="Royal Charter" width="132"> | **Royal Charter**<br><sub>Card 54</sub> | Promotion · Merchant | Move an outer-circle Merchant courtier into an occupied Merchant seat. The sitting courtier is bumped to the outer circle. |
-| <img src="cards/55-acclamation.jpg" alt="Acclamation" width="132"> | **Acclamation**<br><sub>Card 55</sub> | Promotion · Commons | Move an outer-circle Commons courtier into the Demarchus's seat. The sitting courtier is bumped to the outer circle. |
+| <img src="cards/55-acclamation.jpg" alt="Acclamation" width="132"> | **Acclamation**<br><sub>Card 55</sub> | Promotion · Commons | Move an outer-circle Commons courtier into the Voice of the People's seat. The sitting courtier is bumped to the outer circle. |
 
 ## Demotion
 
@@ -108,7 +108,7 @@ Sends an inner-circle courtier out and leaves the seat empty.
 | <img src="cards/57-heresy-accusation.jpg" alt="Heresy Accusation" width="132"> | **Heresy Accusation**<br><sub>Card 57</sub> | Demotion · Church | Send an inner-circle Church courtier to the outer circle. Their seat is left empty. |
 | <img src="cards/58-cashiering.jpg" alt="Cashiering" width="132"> | **Cashiering**<br><sub>Card 58</sub> | Demotion · Military | Send an inner-circle Military courtier to the outer circle. Their seat is left empty. |
 | <img src="cards/59-charter-revoked.jpg" alt="Charter Revoked" width="132"> | **Charter Revoked**<br><sub>Card 59</sub> | Demotion · Merchant | Send an inner-circle Merchant courtier to the outer circle. Their seat is left empty. |
-| <img src="cards/60-ostracism.jpg" alt="Ostracism" width="132"> | **Ostracism**<br><sub>Card 60</sub> | Demotion · Commons | Send the Demarchus to the outer circle. The seat is left empty. |
+| <img src="cards/60-ostracism.jpg" alt="Ostracism" width="132"> | **Ostracism**<br><sub>Card 60</sub> | Demotion · Commons | Send the Voice of the People to the outer circle. The seat is left empty. |
 
 ## Removal
 
@@ -197,13 +197,13 @@ The board: seven chairs, laid out on the table for courtiers to be moved into. E
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/93-seat-archiereus.jpg" alt="Archiereus" width="132"> | **Archiereus**<br><sub>Card 93</sub> | Seat · Church | One of the two Church seats, which are interchangeable. Only a courtier whose current estate is Church may sit here. |
+| <img src="cards/93-seat-archpriest.jpg" alt="Archpriest" width="132"> | **Archpriest**<br><sub>Card 93</sub> | Seat · Church | One of the two Church seats, which are interchangeable. Only a courtier whose current estate is Church may sit here. |
 | <img src="cards/94-seat-oracle.jpg" alt="Oracle" width="132"> | **Oracle**<br><sub>Card 94</sub> | Seat · Church | One of the two Church seats, which are interchangeable. Only a courtier whose current estate is Church may sit here. |
-| <img src="cards/95-seat-strategus.jpg" alt="Strategus" width="132"> | **Strategus**<br><sub>Card 95</sub> | Seat · Military | One of the two Military seats, which are interchangeable. Only a courtier whose current estate is Military may sit here. |
-| <img src="cards/96-seat-somatophylax.jpg" alt="Somatophylax" width="132"> | **Somatophylax**<br><sub>Card 96</sub> | Seat · Military | One of the two Military seats, which are interchangeable. Only a courtier whose current estate is Military may sit here. |
-| <img src="cards/97-seat-dioecetes.jpg" alt="Dioecetes" width="132"> | **Dioecetes**<br><sub>Card 97</sub> | Seat · Merchant | One of the two Merchant seats, which are interchangeable. Only a courtier whose current estate is Merchant may sit here. |
-| <img src="cards/98-seat-agoranomus.jpg" alt="Agoranomus" width="132"> | **Agoranomus**<br><sub>Card 98</sub> | Seat · Merchant | One of the two Merchant seats, which are interchangeable. Only a courtier whose current estate is Merchant may sit here. |
-| <img src="cards/99-seat-demarchus.jpg" alt="Demarchus" width="132"> | **Demarchus**<br><sub>Card 99</sub> | Seat · Commons | The court's only Commons seat. A house reaches it solely through its charioteer, the one commoner it fields. |
+| <img src="cards/95-seat-lord-general.jpg" alt="Lord General" width="132"> | **Lord General**<br><sub>Card 95</sub> | Seat · Military | One of the two Military seats, which are interchangeable. Only a courtier whose current estate is Military may sit here. |
+| <img src="cards/96-seat-captain-of-the-guard.jpg" alt="Captain of the Guard" width="132"> | **Captain of the Guard**<br><sub>Card 96</sub> | Seat · Military | One of the two Military seats, which are interchangeable. Only a courtier whose current estate is Military may sit here. |
+| <img src="cards/97-seat-keeper-of-the-treasury.jpg" alt="Keeper of the Treasury" width="132"> | **Keeper of the Treasury**<br><sub>Card 97</sub> | Seat · Merchant | One of the two Merchant seats, which are interchangeable. Only a courtier whose current estate is Merchant may sit here. |
+| <img src="cards/98-seat-master-of-the-market.jpg" alt="Master of the Market" width="132"> | **Master of the Market**<br><sub>Card 98</sub> | Seat · Merchant | One of the two Merchant seats, which are interchangeable. Only a courtier whose current estate is Merchant may sit here. |
+| <img src="cards/99-seat-voice-of-the-people.jpg" alt="Voice of the People" width="132"> | **Voice of the People**<br><sub>Card 99</sub> | Seat · Commons | The court's only Commons seat. A house reaches it solely through its charioteer, the one commoner it fields. |
 
 ## Card back
 

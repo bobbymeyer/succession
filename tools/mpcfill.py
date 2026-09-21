@@ -29,6 +29,7 @@ Needs Pillow (`pip install pillow`); the simulator itself stays stdlib-only.
 from __future__ import annotations
 
 import argparse
+import pathlib
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -628,12 +629,25 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
     return canvas.convert("RGB")
 
 
-def render_seat(seat: Seat, layout: Layout, fonts: Fonts) -> Image.Image:
+def render_seat(
+    seat: Seat,
+    layout: Layout,
+    fonts: Fonts,
+    art_path: Path | None = None,
+    alpha: int = PANEL_ALPHA,
+) -> Image.Image:
     """A seat card: the chair itself, laid on the table for courtiers to fill.
 
     Bordered in its estate's colour like the courtiers that may sit in it, so
     a player matches card to chair by edge without reading either.
+
+    With `art_path` -- an empty throne, per the prompts in `art/` -- it is laid
+    out like any other card. Without, it falls back to type on parchment, so
+    the board is printable before the seat art has been generated.
     """
+
+    if art_path is not None:
+        return render_seat_with_art(seat, art_path, layout, fonts, alpha)
 
     width, height = layout.size
     content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
@@ -703,6 +717,75 @@ def render_seat(seat: Seat, layout: Layout, fonts: Fonts) -> Image.Image:
         blend(INK_SOFT, PARCHMENT, 0.35),
         tracking,
     )
+    return canvas.convert("RGB")
+
+
+def render_seat_with_art(
+    seat: Seat, art_path: Path, layout: Layout, fonts: Fonts, alpha: int
+) -> Image.Image:
+    """The seat card once its empty throne has been drawn.
+
+    Same furniture as an action card -- title plate above, rules plate below,
+    art between -- so a seat reads as part of the same deck.
+    """
+
+    width, height = layout.size
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    radius = layout.px(PLATE_RADIUS_IN)
+    tracking = layout.px(TRACKING_IN)
+    accent = ESTATE_COLOURS[SEAT_ESTATE[seat].value]
+
+    with Image.open(art_path) as art:
+        window = cover(art.convert("RGB"), window_size(layout))
+    canvas = framed(layout, accent, window)
+
+    measure = ImageDraw.Draw(canvas)
+    content_width = width - 2 * content
+    inner_width = content_width - 2 * pad
+
+    name_font, name_lines = fit_title(
+        measure, seat.value, fonts, inner_width, layout.px(NAME_SIZE_IN), layout.px(NAME_MIN_SIZE_IN)
+    )
+    type_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
+    type_text = card_text.seat_type_line(seat).upper()
+    name_leading = round(name_font.size * 1.16)
+    text_width = max(
+        max(measure.textlength(line, font=name_font) for line in name_lines),
+        tracked_width(measure, type_text, type_font, tracking),
+    )
+    title_width = min(content_width, round(text_width) + 2 * pad + layout.px(0.14))
+    title_x0 = round((width - title_width) / 2)
+    title_height = pad + len(name_lines) * name_leading + round(type_font.size * 1.6) + pad
+    title_box = (title_x0, content, title_x0 + title_width, content + title_height)
+    plate(canvas, title_box, radius, accent, alpha)
+
+    draw = ImageDraw.Draw(canvas)
+    y = content + pad
+    for line in name_lines:
+        draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=INK)
+        y += name_leading
+    y += round(type_font.size * 0.22)
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, type_text, type_font, tracking)) / 2, y),
+        type_text,
+        type_font,
+        accent,
+        tracking,
+    )
+
+    body_font = fonts.at("regular", layout.px(BODY_SIZE_IN))
+    leading = round(body_font.size * LINE_SPACING)
+    lines = wrap(draw, card_text.SEAT_TEXT[seat], body_font, inner_width)
+    body_height = pad + len(lines) * leading + pad
+    body = (content, height - content - body_height, width - content, height - content)
+    plate(canvas, body, radius, accent, alpha)
+
+    draw = ImageDraw.Draw(canvas)
+    y = body[1] + pad
+    for line in lines:
+        draw.text((content + pad, y), line, font=body_font, fill=INK)
+        y += leading
     return canvas.convert("RGB")
 
 
@@ -1070,7 +1153,16 @@ def main(argv: list[str] | None = None) -> int:
             stem = f"{i:02d} Seat -- {seat.value}"
             slug = f"{i:02d}-seat-{cardlist.slugify(seat.value)}"
             wanted = only is None or i in only
-            image = render_seat(seat, layout, fonts) if wanted else None
+            seat_art = by_index.get(i)
+            image = (
+                render_seat(
+                    seat, layout, fonts,
+                    seat_art[0].path if seat_art else None,
+                    args.panel_alpha,
+                )
+                if wanted
+                else None
+            )
             printed, web_name, doc_name = emit(image, stem, slug)
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
@@ -1127,6 +1219,14 @@ def main(argv: list[str] | None = None) -> int:
                 f"\nZip:   {bundle} ({bundle.stat().st_size / 1e6:.0f} MB)"
                 "\n       cards + a relative-path order file, portable to any machine"
             )
+
+    if want_docs and only is None:
+        # A rename leaves the old thumbnail behind, and nothing downstream
+        # would notice a stale file sitting in a committed directory.
+        keep = {pathlib.Path(row.image).name for row in rows} | {back_doc}
+        for orphan in sorted(p for p in docs_dir.glob("*.jpg") if p.name not in keep):
+            orphan.unlink()
+            print(f"  removed orphaned thumbnail: {orphan.name}")
 
     if want_docs:
         listing = cardlist.write(
