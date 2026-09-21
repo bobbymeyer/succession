@@ -12,19 +12,19 @@ estate matches may occupy a seat.
 
 | Seat | Estate |
 |---|---|
-| Chief Priest | Church |
+| Pontifex Maximus | Church |
 | Oracle | Church |
 | Field General | Military |
-| Praetorian Chief | Military |
-| Master of the Exchequer | Merchant |
-| Harbormaster | Merchant |
-| Guildmaster | Commons |
+| Praetorian Prefect | Military |
+| Exchequer | Merchant |
+| Guildmaster | Merchant |
+| Tribune | Commons |
 
 Church, Military and Merchant each seat a mechanically identical pair; Commons
 seats one. The engine treats the members of a pair as interchangeable when a
-card only needs "an empty matching seat". ("Harbormaster" is a placeholder
-name -- it lives in `Seat` in `succession/enums.py` and nothing else depends on
-the spelling.)
+card only needs "an empty matching seat". The names are archetypes rather than
+settled flavour: they live in `Seat` in `succession/enums.py` and nothing else
+depends on the spelling, so renaming one is a one-line change.
 
 The **outer circle is a single shared court**, not a per-player tableau.
 Nobody owns a courtier: agendas are read off the board, and any player may
@@ -133,16 +133,16 @@ estates. There is no shortcut for taking both Military seats -- two barbarian
 generals are simply two of the three.
 
 Each house also fields one commoner -- its charioteer -- which is the only way
-a house can ever hold the Guildmaster's seat.
+a house can ever hold the Tribune's seat.
 
 Each house's own estate comes from the source document's affiliations and
 lives in `FAMILY_PREFERRED_ESTATE` in `succession/courtiers.py`:
 
 | House | Own estate | Seats available |
 |---|---|---|
-| Amonides | Church | Chief Priest, Oracle |
-| Mitreas | Merchant | Master of the Exchequer, Harbormaster |
-| Argaian | Military | Field General, Praetorian Chief |
+| Amonides | Church | Pontifex Maximus, Oracle |
+| Mitreas | Merchant | Exchequer, Guildmaster |
+| Argaian | Military | Field General, Praetorian Prefect |
 
 Every family fields **three** courtiers in its own estate, two in each of the
 other two, and one charioteer, and every estate that a house can be affiliated with seats a

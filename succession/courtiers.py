@@ -57,7 +57,7 @@ COURTIERS: tuple[CourtierDef, ...] = (
     # Each house fields a third courtier in its own estate -- the seventh name
     # in each list -- so it can reach its House Rising seat without spending
     # both of its estate courtiers, and a charioteer, its one commoner, which
-    # is the only way a house can ever hold the Guildmaster's seat.
+    # is the only way a house can ever hold the Tribune's seat.
     CourtierDef("Beloved of the Gods", _C, _OG, _AM, _IMP),
     CourtierDef("Keeper of the Long Peace", _E, _OG, _AM, _IMP),
     CourtierDef("Hand of the Oracle", _C, _OG, _AM, _IMP),

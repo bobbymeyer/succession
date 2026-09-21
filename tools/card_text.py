@@ -92,7 +92,7 @@ RULES: dict[str, str] = {
         "seat. The sitting courtier is bumped to the outer circle."
     ),
     "Acclamation": (
-        "Move an outer-circle Commons courtier into the Guildmaster's seat. "
+        "Move an outer-circle Commons courtier into the Tribune's seat. "
         "The sitting courtier is bumped to the outer circle."
     ),
     # --- Demotions ----------------------------------------------------------
@@ -113,7 +113,7 @@ RULES: dict[str, str] = {
         "seat is left empty."
     ),
     "Ostracism": (
-        "Send the Guildmaster to the outer circle. The seat is left empty."
+        "Send the Tribune to the outer circle. The seat is left empty."
     ),
     # --- Removals -----------------------------------------------------------
     # A killed courtier goes to the discard and may be shuffled back in as a

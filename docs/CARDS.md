@@ -95,7 +95,7 @@ Takes an *occupied* seat of the named estate, bumping the sitting courtier out t
 | <img src="cards/52-battlefield-promotion.jpg" alt="Battlefield Promotion" width="132"> | **Battlefield Promotion**<br><sub>Card 52</sub> | Promotion · Military | Move an outer-circle Military courtier into an occupied Military seat. The sitting courtier is bumped to the outer circle. |
 | <img src="cards/53-consecration.jpg" alt="Consecration" width="132"> | **Consecration**<br><sub>Card 53</sub> | Promotion · Church | Move an outer-circle Church courtier into an occupied Church seat. The sitting courtier is bumped to the outer circle. |
 | <img src="cards/54-royal-charter.jpg" alt="Royal Charter" width="132"> | **Royal Charter**<br><sub>Card 54</sub> | Promotion · Merchant | Move an outer-circle Merchant courtier into an occupied Merchant seat. The sitting courtier is bumped to the outer circle. |
-| <img src="cards/55-acclamation.jpg" alt="Acclamation" width="132"> | **Acclamation**<br><sub>Card 55</sub> | Promotion · Commons | Move an outer-circle Commons courtier into the Guildmaster's seat. The sitting courtier is bumped to the outer circle. |
+| <img src="cards/55-acclamation.jpg" alt="Acclamation" width="132"> | **Acclamation**<br><sub>Card 55</sub> | Promotion · Commons | Move an outer-circle Commons courtier into the Tribune's seat. The sitting courtier is bumped to the outer circle. |
 
 ## Demotion
 
@@ -107,7 +107,7 @@ Sends an inner-circle courtier out and leaves the seat empty.
 | <img src="cards/57-heresy-accusation.jpg" alt="Heresy Accusation" width="132"> | **Heresy Accusation**<br><sub>Card 57</sub> | Demotion · Church | Send an inner-circle Church courtier to the outer circle. Their seat is left empty. |
 | <img src="cards/58-cashiering.jpg" alt="Cashiering" width="132"> | **Cashiering**<br><sub>Card 58</sub> | Demotion · Military | Send an inner-circle Military courtier to the outer circle. Their seat is left empty. |
 | <img src="cards/59-charter-revoked.jpg" alt="Charter Revoked" width="132"> | **Charter Revoked**<br><sub>Card 59</sub> | Demotion · Merchant | Send an inner-circle Merchant courtier to the outer circle. Their seat is left empty. |
-| <img src="cards/60-ostracism.jpg" alt="Ostracism" width="132"> | **Ostracism**<br><sub>Card 60</sub> | Demotion · Commons | Send the Guildmaster to the outer circle. The seat is left empty. |
+| <img src="cards/60-ostracism.jpg" alt="Ostracism" width="132"> | **Ostracism**<br><sub>Card 60</sub> | Demotion · Commons | Send the Tribune to the outer circle. The seat is left empty. |
 
 ## Removal
 
