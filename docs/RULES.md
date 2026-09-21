@@ -12,13 +12,13 @@ estate matches may occupy a seat.
 
 | Seat | Estate |
 |---|---|
-| Pontifex Maximus | Church |
+| Archiereus | Church |
 | Oracle | Church |
-| Field General | Military |
-| Praetorian Prefect | Military |
-| Exchequer | Merchant |
-| Guildmaster | Merchant |
-| Tribune | Commons |
+| Strategus | Military |
+| Somatophylax | Military |
+| Dioecetes | Merchant |
+| Agoranomus | Merchant |
+| Demarchus | Commons |
 
 Church, Military and Merchant each seat a mechanically identical pair; Commons
 seats one. The engine treats the members of a pair as interchangeable when a
@@ -133,21 +133,21 @@ estates. There is no shortcut for taking both Military seats -- two barbarian
 generals are simply two of the three.
 
 Each house also fields one commoner -- its charioteer -- which is the only way
-a house can ever hold the Tribune's seat.
+a house can ever hold the Demarchus's seat.
 
 Each house's own estate comes from the source document's affiliations and
 lives in `FAMILY_PREFERRED_ESTATE` in `succession/courtiers.py`:
 
 | House | Own estate | Seats available |
 |---|---|---|
-| Amonides | Church | Pontifex Maximus, Oracle |
-| Mitreas | Merchant | Exchequer, Guildmaster |
-| Argaian | Military | Field General, Praetorian Prefect |
+| Amonides | Church | Archiereus, Oracle |
+| Mitreas | Merchant | Dioecetes, Agoranomus |
+| Argaian | Military | Strategus, Somatophylax |
 
 Every family fields **three** courtiers in its own estate, two in each of the
 other two, and one charioteer, and every estate that a house can be affiliated with seats a
 pair, so no house is short of candidates for its own estate. Three seats that avoid the family's estate entirely -- two
-Military plus the Exchequer for Amonides, say -- is not a win.
+Military plus the Dioecetes for Amonides, say -- is not a win.
 `--house-preferred-estates mitreas=church` overrides one family's estate;
 `--house-any-three` drops the requirement altogether.
 

@@ -50,26 +50,26 @@ class People(str, Enum):
 
 
 class Seat(str, Enum):
-    PONTIFEX = "Pontifex Maximus"
+    ARCHIEREUS = "Archiereus"
     ORACLE = "Oracle"
-    FIELD_GENERAL = "Field General"
-    PRAETORIAN_PREFECT = "Praetorian Prefect"
-    EXCHEQUER = "Exchequer"
-    GUILDMASTER = "Guildmaster"
-    TRIBUNE = "Tribune"
+    STRATEGUS = "Strategus"
+    SOMATOPHYLAX = "Somatophylax"
+    DIOECETES = "Dioecetes"
+    AGORANOMUS = "Agoranomus"
+    DEMARCHUS = "Demarchus"
 
 
 #: Only a courtier whose estate matches may occupy a seat. Church, Military
 #: and Merchant each have a pair of mechanically identical seats; Commons has
 #: one.
 SEAT_ESTATE: dict[Seat, Estate] = {
-    Seat.PONTIFEX: Estate.CHURCH,
+    Seat.ARCHIEREUS: Estate.CHURCH,
     Seat.ORACLE: Estate.CHURCH,
-    Seat.FIELD_GENERAL: Estate.MILITARY,
-    Seat.PRAETORIAN_PREFECT: Estate.MILITARY,
-    Seat.EXCHEQUER: Estate.MERCHANT,
-    Seat.GUILDMASTER: Estate.MERCHANT,
-    Seat.TRIBUNE: Estate.COMMONS,
+    Seat.STRATEGUS: Estate.MILITARY,
+    Seat.SOMATOPHYLAX: Estate.MILITARY,
+    Seat.DIOECETES: Estate.MERCHANT,
+    Seat.AGORANOMUS: Estate.MERCHANT,
+    Seat.DEMARCHUS: Estate.COMMONS,
 }
 
 SEATS: tuple[Seat, ...] = tuple(SEAT_ESTATE)

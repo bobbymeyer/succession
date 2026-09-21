@@ -41,7 +41,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
-from succession.enums import Family, Origin, People  # noqa: E402
+from succession.enums import SEAT_ESTATE, Family, Origin, People, Seat  # noqa: E402
 from tools import card_text, cardlist, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
@@ -628,6 +628,84 @@ def render_agenda(name: str, subtitle: str, text: str, layout: Layout, fonts: Fo
     return canvas.convert("RGB")
 
 
+def render_seat(seat: Seat, layout: Layout, fonts: Fonts) -> Image.Image:
+    """A seat card: the chair itself, laid on the table for courtiers to fill.
+
+    Bordered in its estate's colour like the courtiers that may sit in it, so
+    a player matches card to chair by edge without reading either.
+    """
+
+    width, height = layout.size
+    content, pad = layout.px(CONTENT_IN), layout.px(PLATE_PAD_IN)
+    inner_width = width - 2 * content
+    tracking = layout.px(TRACKING_IN)
+    accent = ESTATE_COLOURS[SEAT_ESTATE[seat].value]
+
+    canvas = framed(layout, accent, Image.new("RGB", window_size(layout), PARCHMENT))
+    draw = ImageDraw.Draw(canvas)
+
+    label_font = fonts.at("regular", layout.px(TYPE_SIZE_IN))
+    name_font, name_lines = fit_title(
+        draw, seat.value, fonts, inner_width - 2 * pad, layout.px(NAME_SIZE_IN * 1.2),
+        layout.px(NAME_MIN_SIZE_IN),
+    )
+    name_leading = round(name_font.size * 1.18)
+    band_top = layout.px(BORDER_IN)
+    band_height = round(label_font.size * 2.4) + len(name_lines) * name_leading + layout.px(0.16)
+    draw.rectangle((band_top, band_top, width - band_top, band_top + band_height), fill=INK)
+    rule = max(2, layout.px(0.010))
+    draw.rectangle(
+        (band_top, band_top + band_height, width - band_top, band_top + band_height + rule),
+        fill=accent,
+    )
+
+    label = card_text.seat_type_line(seat).upper()
+    y = band_top + layout.px(0.10)
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, label, label_font, tracking)) / 2, y),
+        label,
+        label_font,
+        blend(accent, PARCHMENT, 0.45),
+        tracking,
+    )
+    y += round(label_font.size * 2.2)
+    for line in name_lines:
+        draw.text(((width - draw.textlength(line, font=name_font)) / 2, y), line, font=name_font, fill=PARCHMENT)
+        y += name_leading
+
+    body_font = fonts.at("regular", layout.px(BODY_SIZE_IN * 1.12))
+    body_leading = round(body_font.size * LINE_SPACING)
+    lines = wrap(draw, card_text.SEAT_TEXT[seat], body_font, inner_width - 2 * pad)
+    reminder_font = fonts.at("italic", layout.px(REMINDER_SIZE_IN))
+    reminder_lines = wrap(draw, card_text.SEAT_REMINDER, reminder_font, inner_width - 2 * pad)
+
+    # The lower half is left clear: this is where the courtier goes.
+    y = band_top + band_height + rule + layout.px(0.26)
+    for line in lines:
+        draw.text((content + pad, y), line, font=body_font, fill=INK)
+        y += body_leading
+    y += layout.px(0.16)
+    draw.line((content + pad, y, width - content - pad, y), fill=accent, width=max(1, layout.px(0.005)))
+    y += layout.px(0.15)
+    for line in reminder_lines:
+        draw.text((content + pad, y), line, font=reminder_font, fill=INK_SOFT)
+        y += round(reminder_font.size * 1.28)
+
+    place = "PLACE THE SEATED COURTIER HERE"
+    place_font = fonts.at("regular", layout.px(LABEL_SIZE_IN))
+    draw_tracked(
+        draw,
+        ((width - tracked_width(draw, place, place_font, tracking)) / 2,
+         height - content - round(place_font.size * 2.0)),
+        place,
+        place_font,
+        blend(INK_SOFT, PARCHMENT, 0.35),
+        tracking,
+    )
+    return canvas.convert("RGB")
+
+
 # --- Order file -------------------------------------------------------------
 #: What goes in the zip beside the cards, so somebody who has never used the
 #: desktop tool can still get from download to order.
@@ -827,6 +905,12 @@ def main(argv: list[str] | None = None) -> int:
         help="leave out the 8 agenda cards, for an 84-card order in a smaller bracket",
     )
     parser.add_argument(
+        "--no-seats",
+        dest="include_seats",
+        action="store_false",
+        help="leave out the 7 seat cards that make up the board",
+    )
+    parser.add_argument(
         "--panel-alpha",
         type=int,
         default=PANEL_ALPHA,
@@ -975,6 +1059,40 @@ def main(argv: list[str] | None = None) -> int:
                     detail=text,
                     image=f"cards/{doc_name}",
                     group="Agenda",
+                )
+            )
+
+    if args.include_seats:
+        # The board. Seven chairs, laid out on the table for courtiers to fill,
+        # printed with the deck because the order is paid for by bracket: 92
+        # cards and 99 both sit in the same one, so these cost nothing.
+        for i, seat in enumerate(SEAT_ESTATE, start=len(slots) + 1):
+            stem = f"{i:02d} Seat -- {seat.value}"
+            slug = f"{i:02d}-seat-{cardlist.slugify(seat.value)}"
+            wanted = only is None or i in only
+            image = render_seat(seat, layout, fonts) if wanted else None
+            printed, web_name, doc_name = emit(image, stem, slug)
+            if wanted:
+                print(f"  [{len(slots):>2}] {stem}")
+            slots.append((printed, seat.value.lower()))
+            entries.append(
+                gallery.Entry(
+                    slot=len(entries),
+                    label=f"{i:02d}",
+                    name=seat.value,
+                    type_line=card_text.seat_type_line(seat),
+                    filename=web_name,
+                    group="Seat",
+                )
+            )
+            rows.append(
+                cardlist.Row(
+                    label=f"Card {i:02d}",
+                    name=seat.value,
+                    type_line=card_text.seat_type_line(seat),
+                    detail=card_text.SEAT_TEXT[seat],
+                    image=f"cards/{doc_name}",
+                    group="Seat",
                 )
             )
 
