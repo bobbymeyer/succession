@@ -1,4 +1,4 @@
-"""Generate `prompts.txt` and `filenames.txt` for a Krea-2 / ComfyUI batch run.
+"""Generate `art/prompts.txt` and `art/filenames.txt` for a Krea-2 batch run.
 
 One line per card in `cards.build_cards()`, same order in both files, so a
 "read line N from each" workflow lines the prompt up with its output name.
@@ -15,7 +15,12 @@ The world is Hellenistic Greek and the successor kingdoms (Macedonian,
 Seleucid, Ptolemaic, Thracian, Scythian, Persian, Egyptian): explicitly not
 Roman, not medieval, not modern, not futuristic.
 
-    python tools/make_art_prompts.py          # writes prompts.txt, filenames.txt
+    python tools/make_art_prompts.py          # writes the three files in art/
+
+The images that come back are what `assets/` holds, and `art/filenames.txt` is
+where its naming comes from: `tools/assets.py` checks every asset's number,
+kind and slug against the card at that deck slot, so this file and that check
+have to agree or the deck will not build.
 """
 
 from __future__ import annotations
@@ -751,14 +756,15 @@ def build_lines() -> tuple[list[str], list[str]]:
 
 
 def main() -> None:
-    root = Path(__file__).resolve().parent.parent
+    out = Path(__file__).resolve().parent.parent / "art"
+    out.mkdir(parents=True, exist_ok=True)
     prompts, filenames = build_lines()
-    (root / "prompts.txt").write_text("\n".join(prompts) + "\n", encoding="utf-8")
-    (root / "filenames.txt").write_text("\n".join(filenames) + "\n", encoding="utf-8")
+    (out / "prompts.txt").write_text("\n".join(prompts) + "\n", encoding="utf-8")
+    (out / "filenames.txt").write_text("\n".join(filenames) + "\n", encoding="utf-8")
     # One line, shared by every prompt. If your loader reads the negative file
     # line by line alongside the positives, repeat it 84 times:
-    #   yes "$(cat negative.txt)" | head -n $(wc -l < prompts.txt) > negative_batch.txt
-    (root / "negative.txt").write_text(NEGATIVE + "\n", encoding="utf-8")
+    #   yes "$(cat art/negative.txt)" | head -n $(wc -l < art/prompts.txt) > batch.txt
+    (out / "negative.txt").write_text(NEGATIVE + "\n", encoding="utf-8")
     print(f"wrote {len(prompts)} prompts, {len(filenames)} filenames, 1 negative")
 
 
