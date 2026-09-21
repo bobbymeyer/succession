@@ -43,7 +43,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import SEAT_ESTATE, Family, Origin, People, Seat  # noqa: E402
-from tools import card_text, cardlist, gallery  # noqa: E402
+from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
 
@@ -945,8 +945,9 @@ def main(argv: list[str] | None = None) -> int:
         metavar="print,web,docs",
         help=(
             "comma-separated renditions to build: print (full bleed for MPC), "
-            "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md). "
-            "'all' builds every one. Default print,web"
+            "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md), "
+            "board (a print-at-home PDF of the seat cards). 'all' builds every "
+            "one. Default print,web"
         ),
     )
     parser.add_argument(
@@ -988,6 +989,9 @@ def main(argv: list[str] | None = None) -> int:
         help="leave out the 8 agenda cards, for an 84-card order in a smaller bracket",
     )
     parser.add_argument(
+        "--board-dpi", type=int, default=300, help="resolution of the printable board PDF"
+    )
+    parser.add_argument(
         "--no-seats",
         dest="include_seats",
         action="store_false",
@@ -1004,13 +1008,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    known = {"print", "web", "docs"}
+    known = {"print", "web", "docs", "board"}
     chosen = known if args.profile == "all" else {p.strip() for p in args.profile.split(",") if p.strip()}
     if args.profile == "both":  # the spelling this flag used to take
         chosen = {"print", "web"}
     if chosen - known:
         parser.error(f"unknown profile: {', '.join(sorted(chosen - known))}")
     want_print, want_web, want_docs = ("print" in chosen), ("web" in chosen), ("docs" in chosen)
+    want_board = "board" in chosen
+    if want_board and not args.include_seats:
+        parser.error("--profile board is the seat cards; it cannot be used with --no-seats")
     if not chosen:
         parser.error("--profile needs at least one of print, web, docs")
     if args.make_zip and not want_print:
@@ -1025,7 +1032,15 @@ def main(argv: list[str] | None = None) -> int:
     # Compose once, at whichever resolution is the more demanding, and let the
     # web rendition be a trim and a downscale of it. Rendering the deck twice
     # would cost twice the time and risk the two drifting apart.
-    layout = Layout(args.dpi if want_print else max(args.web_dpi if want_web else 0, args.docs_dpi))
+    layout = Layout(
+        args.dpi
+        if want_print
+        else max(
+            args.web_dpi if want_web else 0,
+            args.docs_dpi if want_docs else 0,
+            args.board_dpi if want_board else 0,
+        )
+    )
     fonts = Fonts(tuple(args.font_dir))
     if fonts.regular is None:
         print("warning: no serif TrueType font found; text will fall back to a bitmap face")
@@ -1076,6 +1091,7 @@ def main(argv: list[str] | None = None) -> int:
     slots: list[tuple[Path, str]] = []
     entries: list[gallery.Entry] = []
     rows: list[cardlist.Row] = []
+    seat_images: list[Image.Image] = []
     alternates: list[str] = []
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
         stem = f"{asset.index:02d} {card.name}"
@@ -1166,6 +1182,8 @@ def main(argv: list[str] | None = None) -> int:
             printed, web_name, doc_name = emit(image, stem, slug)
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
+            if image is not None:
+                seat_images.append(trimmed(image, layout, args.board_dpi))
             slots.append((printed, seat.value.lower()))
             entries.append(
                 gallery.Entry(
@@ -1219,6 +1237,23 @@ def main(argv: list[str] | None = None) -> int:
                 f"\nZip:   {bundle} ({bundle.stat().st_size / 1e6:.0f} MB)"
                 "\n       cards + a relative-path order file, portable to any machine"
             )
+
+    if want_board and seat_images:
+        for paper in ("a4", "letter"):
+            sheet = boardsheet.write(
+                args.docs_dir / f"board-{paper}.pdf",
+                seat_images,
+                paper,
+                args.board_dpi,
+                fonts,
+                "Court of Succession -- the board. Cut out and lay in a row.",
+            )
+            pages = len(boardsheet.build_pages(
+                seat_images, boardsheet.Sheet(paper, args.board_dpi), fonts, ""
+            ))
+            print(f"\nBoard: {paper.upper()}, {pages} page{'s' if pages > 1 else ''} -> {sheet}")
+    elif want_board:
+        print("\nBoard: skipped -- no seat cards were rendered (--only excluded them?)")
 
     if want_docs and only is None:
         # A rename leaves the old thumbnail behind, and nothing downstream
