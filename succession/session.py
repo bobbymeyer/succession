@@ -344,10 +344,6 @@ def card_json(state: GameState, uid: int) -> dict:
         data["changed"] = [a for a in attributes if getattr(live, a) != getattr(printed, a)]
         #: Attributes whose one mutation has been spent.
         data["mutated"] = [a for a in attributes if live.mutated(a)]
-        #: A barbarian's people, printed on the card beside their origin. It
-        #: goes with the printed origin: whoever Goes Native has no people.
-        people = printed.people.value
-        data["people"] = people if people != "None" and live.origin == printed.origin else None
         defense = state.defenses.get(uid)
         data["defense"] = card_json(state, defense) if defense is not None else None
     return data

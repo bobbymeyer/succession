@@ -3,6 +3,7 @@
 // slash itself -- a redirect rule for it would loop on Netlify -- and then
 // load and play as usual.
 import { expect, test } from "@playwright/test";
+import { settle } from "./helpers";
 
 test("opened at /succession without the slash, the game puts it back and plays", async ({ page }) => {
   const errors: string[] = [];
@@ -10,7 +11,7 @@ test("opened at /succession without the slash, the game puts it back and plays",
   await page.goto("http://127.0.0.1:4175/succession");
   await expect(page).toHaveURL("http://127.0.0.1:4175/succession/");
   await page.getByTestId("deal").click({ timeout: 90_000 });
-  await page.locator(".all-moves, [data-testid=pick-option], [data-testid=game-over]").first().waitFor();
+  await settle(page);
   await expect(page.locator(".opponent")).toHaveCount(3);
   await expect(page.locator(".seat img").first()).toBeVisible(); // card art resolved under the prefix
   expect(errors).toEqual([]);

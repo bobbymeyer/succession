@@ -17,7 +17,6 @@ export interface Card {
   origin?: string;
   changed?: Attribute[];
   mutated?: Attribute[];
-  people?: string | null; // a barbarian's people, beside their origin
   defense?: Card | null;
 }
 

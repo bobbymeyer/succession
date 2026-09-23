@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Attribute, Card } from "../protocol";
 import { useUi } from "../art";
 
@@ -11,6 +12,15 @@ interface Props {
   onClick?: () => void;
   /** Courtiers: print the live attributes under the card. */
   caption?: boolean;
+  /** Where this card is as a place to drop another on ("courtier:12"). */
+  drop?: string;
+  /** Lit as a place to drop the card being dragged. */
+  dropLive?: boolean;
+  /** Can be picked up and dragged. */
+  draggable?: boolean;
+  onPress?: (event: ReactPointerEvent<HTMLElement>) => void;
+  /** Buttons over the card while it is picked up. */
+  popover?: ReactNode;
 }
 
 /** The grid every courtier's details keep, in play or in the inspector. */
@@ -21,10 +31,9 @@ export const GRID: { attribute: Attribute; label: string }[] = [
   { attribute: "origin", label: "Origin" },
 ];
 
-/** What a cell shows: a barbarian's people ride along with their origin. */
+/** What a cell shows. */
 export function attributeText(card: Card, attribute: Attribute): string {
   const value = card[attribute] as string;
-  if (attribute === "origin" && card.people) return card.people;
   if (attribute === "family" && value === "None") return "No house";
   if (attribute === "faith" && value === "None") return "No faith";
   return value;
@@ -34,7 +43,7 @@ export function attributeText(card: Card, attribute: Attribute): string {
  * A courtier's attributes as they stand now, always in the same places:
  *
  *   Estate | Faith
- *   House  | Origin (or people)
+ *   House  | Origin
  *
  * Changed ones are marked.
  */
@@ -78,18 +87,33 @@ function Face({ card }: { card: Card }) {
 // One card on the table. Clicking a lit-up card makes a choice; clicking any
 // other card picks it up to look at. The printed card shows printed
 // attributes, so a courtier whose attributes changed in play says so on top.
-export function CardView({ card, size = "md", live = false, selected = false, onClick, caption = false }: Props) {
+export function CardView({
+  card,
+  size = "md",
+  live = false,
+  selected = false,
+  onClick,
+  caption = false,
+  drop,
+  dropLive = false,
+  draggable = false,
+  onPress,
+  popover,
+}: Props) {
   const { inspect, hover } = useUi();
   const courtier = card.kind === "Courtier";
   const changed = courtier && (card.changed?.length ?? 0) > 0;
   const classes = ["card", `size-${size}`];
   if (live) classes.push("live");
   if (selected) classes.push("selected");
+  if (draggable) classes.push("grab");
+  if (dropLive) classes.push("drop-live");
 
   return (
     <div
       className={classes.join(" ")}
       data-uid={card.uid}
+      data-drop={drop}
       onPointerEnter={(e) => e.pointerType === "mouse" && hover(card)}
       onPointerLeave={(e) => e.pointerType === "mouse" && hover(null)}
     >
@@ -99,10 +123,12 @@ export function CardView({ card, size = "md", live = false, selected = false, on
         aria-pressed={live ? selected : undefined}
         aria-label={live ? `Choose ${card.name}` : `Look at ${card.name}`}
         onClick={live && onClick ? onClick : () => inspect(card)}
+        onPointerDown={draggable ? onPress : undefined}
       >
         <Face card={card} />
         {changed && <span className="changed-flag">Changed</span>}
       </button>
+      {popover && <div className="popover">{popover}</div>}
       {live && (
         <button type="button" className="look" aria-label={`Look at ${card.name}`} onClick={() => inspect(card)}>
           <svg viewBox="0 0 16 16" aria-hidden="true">

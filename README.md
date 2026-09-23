@@ -135,7 +135,10 @@ agenda, and other players' hand sizes.
 [Pyodide](https://pyodide.org) (Python compiled to WebAssembly) in a Web
 Worker, so the rules and bots in the browser are the ones in this checkout, not
 a port of them. The page never works out a rule: it shows `session.view()`, and
-builds a move by narrowing the engine's list of legal actions as you click.
+builds a move by narrowing the engine's list of legal actions as you play:
+click a card to pick it up (its choices appear above it, and whatever it can
+target lights up), or drag it straight to where it goes -- the outer circle,
+the discard pile, a courtier, a player, or for an outer courtier an empty seat.
 
 ```bash
 cd web
