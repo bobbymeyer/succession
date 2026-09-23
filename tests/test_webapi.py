@@ -46,6 +46,17 @@ class TableTests(unittest.TestCase):
             human = table.session.humans[0]
             self.assertTrue(all(u["seat"] == human for u in seen))
 
+    def test_a_new_game_starts_with_the_table_as_dealt(self):
+        # Before anyone moves, so the page can show you your agenda and wait.
+        for seed in range(6):
+            table = Table()
+            first = json.loads(table.new_game(json.dumps({"seed": seed})))[0]
+            human = table.session.humans[0]
+            self.assertEqual(first["view"]["turn"], 0)
+            self.assertEqual((first["actor"], first["action"], first["prompt"]), (-1, None, None))
+            self.assertEqual(first["view"]["players"][human]["agenda"]["key"], table.session.state.agendas[human])
+            self.assertTrue(first["view"]["hand"])
+
     def test_the_default_table_is_you_and_one_of_each_bot(self):
         table = Table()
         table.new_game("{}")
@@ -90,6 +101,21 @@ class TableTests(unittest.TestCase):
         # Bot turns before the human's first move each name a bot.
         human = table.session.humans[0]
         self.assertTrue(all(u["actor"] != human for u in updates))
+
+    def test_updates_say_what_was_played(self):
+        table = Table()
+        updates = json.loads(table.new_game(json.dumps({"seed": 5})))
+        moved = [u for u in updates if u["action"]]
+        self.assertTrue(moved)
+        for u in moved:
+            self.assertIn(u["action"]["kind"], {"play", "move", "discard", "pass"})
+            self.assertTrue(u["action"]["text"])
+        # Whatever a bot played is on the table for everyone: never a card
+        # still in someone else's hand.
+        me = table.session.humans[0]
+        hidden = {uid for p, hand in enumerate(table.session.state.hands) if p != me for uid in hand}
+        last = moved[-1]["action"]
+        self.assertNotIn(last["card"], hidden)
 
     def test_export_is_a_log_analyze_reads(self):
         import tempfile

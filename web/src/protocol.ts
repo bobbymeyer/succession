@@ -39,6 +39,7 @@ export interface Agenda {
   name: string;
   met: boolean;
   status: Clause[];
+  seated: number[]; // uids of the seated courtiers that count toward it
 }
 
 export interface Player {
@@ -101,6 +102,7 @@ export interface Update {
   view: View;
   log: string[];
   actor: number; // whose move this update shows; -1 before anyone's
+  action: Action | null; // that move, all of it face up on the table
   prompt: Prompt | null;
   result: Result | null;
 }

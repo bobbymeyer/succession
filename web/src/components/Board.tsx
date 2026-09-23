@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Card, Player, View } from "../protocol";
 import { useUi } from "../art";
-import { playerName, tierName } from "../names";
+import { playerName, seatColour, tierName } from "../names";
 import { CardBack, CardView } from "./CardView";
 
 export interface Interaction {
@@ -60,9 +60,9 @@ function Agenda({ player, size }: { player: Player; size: "xxs" | "xs" | "sm" | 
 
 // A compact place at the table: who, how many cards, their agenda (a card
 // back until it is revealed). The whole row stays one line high.
-function Opponent({ view, player, act }: { view: View; player: Player; act: Interaction }) {
+function Opponent({ view, player, act, turn }: { view: View; player: Player; act: Interaction; turn: number | null }) {
   const classes = ["opponent"];
-  if (player.seat === view.current && !view.over) classes.push("current");
+  if (player.seat === turn) classes.push("current");
   if (view.winners.includes(player.seat)) classes.push("winner");
   const live = act.playerLive(player.seat);
   if (live) classes.push("live");
@@ -70,6 +70,7 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
   return (
     <div
       className={classes.join(" ")}
+      style={{ "--seat": seatColour(player.seat) } as React.CSSProperties}
       data-player={player.seat}
       data-drop={`player:${player.seat}`}
       aria-label={playerName(view, player.seat)}
@@ -79,6 +80,7 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
       onKeyDown={live ? (e) => (e.key === "Enter" || e.key === " ") && act.onPlayer(player.seat) : undefined}
     >
       <span className="who">
+        <span className="seat-dot" aria-hidden="true" />
         <strong>P{player.seat}</strong> {tierName(player.tier).replace(" bot", "")}
       </span>
       <span className="hand-count" data-hand={player.seat} title={`${player.hand} cards in hand`}>
@@ -102,7 +104,22 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
   );
 }
 
-export function Board({ view, act }: { view: View; act: Interaction }) {
+// `playing` is a bot whose card is still on its way to the table: until it
+// lands, it is still that bot's turn as far as anyone watching can tell.
+// `won` is the court that won the game, each courtier with its winner's
+// colour; they light up and bounce once the game is over.
+export function Board({
+  view,
+  act,
+  playing = null,
+  won,
+}: {
+  view: View;
+  act: Interaction;
+  playing?: number | null;
+  won?: Map<number, string>;
+}) {
+  const turn = playing ?? (view.over ? null : view.current);
   const { art } = useUi();
   // Board courtiers are places to drop an action on; hand cards are not.
   const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => (
@@ -128,7 +145,7 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
     <div className="board">
       <section className="opponents" aria-label="Opponents">
         {opponents.map((p) => (
-          <Opponent key={p.seat} view={view} player={p} act={act} />
+          <Opponent key={p.seat} view={view} player={p} act={act} turn={turn} />
         ))}
         <div className="status" aria-label="Table status">
           <span className="pile" title="Draw pile">
@@ -148,16 +165,23 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
       <section className="court" aria-label="Inner circle">
         <h2>The inner circle</h2>
         <div className="seats">
-          {view.seats.map((s) => {
+          {view.seats.map((s, i) => {
             const live = act.seatLive(s.seat);
             const classes = ["seat", `estate-${s.estate.toLowerCase()}`];
+            const winner = s.courtier ? won?.get(s.courtier.uid) : undefined;
+            if (winner) classes.push("won-by");
             if (live) classes.push("live");
             if (act.seatSelected(s.seat)) classes.push("selected");
             if (!s.courtier) classes.push("vacant");
             if (act.dropLive(`seat:${s.seat}`)) classes.push("drop-live");
             const src = art.seat(s.seat);
             return (
-              <div key={s.seat} className={classes.join(" ")} data-drop={`seat:${s.seat}`}>
+              <div
+                key={s.seat}
+                className={classes.join(" ")}
+                data-drop={`seat:${s.seat}`}
+                style={winner ? ({ "--win": winner, "--i": i } as React.CSSProperties) : undefined}
+              >
                 <div className="seat-label">
                   {s.seat}
                   <small>{s.estate}</small>

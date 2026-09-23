@@ -11,6 +11,7 @@ show the bots moving one at a time at whatever pace it likes:
      "view": {...},             # session.view(seat)
      "log": ["[t4] P1 ..."],    # log lines new since the previous update
      "actor": 1,                # whose move this update shows (-1: nobody's yet)
+     "action": {...} | null,    # the move itself -- all of it face up on the table
      "prompt": {...} | null,    # the question waiting on a human, if any
      "result": {...} | null}    # set once the game is over
 
@@ -26,7 +27,7 @@ from typing import Optional
 from .agendas import AGENDAS
 from .bots import BOT_TIERS
 from .logsink import csv_text, row
-from .session import HUMAN, OVER, GameSession, Prompt
+from .session import HUMAN, OVER, GameSession, Prompt, action_json
 from .state import Config
 
 PLAYER_TYPES = (HUMAN, *BOT_TIERS)
@@ -56,7 +57,9 @@ class Table:
             seed = random.randrange(2**31)
         self.session = GameSession(Config(players=players), int(seed))
         self._sent = 0
-        return self._play_on([], None)
+        # The table as dealt comes first, before anyone has moved: the page
+        # shows each person their agenda there and waits for them to begin.
+        return self._play_on([self._update(None)], None)
 
     def answer(self, choice: int) -> str:
         """Answer the waiting prompt: an action index, or a card uid mid-card."""
@@ -122,6 +125,11 @@ class Table:
             "view": session.view(seat),
             "log": new,
             "actor": session.last_actor,
+            "action": (
+                action_json(session.state, session.last_action, -1)
+                if session.last_action is not None
+                else None
+            ),
             "prompt": None,
             "result": None,
         }

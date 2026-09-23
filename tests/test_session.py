@@ -263,6 +263,28 @@ class AgendaStatus(unittest.TestCase):
         for clause in mine["status"]:
             self.assertEqual(set(clause), {"label", "have", "need", "met", "waiting"})
 
+    def test_a_won_agenda_names_the_courtiers_who_won_it(self):
+        from succession.agendas import AGENDAS_BY_KEY, satisfied
+
+        seen = 0
+        for seed in range(40):
+            session = GameSession(Config(players=("greedy", "strategic", "naive")), seed)
+            session.advance()
+            seated = {uid for uid in session.state.seats.values() if uid is not None}
+            for w in session.state.winners:
+                agenda = session.view(-1)["players"][w]["agenda"]
+                self.assertTrue(agenda["seated"])
+                self.assertLessEqual(set(agenda["seated"]), seated)
+                # Take them off the board and the agenda is no longer met.
+                key = AGENDAS_BY_KEY[agenda["key"]]
+                for uid in agenda["seated"]:
+                    seat = next(s for s, u in session.state.seats.items() if u == uid)
+                    session.state.seats[seat] = None
+                self.assertFalse(satisfied(session.state, key))
+                seen += 1
+                break
+        self.assertGreater(seen, 0)
+
 
 class Terminal(unittest.TestCase):
     def test_a_whole_game_from_the_terminal(self):

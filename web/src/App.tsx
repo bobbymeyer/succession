@@ -2,15 +2,17 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
+import { FADE, HOLD, showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
 import { drops, settled, stage, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
-import { playerName, readableLog, visibleCards } from "./names";
+import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
-import { GameOver, headline } from "./components/GameOver";
+import { GameOver, winningCourt } from "./components/GameOver";
+import { Briefing } from "./components/Briefing";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { DiscardPile, StatusPanel } from "./components/Status";
@@ -88,7 +90,6 @@ export function App() {
   const [selection, setSelection] = useState<Selection>({});
   const [picked, setPicked] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [overOpen, setOverOpen] = useState(false);
   const [tab, setTab] = useState<"agenda" | "log">("agenda");
   const [dropping, setDropping] = useState<Set<string>>(() => new Set());
   const dragging = useRef<Drag | null>(null);
@@ -124,18 +125,32 @@ export function App() {
   const speedRef = useRef(speed);
   speedRef.current = speed;
   // Where every card was just before the update now being drawn.
-  const before = useRef<{ snapshot: Snapshot; actor: number } | null>(null);
+  const before = useRef<{ snapshot: Snapshot; actor: number; action: Action | null } | null>(null);
   const fresh = useRef(false);
+  // A new deal stops at the table as dealt until you have read your agenda.
+  const hold = useRef(false);
+  const [briefing, setBriefing] = useState(false);
+  // The bot whose card is still crossing the table keeps the spotlight until
+  // it lands; after that it passes to whoever is thinking next.
+  const [playing, setPlaying] = useState<number | null>(null);
+  const playingTimer = useRef<number | null>(null);
 
   const pump = useCallback(() => {
     timer.current = null;
     const next = queue.current.shift();
     if (!next) return;
-    before.current = { snapshot: fresh.current ? EMPTY : measure(), actor: next.actor };
+    before.current = { snapshot: fresh.current ? EMPTY : measure(), actor: next.actor, action: next.action };
     fresh.current = false;
     setShown(next);
     setLog((l) => [...l, ...next.log.map((text) => ({ text, view: next.view }))]);
     setPending(queue.current.length);
+    if (hold.current) {
+      hold.current = false;
+      if (next.view.you >= 0 && next.view.players[next.view.you]?.agenda) {
+        setBriefing(true);
+        return; // the bots wait for Begin
+      }
+    }
     if (queue.current.length) {
       const delay = next.prompt ? 0 : SPEEDS[speedRef.current];
       timer.current = window.setTimeout(pump, delay);
@@ -145,16 +160,25 @@ export function App() {
   useLayoutEffect(() => {
     const from = before.current;
     before.current = null;
-    if (from && shown) play(from.snapshot, from.actor, shown.view.you, glide(speedRef.current));
+    if (!from || !shown) return;
+    const duration = glide(speedRef.current);
+    if (playingTimer.current !== null) window.clearTimeout(playingTimer.current);
+    playingTimer.current = null;
+    const bot = from.actor >= 0 && from.actor !== shown.view.you && duration > 0;
+    setPlaying(bot ? from.actor : null);
+    if (bot) playingTimer.current = window.setTimeout(() => setPlaying(null), duration + HOLD + FADE);
+    // A bot's hand first, measured before the cards set off.
+    if (from.action && from.actor >= 0 && from.actor !== shown.view.you && from.snapshot.cards.size) {
+      showHand(from.actor, from.action, seatColour(from.actor), duration);
+    }
+    play(from.snapshot, from.actor, shown.view.you, duration);
   }, [shown]);
 
-  // A finished game is kept for export, and its results come up once the
-  // last bot move has played out.
+  // A finished game is kept for export once the last bot move has played out.
   const result = shown?.result ?? null;
   useEffect(() => {
     if (!result || pending > 0) return;
     setSaved(saveGame(result.record) ? savedGames().length : null);
-    setOverOpen(true);
   }, [result, pending]);
 
   const send = useCallback(
@@ -169,8 +193,9 @@ export function App() {
           timer.current = null;
           queue.current = [];
           fresh.current = true;
+          hold.current = request.type === "new";
+          setBriefing(false);
           setLog([]);
-          setOverOpen(false);
         }
         queue.current.push(...updates);
         setPending(queue.current.length);
@@ -209,8 +234,13 @@ export function App() {
     }
   };
 
+  const begin = useCallback(() => {
+    setBriefing(false);
+    if (timer.current === null) pump();
+  }, [pump]);
+
   const toSetup = () => {
-    setOverOpen(false);
+    setBriefing(false);
     setShown(null);
   };
 
@@ -460,7 +490,7 @@ export function App() {
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
-        <Board view={view} act={act} />
+        <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} />
         <div className="rail">
           <aside className="side">
             <div className="controls">
@@ -481,17 +511,19 @@ export function App() {
             </div>
 
             {result && !waiting ? (
-              <div className="prompt over" data-testid="game-over">
-                <h2>{headline(view, result)}</h2>
-                <div className="buttons">
-                  <button type="button" className="primary" onClick={() => setOverOpen(true)}>
-                    Results
-                  </button>
-                  <button type="button" onClick={playAgain}>
-                    Play again
-                  </button>
-                </div>
-              </div>
+              <GameOver
+                view={view}
+                result={result}
+                saved={saved}
+                copied={copied}
+                onPlayAgain={playAgain}
+                onNewTable={toSetup}
+                onCopy={copyRecord}
+                onDownloadRecord={() =>
+                  download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
+                }
+                onExport={exportCsv}
+              />
             ) : turnPrompt || pickPrompt ? (
               <StatusPanel hint={hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
             ) : (
@@ -512,23 +544,7 @@ export function App() {
         </div>
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
-        {result && (
-          <GameOver
-            open={overOpen && !waiting}
-            view={view}
-            result={result}
-            saved={saved}
-            copied={copied}
-            onClose={() => setOverOpen(false)}
-            onPlayAgain={playAgain}
-            onNewTable={toSetup}
-            onCopy={copyRecord}
-            onDownloadRecord={() =>
-              download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
-            }
-            onExport={exportCsv}
-          />
-        )}
+        {briefing && <Briefing view={view} onBegin={begin} />}
       </main>
     </UiContext.Provider>
   );

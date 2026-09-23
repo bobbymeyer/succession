@@ -11,6 +11,14 @@ export function tierName(tier: string): string {
   return TIER_NAMES[tier] ?? tier;
 }
 
+/** Each seat's colour: its chip, and its hand when it plays. Clear of the
+ *  gold that marks your own choices and the red that marks a selection. */
+const SEAT_COLOURS = ["#4fc3c7", "#b48ef0", "#6fcf7f", "#f29e5c", "#6fa8ff", "#f07fbf", "#d4d46a", "#9aa3b5"];
+
+export function seatColour(seat: number): string {
+  return SEAT_COLOURS[seat % SEAT_COLOURS.length];
+}
+
 /** "You", or "P2 Greedy bot". */
 export function playerName(view: View, seat: number): string {
   if (seat === view.you) return "You";

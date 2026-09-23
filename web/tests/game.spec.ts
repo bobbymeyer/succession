@@ -13,6 +13,22 @@ async function start(page: Page, errors: string[], seed?: number) {
   await page.getByTestId("deal").click();
 }
 
+test("a round opens on your agenda and waits for you to begin", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 3);
+  const briefing = page.getByTestId("briefing");
+  await expect(briefing).toBeVisible();
+  const mine = await briefing.locator("h2").innerText();
+  // Nobody has moved: the bots wait until you begin.
+  await page.waitForTimeout(1500);
+  await expect(page.locator(".status .turn")).toHaveText("Turn 0");
+  await page.getByTestId("begin").click();
+  await expect(briefing).toBeHidden();
+  await settle(page);
+  await expect(page.getByTestId("agenda-tracker").locator("strong").first()).toHaveText(mine);
+  expect(errors).toEqual([]);
+});
+
 test("a game played from the move list", async ({ page }) => {
   const errors: string[] = [];
   await start(page, errors);
@@ -107,7 +123,7 @@ test("a card dragged onto the discard pile is discarded and replaced", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("the end of a game: results, export, play again", async ({ page }) => {
+test("the end of a game: the reveal, export, play again", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -116,13 +132,16 @@ test("the end of a game: results, export, play again", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("deal").click({ timeout: 90_000 });
 
-  const dialog = page.getByTestId("game-over-dialog");
+  const dialog = page.getByTestId("game-over");
   for (let i = 0; i < 400 && (await playFromList(page)); i++);
 
-  // The results come up on their own, with every agenda turned over.
+  // No window in the way: the winner turns their agenda over in the rail,
+  // and the courtiers who won it light up on the board.
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".standings li")).toHaveCount(4);
-  await expect(dialog.locator(".standings li.won")).not.toHaveCount(0);
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  const revealed = await dialog.getByTestId("revealed-agenda").count();
+  if (revealed) await expect(page.locator(".seat.won-by")).not.toHaveCount(0);
+  else await expect(dialog).toContainText("Chaos grips the empire");
 
   // The finished game downloads as a log `analyze` reads.
   await dialog.getByText("Save this game").click();
@@ -152,6 +171,6 @@ test("every screen credits bobbymeyer.com", async ({ page }) => {
   await expect(credit).toHaveAttribute("href", "https://bobbymeyer.com");
   await expect(credit).toHaveAttribute("target", "_top");
   await page.getByTestId("deal").click();
-  await page.locator(".all-moves, [data-testid=pick-option], [data-testid=game-over]").first().waitFor();
+  await settle(page);
   await expect(page.getByRole("link", { name: "designed by bobbymeyer." })).toBeVisible();
 });

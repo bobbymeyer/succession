@@ -5,7 +5,14 @@ type Surface = Page | Frame | FrameLocator;
 
 /** Wait until the page is asking for a decision, or the game is over. */
 export async function settle(surface: Surface) {
-  await surface.locator("[data-testid=game-over], .all-moves").first().waitFor({ timeout: 60_000 });
+  const ready = "[data-testid=game-over], .all-moves";
+  await surface.locator(`${ready}, [data-testid=begin]`).first().waitFor({ timeout: 60_000 });
+  // A new round opens on your agenda; begin it.
+  const begin = surface.locator("[data-testid=begin]");
+  if (await begin.isVisible()) {
+    await begin.click();
+    await surface.locator(ready).first().waitFor({ timeout: 60_000 });
+  }
 }
 
 /** Take one decision from the folded-away list of legal moves. False once the game is over. */
