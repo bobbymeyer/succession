@@ -4,11 +4,13 @@
     python -m succession run --games 1000 --out results.db --format sqlite
     python -m succession analyze results.csv
     python -m succession demo --seed 42
+    python -m succession play --seed 42
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import random
 import sys
 import time
@@ -22,9 +24,13 @@ from .bots import BOT_TIERS, make_bot
 from .enums import FAMILIES, Estate
 from .engine import GameResult, play_game
 from .logsink import open_sink, read_rows, row
+from .session import HUMAN, GameSession
 from .state import Config
+from .terminal import play
 
 DEFAULT_PLAYERS = "naive,greedy,strategic,naive"
+#: One person against one bot of each tier.
+DEFAULT_TABLE = "human,naive,greedy,strategic"
 
 
 def parse_preferred_estates(spec: str) -> tuple[tuple[str, str], ...]:
@@ -66,11 +72,11 @@ def parse_dropped_agendas(spec: str) -> tuple[str, ...]:
     return tuple(keys)
 
 
-def build_config(args: argparse.Namespace) -> Config:
+def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
     players = tuple(p.strip() for p in args.players.split(",") if p.strip())
-    unknown = [p for p in players if p not in BOT_TIERS]
+    unknown = [p for p in players if p not in tiers]
     if unknown:
-        raise SystemExit(f"unknown bot tier(s): {', '.join(unknown)} (have: {', '.join(sorted(BOT_TIERS))})")
+        raise SystemExit(f"unknown player type(s): {', '.join(unknown)} (have: {', '.join(sorted(tiers))})")
     if len(players) < 2:
         raise SystemExit("need at least two players")
     if len(players) > len(AGENDAS):
@@ -170,8 +176,25 @@ def cmd_demo(args: argparse.Namespace) -> int:
     return 0
 
 
-def add_rules_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--players", default=DEFAULT_PLAYERS, help=f"bot tiers, clockwise (default: {DEFAULT_PLAYERS})")
+def cmd_play(args: argparse.Namespace) -> int:
+    if args.replay:
+        record = json.loads(Path(args.replay).read_text())
+        session = GameSession.replay(record)
+    else:
+        config = build_config(args, tiers=(*BOT_TIERS, HUMAN))
+        seed = args.seed if args.seed is not None else random.randrange(2**31)
+        session = GameSession(config, seed)
+    finished = play(session)
+    if args.record:
+        Path(args.record).write_text(json.dumps(session.record()) + "\n")
+        print(f"\nwrote the game record to {args.record}")
+    elif not finished:
+        print(f"\n(seed {session.seed}; --record FILE saves a game to replay with --replay FILE)")
+    return 0
+
+
+def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_PLAYERS) -> None:
+    parser.add_argument("--players", default=players, help=f"player types, clockwise (default: {players})")
     parser.add_argument("--starting-hand", type=int, default=5)
     parser.add_argument("--hand-limit", type=int, default=7)
     parser.add_argument("--max-turns", type=int, default=600, help="player-turn cap before a game is logged as a timeout")
@@ -215,6 +238,13 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--seed", type=int, default=0)
     add_rules_arguments(demo)
     demo.set_defaults(func=cmd_demo)
+
+    play_ = sub.add_parser("play", help="take a seat at the table against the bots")
+    play_.add_argument("--seed", type=int, default=None, help="deal a particular game (default: a random one)")
+    play_.add_argument("--record", metavar="FILE", help="save the game, decision by decision, when it ends or you quit")
+    play_.add_argument("--replay", metavar="FILE", help="replay a saved game to where it stopped, then carry on playing")
+    add_rules_arguments(play_, players=DEFAULT_TABLE)
+    play_.set_defaults(func=cmd_play)
 
     return parser
 

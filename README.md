@@ -31,7 +31,8 @@ python -m succession demo --seed 42                    # watch one game, move by
 python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
-python -m unittest discover -s tests                   # 116 rule and print tests
+python -m succession play                              # take a seat against the bots
+python -m unittest discover -s tests                   # 130 rule, session and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -48,6 +49,8 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `succession/engine.py` | Card resolution, the turn loop, win checking |
 | `succession/agendas.py` | The eight agendas: win predicates and the bots' progress metric |
 | `succession/bots.py` | Naive, greedy, and strategic bots |
+| `succession/session.py` | A game that stops for human seats: prompts, player views, records |
+| `succession/terminal.py` | The `play` command's front end |
 | `succession/logsink.py` | CSV and SQLite writers, one row per game |
 | `succession/analysis.py` | Batch summary statistics |
 | `succession/runner.py` | CLI (`run`, `analyze`, `demo`) |
@@ -101,6 +104,25 @@ table are the cards the bots played. Art file `NN_...` goes to deck slot
 numbering stops the build instead of shifting forty portraits by one seat.
 `docs/PRINTING.md` has the rest: card geometry, cardstock, the agenda cards,
 and what is still not in the box.
+
+## Playing a seat
+
+`python -m succession play` deals you in against one bot of each tier and
+takes you through the game a question at a time: your move on your turn, and
+your pick whenever an event asks the whole table to name a victim or discard.
+`--players human,strategic,strategic` sets the table, `--seed` deals a
+particular game, and every rules flag from `run` works here too.
+
+`--record game.json` saves the game when it ends or you quit: the seed, the
+rules, and each decision you made. `--replay game.json` plays it back to where
+it stopped and hands you the next move -- which makes a bug report one small
+file.
+
+The terminal is the first front end on `succession/session.py`, which is what
+the browser version will be built on. `GameSession` runs the same turn loop as
+`play_game()`, so a human seat plays exactly the game a bot seat would, and
+`view()` is the whole of what a seat is shown: the board, your own hand and
+agenda, and other players' hand sizes.
 
 ## The bots
 
