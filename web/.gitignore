@@ -5,3 +5,4 @@ public/engine.zip
 test-results/
 playwright-report/
 *.tsbuildinfo
+.embed-parent/

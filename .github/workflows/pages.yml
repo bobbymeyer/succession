@@ -1,0 +1,101 @@
+# Test everything on every push; on main, publish the browser game to GitHub
+# Pages. The site is web/dist: static files, Pyodide included, relative paths
+# throughout, so it works at https://<owner>.github.io/<repo>/ or proxied
+# under another domain.
+
+name: Test and publish
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  # Supersede a branch run with a newer push, but let every main run finish.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  simulator:
+    name: Simulator (Python ${{ matrix.python }})
+    # Pushes to this repository already run everything; a pull request only
+    # needs its own run when it comes from a fork.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest Python the simulator supports, and the one Pyodide runs
+        # in the browser.
+        python: ["3.10", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Pillow, for the print-tooling tests
+        run: pip install pillow
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+  web:
+    name: Browser game
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      # The build zips succession/ for Pyodide with a small Python script.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Whole games in the browser
+        run: npx playwright test
+        env:
+          CI: "true"
+      - name: Keep the Playwright report of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: web/playwright-report
+          retention-days: 7
+      - name: Hand the site to Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: [simulator, web]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    # Never cancel a deployment halfway; let the next one queue behind it.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

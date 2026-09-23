@@ -65,6 +65,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
+| `docs/EMBED.md` | Putting the browser game on another site |
 | `docs/PRINTING.md` | Turning `assets/` into a deck you can order |
 | `docs/CARDS.md` | **Every card, with its picture, attributes and rules text** |
 | `art/` | The prompts, output names and negative prompt behind `assets/` |
@@ -180,7 +181,12 @@ The end-of-game screen also copies or downloads the one game's record, which
 `python -m succession play --replay` or the page's "Load a saved game" plays
 back move for move.
 
-Still to come: publishing to GitHub Pages.
+**Published from `main`.** `.github/workflows/pages.yml` runs the simulator
+tests (on Python 3.10 and 3.14, the one Pyodide uses) and the browser tests on
+every push, and on `main` publishes `web/dist` to
+<https://bobbymeyer.github.io/succession/>. [docs/EMBED.md](docs/EMBED.md) has
+the iframe snippet for putting it on another page, and the two Netlify lines
+that serve it at bobbymeyer.com/succession/ instead.
 
 ## The bots
 

@@ -8,6 +8,7 @@ import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./prot
 import { playerName, readableLog, visibleCards } from "./names";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { GameOver, headline } from "./components/GameOver";
+import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { PickPanel, TurnPanel } from "./components/PromptPanel";
 import { Setup } from "./components/Setup";
@@ -254,6 +255,9 @@ export function App() {
               <button type="button" onClick={toSetup}>
                 New game
               </button>
+            </div>
+            <div className="controls frame">
+              <FrameControls />
             </div>
 
             {result && !waiting ? (

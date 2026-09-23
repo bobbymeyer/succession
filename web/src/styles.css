@@ -293,3 +293,18 @@ code { font-family: ui-monospace, monospace; font-size: 0.85em; color: var(--ink
   .final-court { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .game-over h2 { font-size: 1.5rem; }
 }
+
+/* -- room to play ---------------------------------------------------------- */
+a.button {
+  display: inline-block;
+  color: inherit;
+  text-decoration: none;
+  background: var(--rail);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+}
+a.button:hover { border-color: var(--gold); }
+.controls.frame { justify-content: flex-start; flex-wrap: wrap; }
+.controls.frame:empty { display: none; }
+.controls.frame button, .controls.frame a.button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { GameRecord, TableOptions } from "../protocol";
 import { tierName } from "../names";
 import { useUi } from "../art";
+import { FrameControls } from "./Frame";
 
 interface Props {
   options: TableOptions;
@@ -90,6 +91,7 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear }: Pro
         <button type="button" className="primary" data-testid="deal" onClick={deal}>
           Deal
         </button>
+        <FrameControls />
       </div>
 
       <details className="load">
