@@ -17,7 +17,7 @@ export function CardDetail({ card }: { card: Card }) {
             <div key={a} className={card.changed?.includes(a) ? "changed" : ""}>
               <dt>{label}</dt>
               <dd>
-                {a === "origin" && card.people ? `${card.origin} · ${card.people}` : attributeText(card, a)}
+                {attributeText(card, a)}
                 {card.changed?.includes(a) && <small> changed in play</small>}
                 {card.mutated?.includes(a) && <small> · its one mutation is spent</small>}
               </dd>

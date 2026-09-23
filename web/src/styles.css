@@ -367,3 +367,49 @@ a.button:hover { border-color: var(--gold); }
 .credit { grid-column: 1 / -1; margin: 28px 0 4px; text-align: center; font-size: 0.8rem; }
 .credit a { color: var(--muted); text-decoration: none; letter-spacing: 0.02em; }
 .credit a:hover, .credit a:focus-visible { color: var(--gold-bright); text-decoration: underline; text-underline-offset: 3px; }
+
+/* -- picking cards up, and dragging them ---------------------------------- */
+.card.grab .face { cursor: grab; touch-action: none; }
+.card.dragging { opacity: 0.35; }
+.card.ghost {
+  position: fixed; z-index: 50; pointer-events: none; margin: 0;
+  transform: rotate(-3deg) scale(1.04); filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.55));
+}
+.card.ghost .attrs, .card.ghost .look, .card.ghost .popover { display: none; }
+.card.selected { z-index: 3; }
+
+/* The buttons over a picked-up card. */
+/* Anchored to the card's left edge, so the first card in a row cannot push
+   it off the screen; the pointer stays over the card's middle. */
+.popover {
+  position: absolute; bottom: calc(100% + 14px); left: 0;
+  z-index: 10; white-space: nowrap;
+}
+.offers { display: flex; gap: 6px; padding: 6px; border-radius: 10px; background: var(--rail); border: 1px solid var(--gold); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+.offers::after {
+  content: ""; position: absolute; left: calc(var(--w) / 2); top: 100%; transform: translateX(-50%);
+  border: 7px solid transparent; border-top-color: var(--gold);
+}
+.offer { font-weight: 600; padding: 0.35rem 0.75rem; }
+.offer:first-child { background: var(--gold); border-color: var(--gold); color: var(--cloth-deep); }
+.offer:first-child:hover { background: var(--gold-bright); }
+/* In the hand the popover must clear the lifted card. */
+.mine .card.selected .popover { bottom: calc(100% + 22px); }
+
+/* Places a dragged card can land. */
+[data-drop].drop-live { outline: 2px dashed var(--gold-bright); outline-offset: 4px; border-radius: 12px; }
+.outer.drop-live { background: rgba(240, 200, 101, 0.1); }
+.seat.drop-live { background: rgba(240, 200, 101, 0.12); }
+.card.drop-live .face { box-shadow: 0 0 0 3px var(--gold-bright), 0 0 18px rgba(240, 200, 101, 0.55); }
+.drop-hint { color: var(--gold-bright); text-transform: none; letter-spacing: 0; font-weight: 600; }
+.opponent.live { cursor: pointer; border-color: var(--gold-bright); box-shadow: 0 0 0 2px var(--gold-bright); }
+
+/* -- the discard pile, where the moves used to be listed ------------------- */
+.discard-pile {
+  display: flex; gap: 14px; align-items: center;
+  padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(28, 40, 64, 0.55);
+}
+.discard-pile .pile-text { display: flex; flex-direction: column; gap: 4px; }
+.discard-pile .pile-text h2 { margin: 0; }
+.discard-pile.drop-live { background: rgba(240, 200, 101, 0.12); }
+.discard-pile .card.empty-slot { height: calc(var(--w-md) * 692 / 496); border: 1px dashed var(--line); border-radius: 6px; }

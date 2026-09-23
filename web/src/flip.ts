@@ -4,7 +4,8 @@
 // so a courtier leaving your hand for the outer circle, or a seat for the
 // discard, glides across the table even though React drew it afresh. A card
 // that was nowhere visible -- it came out of a bot's hand -- flies in from
-// that player's place at the table.
+// the hand on that player's chip, growing from the size of the card back
+// there to its size on the table.
 
 interface Box {
   x: number;
@@ -30,7 +31,11 @@ export function measure(): Snapshot {
   const cards = new Map<number, Box>();
   const players = new Map<number, Box>();
   document.querySelectorAll<HTMLElement>("[data-uid]").forEach((el) => cards.set(Number(el.dataset.uid), box(el)));
-  document.querySelectorAll<HTMLElement>("[data-player]").forEach((el) => players.set(Number(el.dataset.player), box(el)));
+  // A player's hand where there is one on show, else their place at the table.
+  document.querySelectorAll<HTMLElement>("[data-player]").forEach((el) => {
+    const hand = el.querySelector("[data-hand]");
+    players.set(Number(el.dataset.player), box(hand ?? el));
+  });
   return { cards, players };
 }
 
@@ -59,10 +64,11 @@ export function play(before: Snapshot, actor: number, you: number, duration: num
       if (Math.abs(dx) < 2 && Math.abs(dy) < 2 && Math.abs(scale - 1) < 0.02) return; // stayed put
       from = { transform: `translate(${dx}px, ${dy}px) scale(${scale})` };
     } else if (source && before.cards.size) {
-      // Out of a bot's hand: from the middle of their place at the table.
+      // Out of a bot's hand: from the card back on their chip, at its size.
       const dx = source.x + source.w / 2 - (now.x + now.w / 2);
       const dy = source.y + source.h / 2 - (now.y + now.h / 2);
-      from = { transform: `translate(${dx}px, ${dy}px) scale(0.35)`, opacity: 0 };
+      const scale = Math.max(0.12, Math.min(1, source.w / (now.w || 1)));
+      from = { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, opacity: 0.4 };
     } else {
       from = { transform: "translateY(10px)", opacity: 0 };
     }

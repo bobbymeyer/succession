@@ -1,3 +1,4 @@
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Card, Player, View } from "../protocol";
 import { useUi } from "../art";
 import { playerName, tierName } from "../names";
@@ -10,6 +11,15 @@ export interface Interaction {
   seatLive(seat: string): boolean;
   seatSelected(seat: string): boolean;
   onSeat(seat: string): void;
+  playerLive(seat: number): boolean;
+  onPlayer(seat: number): void;
+  /** Can this card be picked up and dragged? */
+  canDrag(uid: number): boolean;
+  onPress(uid: number, event: ReactPointerEvent<HTMLElement>): void;
+  /** While a card is dragged: the places it may be dropped. */
+  dropLive(key: string): boolean;
+  /** Buttons over a picked-up card. */
+  popover(uid: number): ReactNode;
 }
 
 export const NO_INTERACTION: Interaction = {
@@ -19,6 +29,12 @@ export const NO_INTERACTION: Interaction = {
   seatLive: () => false,
   seatSelected: () => false,
   onSeat: () => {},
+  playerLive: () => false,
+  onPlayer: () => {},
+  canDrag: () => false,
+  onPress: () => {},
+  dropLive: () => false,
+  popover: () => null,
 };
 
 /** A hidden agenda is a card back; a revealed one is the agenda card. */
@@ -44,16 +60,28 @@ function Agenda({ player, size }: { player: Player; size: "xxs" | "xs" | "sm" | 
 
 // A compact place at the table: who, how many cards, their agenda (a card
 // back until it is revealed). The whole row stays one line high.
-function Opponent({ view, player }: { view: View; player: Player }) {
+function Opponent({ view, player, act }: { view: View; player: Player; act: Interaction }) {
   const classes = ["opponent"];
   if (player.seat === view.current && !view.over) classes.push("current");
   if (view.winners.includes(player.seat)) classes.push("winner");
+  const live = act.playerLive(player.seat);
+  if (live) classes.push("live");
+  if (act.dropLive(`player:${player.seat}`)) classes.push("drop-live");
   return (
-    <div className={classes.join(" ")} data-player={player.seat} aria-label={playerName(view, player.seat)}>
+    <div
+      className={classes.join(" ")}
+      data-player={player.seat}
+      data-drop={`player:${player.seat}`}
+      aria-label={playerName(view, player.seat)}
+      role={live ? "button" : undefined}
+      tabIndex={live ? 0 : undefined}
+      onClick={live ? () => act.onPlayer(player.seat) : undefined}
+      onKeyDown={live ? (e) => (e.key === "Enter" || e.key === " ") && act.onPlayer(player.seat) : undefined}
+    >
       <span className="who">
         <strong>P{player.seat}</strong> {tierName(player.tier).replace(" bot", "")}
       </span>
-      <span className="hand-count" title={`${player.hand} cards in hand`}>
+      <span className="hand-count" data-hand={player.seat} title={`${player.hand} cards in hand`}>
         <CardBack size="xxs" />
         {player.hand}
       </span>
@@ -76,15 +104,21 @@ function Opponent({ view, player }: { view: View; player: Player }) {
 
 export function Board({ view, act }: { view: View; act: Interaction }) {
   const { art } = useUi();
-  const card = (c: Card, size: "sm" | "md" | "lg", caption = true) => (
+  // Board courtiers are places to drop an action on; hand cards are not.
+  const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => (
     <CardView
       key={c.uid}
       card={c}
       size={size}
-      caption={caption}
+      caption={onBoard}
       live={act.cardLive(c.uid)}
       selected={act.cardSelected(c.uid)}
       onClick={() => act.onCard(c.uid)}
+      drop={onBoard ? `courtier:${c.uid}` : undefined}
+      dropLive={onBoard && act.dropLive(`courtier:${c.uid}`)}
+      draggable={act.canDrag(c.uid)}
+      onPress={(e) => act.onPress(c.uid, e)}
+      popover={act.popover(c.uid)}
     />
   );
   const opponents = view.players.filter((p) => p.seat !== view.you);
@@ -94,16 +128,12 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
     <div className="board">
       <section className="opponents" aria-label="Opponents">
         {opponents.map((p) => (
-          <Opponent key={p.seat} view={view} player={p} />
+          <Opponent key={p.seat} view={view} player={p} act={act} />
         ))}
         <div className="status" aria-label="Table status">
           <span className="pile" title="Draw pile">
             <CardBack size="xxs" label="Deck" />
             {view.deck}
-          </span>
-          <span className="pile" title={view.discard_top ? `Discard pile, top: ${view.discard_top.name}` : "Discard pile"}>
-            {view.discard_top ? <CardView card={view.discard_top} size="xxs" /> : <span className="card size-xxs empty-slot" />}
-            {view.discard}
           </span>
           <span className="turn">Turn {view.turn}</span>
           {view.removed > 0 && <span className="muted">{view.removed} out</span>}
@@ -124,9 +154,10 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
             if (live) classes.push("live");
             if (act.seatSelected(s.seat)) classes.push("selected");
             if (!s.courtier) classes.push("vacant");
+            if (act.dropLive(`seat:${s.seat}`)) classes.push("drop-live");
             const src = art.seat(s.seat);
             return (
-              <div key={s.seat} className={classes.join(" ")}>
+              <div key={s.seat} className={classes.join(" ")} data-drop={`seat:${s.seat}`}>
                 <div className="seat-label">
                   {s.seat}
                   <small>{s.estate}</small>
@@ -155,8 +186,15 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
         </div>
       </section>
 
-      <section className="outer" aria-label="Outer circle">
-        <h2>The outer circle</h2>
+      <section
+        className={`outer${act.dropLive("outer") ? " drop-live" : ""}`}
+        aria-label="Outer circle"
+        data-drop="outer"
+      >
+        <h2>
+          The outer circle
+          {act.dropLive("outer") && <span className="drop-hint"> · drop to play here</span>}
+        </h2>
         <div className="row">
           {view.outer.length ? view.outer.map((c) => card(c, "md")) : <p className="muted">Nobody waits outside.</p>}
         </div>

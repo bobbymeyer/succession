@@ -1,40 +1,22 @@
 // Whole games in a real browser: Pyodide boots, the engine deals, and a
 // player gets from the first move to the end.
 import { expect, test, type Page } from "@playwright/test";
+import { playFromList, random, settle } from "./helpers";
 
-async function start(page: Page, errors: string[]) {
+async function start(page: Page, errors: string[], seed?: number) {
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
   await page.goto("./");
-  await page.getByTestId("deal").click({ timeout: 90_000 }); // Pyodide boot
-}
-
-// Wait for the page to settle on something a player can act on.
-async function settled(page: Page) {
-  const ready = page.locator("[data-testid=game-over], [data-testid=pick-option], [data-testid=confirm], .all-moves");
-  await ready.first().waitFor();
-}
-
-function pick<T>(items: T[]): T {
-  return items[Math.floor(Math.random() * items.length)];
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 }); // Pyodide boot
+  if (seed !== undefined) await page.fill("input[placeholder=random]", String(seed));
+  await page.getByTestId("deal").click();
 }
 
 test("a game played from the move list", async ({ page }) => {
   const errors: string[] = [];
   await start(page, errors);
-  for (let i = 0; i < 400; i++) {
-    await settled(page);
-    if (await page.getByTestId("game-over").isVisible()) break;
-    const picks = await page.getByTestId("pick-option").all();
-    if (picks.length) {
-      await pick(picks).click();
-    } else {
-      await page.locator(".all-moves summary").click();
-      await pick(await page.getByTestId("move-option").all()).click();
-    }
-    await page.getByTestId("confirm").click();
-  }
+  for (let i = 0; i < 400 && (await playFromList(page, random)); i++);
   await expect(page.getByTestId("game-over")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -42,23 +24,86 @@ test("a game played from the move list", async ({ page }) => {
 test("a game played by clicking the board", async ({ page }) => {
   const errors: string[] = [];
   await start(page, errors);
-  // Anything lit up is a real choice; keep clicking until a move is built.
-  const choices = page.locator(
-    ".card.live > button.face, button.chair:not(:disabled), .seat-take, .prompt .buttons button:not(.primary):not(:text-is('Back')), [data-testid=pick-option]",
+  // Anything lit up is a real choice. Prefer the buttons over a picked-up
+  // card, then anything lit that is not already picked up.
+  const offers = page.getByTestId("offer");
+  const lit = page.locator(
+    ".card.live:not(.selected) > button.face, .seat.live button.chair:not(:disabled), .seat-take, .opponent.live",
   );
-  for (let i = 0; i < 2000; i++) {
-    await settled(page);
+  const pickedUp = page.locator(".card.live.selected > button.face");
+  for (let i = 0; i < 3000; i++) {
+    await settle(page);
     if (await page.getByTestId("game-over").isVisible()) break;
-    const confirm = page.getByTestId("confirm");
-    if (await confirm.isVisible()) {
-      await confirm.click();
+    const buttons = await offers.all();
+    if (buttons.length && Math.random() < 0.8) {
+      await random(buttons).click();
       continue;
     }
-    const live = await choices.all();
-    expect(live.length, "something must be clickable").toBeGreaterThan(0);
-    await pick(live).click();
+    const choices = await lit.all();
+    if (choices.length) await random(choices).click();
+    else await pickedUp.first().click(); // put it down and start again
   }
   await expect(page.getByTestId("game-over")).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test("a card is picked up by clicking it and put down by clicking it again", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 4);
+  await settle(page);
+  const card = page.locator(".mine .card.live").first();
+  await card.locator("> button.face").click();
+  await expect(card).toHaveClass(/selected/);
+  await expect(card.getByTestId("offer").first()).toBeVisible();
+  await card.locator("> button.face").click();
+  await expect(card).not.toHaveClass(/selected/);
+  await expect(page.getByTestId("offer")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a courtier dragged from the hand onto the outer circle is played there", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 4);
+  await settle(page);
+  const outer = page.locator("section.outer");
+  for (const card of await page.locator(".mine .card.grab").all()) {
+    const uid = await card.getAttribute("data-uid");
+    const from = (await card.boundingBox())!;
+    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(from.x + from.width / 2 + 20, from.y - 20, { steps: 4 });
+    if (!(await outer.evaluate((el) => el.classList.contains("drop-live")))) {
+      await page.mouse.up(); // not a courtier: dropped nowhere, nothing happens
+      continue;
+    }
+    const to = (await outer.boundingBox())!;
+    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator(`section.outer [data-uid="${uid}"]`)).toBeVisible();
+    expect(errors).toEqual([]);
+    return;
+  }
+  throw new Error("no courtier in the opening hand to drag");
+});
+
+test("a card dragged onto the discard pile is discarded and replaced", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 4);
+  await settle(page);
+  const card = page.locator(".mine .card.grab").first();
+  const uid = await card.getAttribute("data-uid");
+  const handSize = await page.locator(".mine .card").count();
+  const from = (await card.boundingBox())!;
+  const pile = (await page.locator(".discard-pile").boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(pile.x + pile.width / 2, pile.y + pile.height / 2, { steps: 10 });
+  await expect(page.locator(".discard-pile")).toHaveClass(/drop-live/);
+  await page.mouse.up();
+  await expect(page.locator(`.discard-pile [data-uid="${uid}"], .mine [data-uid="${uid}"]`)).toHaveCount(1);
+  await expect(page.locator(`.mine [data-uid="${uid}"]`)).toHaveCount(0);
+  await settle(page);
+  expect(await page.locator(".mine .card").count()).toBeGreaterThanOrEqual(handSize);
   expect(errors).toEqual([]);
 });
 
@@ -72,18 +117,7 @@ test("the end of a game: results, export, play again", async ({ page }) => {
   await page.getByTestId("deal").click({ timeout: 90_000 });
 
   const dialog = page.getByTestId("game-over-dialog");
-  for (let i = 0; i < 400; i++) {
-    await page.locator("[data-testid=game-over], [data-testid=pick-option], .all-moves").first().waitFor({ timeout: 60_000 });
-    if (await page.getByTestId("game-over").isVisible()) break;
-    const picks = await page.getByTestId("pick-option").all();
-    if (picks.length) {
-      await picks[0].click();
-    } else {
-      await page.locator(".all-moves summary").click();
-      await page.getByTestId("move-option").first().click();
-    }
-    await page.getByTestId("confirm").click();
-  }
+  for (let i = 0; i < 400 && (await playFromList(page)); i++);
 
   // The results come up on their own, with every agenda turned over.
   await expect(dialog).toBeVisible();
@@ -102,7 +136,7 @@ test("the end of a game: results, export, play again", async ({ page }) => {
   // Play again deals a fresh game at the same table.
   await dialog.getByTestId("play-again").click();
   await expect(dialog).toBeHidden();
-  await page.locator("[data-testid=pick-option], .all-moves, [data-testid=game-over]").first().waitFor();
+  await settle(page);
   await expect(page.locator(".opponent")).toHaveCount(3);
 
   // And the game is remembered on the setup screen.

@@ -3,8 +3,9 @@ import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
 import { clearGames, download, saveGame, savedGames } from "./history";
-import { build, cardIsLive, choose, clickCard, FIELDS, seatIsLive, type Selection } from "./moves";
-import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./protocol";
+import { type Selection } from "./moves";
+import { drops, settled, stage, type Stage } from "./play";
+import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
@@ -12,10 +13,12 @@ import { Credit } from "./components/Credit";
 import { GameOver, headline } from "./components/GameOver";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
-import { PickPanel, TurnPanel } from "./components/PromptPanel";
+import { DiscardPile, StatusPanel } from "./components/Status";
 import { Setup } from "./components/Setup";
 
-const SPEEDS = { Slow: 1200, Normal: 600, Fast: 200, Instant: 0 } as const;
+// The pause after each bot move. Long enough to watch the card leave the
+// bot's hand and land; Instant plays straight through.
+const SPEEDS = { Slow: 2200, Normal: 1300, Fast: 550, Instant: 0 } as const;
 type Speed = keyof typeof SPEEDS;
 
 function savedSpeed(): Speed {
@@ -30,7 +33,44 @@ function savedSpeed(): Speed {
 
 /** How long a card takes to cross the table: most of the pause between moves. */
 function glide(speed: Speed): number {
-  return Math.min(600, SPEEDS[speed] * 0.7);
+  return Math.min(900, SPEEDS[speed] * 0.7);
+}
+
+/** A card being dragged, from pointer-down until it is dropped. */
+interface Drag {
+  uid: number;
+  source: HTMLElement;
+  x0: number;
+  y0: number;
+  ghost: HTMLElement | null;
+  targets: Map<string, () => void>;
+}
+
+/** The instruction line for where the player is in building a move. */
+function hintFor(s: Stage, view: View, cards: Map<number, Card>): string {
+  const name = (uid: number | null) => (uid !== null ? cards.get(uid)?.name ?? "it" : "it");
+  switch (s.step) {
+    case "start":
+      return "Your move. Click a card to pick it up, or drag it where it goes.";
+    case "card": {
+      const aims = [...s.cards.values()].some((sel) => sel.courtier !== undefined && sel.courtier !== null) || s.players.size > 0;
+      return aims
+        ? `${name(s.active)}: click a lit ${s.players.size ? "player" : "courtier"} or drag the card onto one${s.offers.length ? ", or choose above it" : ""}. Click it again to put it down.`
+        : `${name(s.active)}: choose above the card, or drag it to the outer circle or the discard pile. Click it again to put it down.`;
+    }
+    case "mover":
+      return `${name(s.active)}: click a lit seat, or drag them into it.`;
+    case "courtier":
+      return "Click the courtier it targets.";
+    case "seat":
+      return "Click the seat it takes.";
+    case "sacrifice":
+      return "Click a courtier in your hand to pay for it.";
+    case "target_player":
+      return "Click the player it targets.";
+    default:
+      return view.over ? "" : "Choose above the card.";
+  }
 }
 
 export function App() {
@@ -50,6 +90,21 @@ export function App() {
   const [copied, setCopied] = useState(false);
   const [overOpen, setOverOpen] = useState(false);
   const [tab, setTab] = useState<"agenda" | "log">("agenda");
+  const [dropping, setDropping] = useState<Set<string>>(() => new Set());
+  const dragging = useRef<Drag | null>(null);
+  const justDragged = useRef(false);
+
+  // Escape puts down whatever is picked up.
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelection({});
+        setPicked(null);
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, []);
   const [saved, setSaved] = useState<number | null>(() => savedGames().length);
 
   const [art, setArt] = useState<Art>(NO_ART);
@@ -200,21 +255,118 @@ export function App() {
   const cards = visibleCards(view);
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
   const pickPrompt = !waiting && prompt && prompt.kind !== "turn" ? prompt : null;
-  const builder = turnPrompt ? build(turnPrompt.options, selection) : null;
   const latest = log.length ? readableLog(log[log.length - 1].view, log[log.length - 1].text) : null;
 
+  // -- playing by hand: click to pick up, or drag -----------------------------
+  const actions = turnPrompt?.options ?? [];
+  const now: Stage | null = turnPrompt ? stage(actions, selection) : null;
+  const answer = (action: Action) => send({ type: "answer", choice: action.index });
+  /** Take a selection: play it if it pins one move down, else wait for more. */
+  const apply = (next: Selection) => {
+    const action = settled(actions, next);
+    if (action) answer(action);
+    else setSelection(next);
+  };
+  const pick = (uid: number) => send({ type: "answer", choice: uid });
+  const pickVerb = pickPrompt?.kind === "courtier" ? "Name to die" : "Discard";
+
+  /** Where a card may be dragged, and what dropping it there does. */
+  const targetsFor = (uid: number): Map<string, () => void> => {
+    const out = new Map<string, () => void>();
+    if (turnPrompt && (now?.active === null || now?.active === uid)) {
+      for (const [key, sel] of drops(actions, uid)) out.set(key, () => apply(sel));
+    } else if (pickPrompt?.kind === "discard" && pickPrompt.options.some((c) => c.uid === uid)) {
+      out.set("discard", () => pick(uid));
+    }
+    return out;
+  };
+
+  const press = (uid: number, e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    const targets = targetsFor(uid);
+    if (!targets.size) return;
+    const source = (e.currentTarget.closest(".card") as HTMLElement) ?? e.currentTarget;
+    dragging.current = { uid, source, x0: e.clientX, y0: e.clientY, ghost: null, targets };
+    const move = (ev: PointerEvent) => {
+      const d = dragging.current;
+      if (!d) return;
+      if (!d.ghost) {
+        if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return; // still a click
+        const rect = d.source.getBoundingClientRect();
+        const ghost = d.source.cloneNode(true) as HTMLElement;
+        ghost.classList.add("ghost");
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.left = `${rect.left}px`;
+        ghost.style.top = `${rect.top}px`;
+        ghost.dataset.dx = String(d.x0 - rect.left);
+        ghost.dataset.dy = String(d.y0 - rect.top);
+        ghost.removeAttribute("data-uid");
+        document.body.appendChild(ghost);
+        d.ghost = ghost;
+        d.source.classList.add("dragging");
+        setDropping(new Set(d.targets.keys()));
+      }
+      d.ghost.style.left = `${ev.clientX - Number(d.ghost.dataset.dx)}px`;
+      d.ghost.style.top = `${ev.clientY - Number(d.ghost.dataset.dy)}px`;
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+      const d = dragging.current;
+      dragging.current = null;
+      if (!d?.ghost) return; // a click: the button's own click handler takes it
+      d.ghost.remove();
+      d.source.classList.remove("dragging");
+      setDropping(new Set());
+      justDragged.current = true;
+      setTimeout(() => (justDragged.current = false), 0);
+      const key = document.elementFromPoint(ev.clientX, ev.clientY)?.closest("[data-drop]")?.getAttribute("data-drop");
+      if (key) d.targets.get(key)?.();
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", up);
+  };
+
+  const offerButtons = (offers: { label: string; run(): void }[]) => (
+    <div className="offers" role="group" aria-label="Choose">
+      {offers.map((o) => (
+        <button key={o.label} type="button" className="offer" data-testid="offer" onClick={o.run}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+
   let act: Interaction = NO_INTERACTION;
-  if (turnPrompt && builder) {
+  if (turnPrompt && now) {
     act = {
-      cardLive: (uid) => cardIsLive(turnPrompt.options, builder, uid),
-      cardSelected: (uid) => selection.card === uid || selection.courtier === uid || selection.sacrifice === uid,
+      cardLive: (uid) => now.cards.has(uid),
+      cardSelected: (uid) => now.active === uid || selection.sacrifice === uid,
       onCard: (uid) => {
-        const next = clickCard(turnPrompt.options, builder, uid);
-        if (next) setSelection(next);
+        if (justDragged.current) return;
+        const next = now.cards.get(uid);
+        if (next) apply(next);
       },
-      seatLive: (seat) => seatIsLive(builder, seat),
+      seatLive: (seat) => now.seats.has(seat),
       seatSelected: (seat) => selection.seat === seat,
-      onSeat: (seat) => setSelection(choose(builder, seat)),
+      onSeat: (seat) => {
+        const next = now.seats.get(seat);
+        if (next) apply(next);
+      },
+      playerLive: (p) => now.players.has(p),
+      onPlayer: (p) => {
+        const next = now.players.get(p);
+        if (next) apply(next);
+      },
+      canDrag: (uid) => (now.active === null || now.active === uid) && drops(actions, uid).size > 0,
+      onPress: press,
+      dropLive: (key) => dropping.has(key),
+      popover: (uid) =>
+        uid === now.active && now.offers.length
+          ? offerButtons(now.offers.map((o) => ({ label: o.label, run: () => apply(o.selection) })))
+          : null,
     };
   } else if (pickPrompt) {
     const uids = pickPrompt.options.map((c) => c.uid);
@@ -222,9 +374,24 @@ export function App() {
       ...NO_INTERACTION,
       cardLive: (uid) => uids.includes(uid),
       cardSelected: (uid) => picked === uid,
-      onCard: (uid) => setPicked(uid),
+      onCard: (uid) => !justDragged.current && setPicked(picked === uid ? null : uid),
+      canDrag: (uid) => pickPrompt.kind === "discard" && uids.includes(uid),
+      onPress: press,
+      dropLive: (key) => dropping.has(key),
+      popover: (uid) => (uid === picked ? offerButtons([{ label: pickVerb, run: () => pick(uid) }]) : null),
     };
   }
+
+  const hint = now
+    ? hintFor(now, view, cards)
+    : pickPrompt
+      ? `${pickPrompt.card.name}: ${
+          pickPrompt.kind === "courtier"
+            ? "every player names a courtier to die. Click one of the lit courtiers."
+            : "every player discards. Click a lit card, or drag it to the discard pile."
+        }`
+      : "";
+  const pass = turnPrompt?.options.find((a) => a.kind === "pass") ?? null;
 
   const copyRecord = async () => {
     if (!result) return;
@@ -325,30 +492,15 @@ export function App() {
                   </button>
                 </div>
               </div>
-            ) : turnPrompt && builder ? (
-              <TurnPanel
-                view={view}
-                prompt={turnPrompt}
-                builder={builder}
-                cards={cards}
-                onChoose={(value) => setSelection(choose(builder, value))}
-                onSelectAction={(a) => setSelection(Object.fromEntries(FIELDS.map((f) => [f, a[f]])))}
-                onConfirm={() => builder.chosen && send({ type: "answer", choice: builder.chosen.index })}
-                onReset={() => setSelection({})}
-              />
-            ) : pickPrompt ? (
-              <PickPanel
-                prompt={pickPrompt}
-                picked={picked}
-                onPick={setPicked}
-                onConfirm={() => picked !== null && send({ type: "answer", choice: picked })}
-              />
+            ) : turnPrompt || pickPrompt ? (
+              <StatusPanel hint={hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
             ) : (
               <div className="prompt" aria-live="polite">
                 {latest && <p className="latest">{latest}</p>}
                 <p className="thinking">{playerName(view, view.current)} to play…</p>
               </div>
             )}
+            <DiscardPile view={view} dropLive={dropping.has("discard")} />
             {error && <p className="error">{error}</p>}
             {hovered && (
               <div className="preview" aria-hidden="true">

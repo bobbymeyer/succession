@@ -4,6 +4,7 @@
 // Pyodide, storage and downloads all have to work from inside the frame.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { playFromList } from "./helpers";
 
 // Served by the second web server in playwright.config.ts: a different origin
 // from the game's, and a real server -- Chrome will not let a page it cannot
@@ -35,18 +36,7 @@ test("a whole game inside another site's iframe", async ({ page, baseURL }) => {
   await expect(frame.getByText("Open in a new tab").first()).toBeVisible();
   await expect(frame.getByRole("button", { name: "Full screen" })).toBeVisible();
 
-  for (let i = 0; i < 400; i++) {
-    await frame.locator("[data-testid=game-over], [data-testid=pick-option], .all-moves").first().waitFor();
-    if (await frame.getByTestId("game-over").isVisible()) break;
-    const picks = await frame.getByTestId("pick-option").all();
-    if (picks.length) {
-      await picks[0].click();
-    } else {
-      await frame.locator(".all-moves summary").click();
-      await frame.getByTestId("move-option").first().click();
-    }
-    await frame.getByTestId("confirm").click();
-  }
+  for (let i = 0; i < 400 && (await playFromList(frame)); i++);
 
   const dialog = frame.getByTestId("game-over-dialog");
   await expect(dialog).toBeVisible();
