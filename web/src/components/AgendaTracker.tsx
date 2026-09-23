@@ -10,8 +10,7 @@ export function AgendaTracker({ agenda }: { agenda: Agenda }) {
   const src = art.agenda(agenda.name);
   const met = agenda.status.filter((c) => c.met).length;
   return (
-    <section className={`tracker${agenda.met ? " done" : ""}`} aria-label="Your agenda" data-testid="agenda-tracker">
-      <h2>Your agenda</h2>
+    <div className={`tracker${agenda.met ? " done" : ""}`} data-testid="agenda-tracker">
       <div className="tracker-head">
         {src && (
           <button
@@ -49,6 +48,6 @@ export function AgendaTracker({ agenda }: { agenda: Agenda }) {
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }

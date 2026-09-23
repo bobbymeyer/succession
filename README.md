@@ -162,7 +162,8 @@ under the card, changed ones in red, and any Defense they carry. Click any card
 to see it full size. A courtier's details always sit in the same grid --
 estate and faith above, house and origin (or a barbarian's people) below.
 
-Your agenda is tracked clause by clause beside the board: which parts the
+Your agenda is tracked clause by clause, in a tab beside the log under the
+question you are being asked: which parts the
 court meets right now, how far along the rest are, and who is waiting in the
 outer circle to help (`conditions()` in `succession/agendas.py`; all of them
 met is exactly the win).

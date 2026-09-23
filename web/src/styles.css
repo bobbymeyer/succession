@@ -151,7 +151,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   max-height: calc(100vh - 32px); overflow: auto;
 }
 .side { display: flex; flex-direction: column; gap: 12px; }
-.log { min-height: 0; }
 
 .board > section { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
@@ -190,8 +189,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 .all-moves { margin-top: 0.5rem; font-size: 0.88rem; color: var(--muted); }
 .all-moves ul { list-style: none; padding: 0; margin: 0.25rem 0 0; max-height: 14rem; overflow: auto; }
 .preview .detail-image { width: 100%; border-radius: 10px; }
-.log { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-.log ol { margin: 0; padding-left: 0; list-style: none; max-height: 26rem; overflow: auto; font-size: 0.84rem; }
 .log li { padding: 3px 0; border-bottom: 1px solid var(--line); }
 .log li:first-child { color: var(--gold-bright); }
 
@@ -224,7 +221,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
      look over the board for the answer, and the log goes to the bottom. */
   .rail { display: contents; }
   .side { grid-area: side; position: sticky; top: 0; z-index: 2; margin: -16px -16px 0; padding: 10px 16px; background: rgba(13, 20, 34, 0.96); border-bottom: 1px solid var(--line); max-height: 45vh; overflow: auto; }
-  .log { grid-area: log; }
   .prompt { box-shadow: none; }
 }
 @media (max-width: 560px) {
@@ -321,8 +317,7 @@ a.button:hover { border-color: var(--gold); }
 .mine .row { gap: 12px; padding-top: 8px; }
 
 /* -- your agenda, clause by clause ----------------------------------------- */
-.tracker { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
-.tracker.done { border-color: var(--gold-bright); background: rgba(240, 200, 101, 0.1); }
+.tracker.done .tracker-score { font-weight: 700; }
 .tracker-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
 .tracker-head strong { font-family: var(--serif); font-size: 1.05rem; display: block; line-height: 1.2; }
 .tracker-card { padding: 0; border: none; background: none; flex: none; }
@@ -339,21 +334,9 @@ a.button:hover { border-color: var(--gold); }
 .clauses .bar span { display: block; height: 100%; background: var(--gold); transition: width 300ms ease; }
 .clauses li.met .bar span { background: var(--gold-bright); }
 
-/* -- three columns when there is room ------------------------------------- */
-.game.wide {
-  grid-template-columns: 15.5rem minmax(0, 1fr) 19rem;
-  grid-template-areas: "left board rail";
-}
-.left {
-  grid-area: left; position: sticky; top: 16px;
-  display: flex; flex-direction: column; gap: 12px;
-  max-height: calc(100vh - 32px); min-height: 0;
-}
-.left .log { flex: 1; min-height: 8rem; display: flex; flex-direction: column; }
-.left .log ol { max-height: none; flex: 1; min-height: 0; }
 @media (max-width: 900px) {
-  .game { grid-template-areas: "side" "board" "agenda" "log"; }
-  .tracker { grid-area: agenda; }
+  .game { grid-template-areas: "side" "board" "tabs"; }
+  .tabbed { grid-area: tabs; }
   .status { margin-left: 0; }
 }
 
@@ -364,3 +347,18 @@ a.button:hover { border-color: var(--gold); }
   border: 1px dashed var(--muted); border-radius: 2px;
   color: var(--muted); font-size: 0.7rem; font-weight: 700;
 }
+
+/* -- your agenda and the log, one slot, a tab each ------------------------- */
+.tabbed { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tabs { display: flex; border-bottom: 1px solid var(--line); }
+.tabs button {
+  flex: 1; border: none; border-radius: 0; background: none; padding: 9px 12px;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--gold); box-shadow: none; }
+.tabs button:hover { color: var(--ink); }
+.tabs small { font-variant-numeric: tabular-nums; letter-spacing: 0; color: var(--muted); margin-left: 4px; }
+.tabs small.met { color: var(--gold-bright); }
+.tabpanel { padding: 12px; }
+.tabpanel .log { margin: 0; padding: 0; list-style: none; max-height: 24rem; overflow: auto; font-size: 0.84rem; }
