@@ -140,6 +140,19 @@ class Records(unittest.TestCase):
         self.assertEqual(again.prompt, session.prompt)
         self.assertEqual(fingerprint(again.state), fingerprint(session.state))
 
+    def test_a_record_from_before_discard_and_draw_replays_without_it(self):
+        # Played under the old rule, then saved as version 1 had it: no
+        # discard_draws key. It must replay the game it recorded.
+        config = Config(players=(HUMAN, "naive", "greedy"), discard_draws=False)
+        session = GameSession(config, 6)
+        random_human(session, random.Random(6), stop_after=12)
+        old = session.record()
+        old["version"] = 1
+        del old["config"]["discard_draws"]
+        again = GameSession.replay(json.loads(json.dumps(old)))
+        self.assertFalse(again.config.discard_draws)
+        self.assertEqual(fingerprint(again.state), fingerprint(session.state))
+
     def test_the_record_keeps_the_rules_variant(self):
         config = Config(players=(HUMAN, "naive"), faith_seats=5, house_preferred_estates=(("Mitreas", "Church"),))
         session = GameSession(config, 4)

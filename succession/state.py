@@ -40,6 +40,8 @@ class Config:
     #: person with printed attributes. Set False to take them out of the game
     #: entirely (the stricter reading of the Removals text).
     removed_courtiers_return_to_deck: bool = True
+    #: Discard & Draw: a turn spent discarding draws a replacement at once.
+    discard_draws: bool = True
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False

@@ -58,6 +58,8 @@ class Action:
         if self.kind == MOVE:
             return f"move {state.name(self.courtier)} -> {self.seat.value}"
         if self.kind == DISCARD:
+            if state.config.discard_draws:
+                return f"discard & draw: {state.name(self.card)}"
             return f"discard {state.name(self.card)}"
         bits = [f"play {state.name(self.card)}"]
         if self.courtier >= 0:

@@ -40,7 +40,9 @@ nothing. Turn order is clockwise; the first player is chosen at random.
    circle. There is no way to play a card from hand straight into a seat.
 2. **Move** — free, no card: take an outer courtier and install them in an
    *empty* seat of their estate.
-3. **Discard** a card.
+3. **Discard & Draw** — discard a card and draw a replacement at once. If the
+   deck is empty the discard pile, the card just thrown included, is shuffled
+   in first. (`--discard-no-draw` restores the plain discard.)
 
 An **occupied** seat can only be taken with a promotion card; the sitting
 courtier is bumped to the outer circle.

@@ -37,6 +37,9 @@ class EvalRng:
     so evaluating the same action twice always gives the same board.
     """
 
+    #: Marks a lookahead: nothing that would show a bot a hidden card happens.
+    lookahead = True
+
     def randint(self, a: int, b: int) -> int:
         return a if a % 2 else a + 1  # an odd result: the save fails
 
@@ -183,7 +186,16 @@ def apply_action(state: GameState, player: int, action: Action, rng, deciders=No
 
     if action.kind == DISCARD:
         state.discard.append(action.card)
-        state.note(f"P{player} discards {state.name(action.card)}")
+        # Discard & Draw: the card is replaced at once -- from the deck, or a
+        # reshuffled discard pile if the deck is out. A bot's lookahead does
+        # not draw: the replacement is unknown, and drawing it in a clone would
+        # show the bot the top of the deck.
+        drew = False
+        if state.config.discard_draws and not getattr(rng, "lookahead", False):
+            before = len(hand)
+            draw(state, player, rng)
+            drew = len(hand) > before
+        state.note(f"P{player} discards {state.name(action.card)}{' and draws' if drew else ''}")
         return
 
     card = state.card(action.card)
