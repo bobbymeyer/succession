@@ -48,7 +48,7 @@ function Opponent({ view, player }: { view: View; player: Player }) {
   if (view.winners.includes(player.seat)) classes.push("winner");
   const shown = Math.min(player.hand, 7);
   return (
-    <div className={classes.join(" ")} aria-label={playerName(view, player.seat)}>
+    <div className={classes.join(" ")} data-player={player.seat} aria-label={playerName(view, player.seat)}>
       <div className="who">
         <strong>P{player.seat}</strong> {tierName(player.tier)}
         {player.skips_next_turn && <span className="flag">Skips next turn</span>}

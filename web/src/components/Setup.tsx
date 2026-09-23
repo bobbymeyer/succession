@@ -5,13 +5,16 @@ import { useUi } from "../art";
 
 interface Props {
   options: TableOptions;
+  saved: number | null; // finished games kept in this browser; null if storage is off
   onDeal(players: string[], seed?: number): void;
   onLoad(record: GameRecord): void;
+  onExport(): void;
+  onClear(): void;
 }
 
 const DEFAULT_BOTS = ["naive", "greedy", "strategic"];
 
-export function Setup({ options, onDeal, onLoad }: Props) {
+export function Setup({ options, saved, onDeal, onLoad, onExport, onClear }: Props) {
   const bots = options.player_types.filter((t) => t !== "human");
   const [table, setTable] = useState<string[]>(DEFAULT_BOTS);
   const [seed, setSeed] = useState("");
@@ -105,6 +108,26 @@ export function Setup({ options, onDeal, onLoad }: Props) {
           Load
         </button>
       </details>
+
+      {saved ? (
+        <details className="load">
+          <summary>
+            Your games ({saved} finished in this browser)
+          </summary>
+          <p className="hint">
+            Download them as the simulator's own log -- <code>python -m succession analyze games.csv</code> -- to set
+            human results beside the bots'.
+          </p>
+          <div className="buttons">
+            <button type="button" onClick={onExport}>
+              Download games as CSV
+            </button>
+            <button type="button" onClick={() => window.confirm(`Forget all ${saved} games?`) && onClear()}>
+              Forget them
+            </button>
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

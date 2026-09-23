@@ -10,6 +10,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from succession.analysis import summarize
+from succession.logsink import read_rows
 from succession.webapi import Table, options
 
 
@@ -78,6 +80,41 @@ class TableTests(unittest.TestCase):
         self.assertEqual(len(loaded), 1)
         self.assertEqual(loaded[0]["prompt"], updates[-1]["prompt"])
         self.assertEqual(loaded[0]["view"], updates[-1]["view"])
+
+    def test_updates_say_who_moved(self):
+        table = Table()
+        updates = json.loads(table.new_game(json.dumps({"seed": 5})))
+        n = len(table.session.tiers)
+        for u in updates:
+            self.assertIn(u["actor"], range(-1, n))
+        # Bot turns before the human's first move each name a bot.
+        human = table.session.humans[0]
+        self.assertTrue(all(u["actor"] != human for u in updates))
+
+    def test_export_is_a_log_analyze_reads(self):
+        import tempfile
+
+        records = []
+        for seed, players in ((1, None), (2, ["human", "strategic"]), (3, None)):
+            table = Table()
+            request = {"seed": seed} if players is None else {"seed": seed, "players": players}
+            play_out(table, json.loads(table.new_game(json.dumps(request))), random.Random(seed))
+            records.append(table.session.record())
+        unfinished = Table()
+        json.loads(unfinished.new_game(json.dumps({"seed": 4})))
+        records.append(unfinished.session.record())
+
+        text = Table().export(json.dumps(records))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "games.csv"
+            path.write_text(text)
+            rows = read_rows(path)
+        self.assertEqual(len(rows), 3)  # the unfinished game is left out
+        summary = summarize(rows)
+        # Four seats, two seats, four seats: the two-player game's blank
+        # columns are not players.
+        self.assertEqual(sum(summary["seats_by_tier"].values()), 10)
+        self.assertEqual(summary["seats_by_tier"]["human"], 3)
 
     def test_options(self):
         data = json.loads(options())

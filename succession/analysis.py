@@ -13,9 +13,11 @@ TIER_ORDER = ("naive", "greedy", "strategic")
 
 
 def _tiers(row: dict[str, Any]) -> list[str]:
+    # A log that mixes table sizes leaves the seats a smaller table did not
+    # have blank; the players end at the first empty one.
     out = []
     i = 0
-    while f"p{i}_tier" in row:
+    while row.get(f"p{i}_tier") not in (None, ""):
         out.append(row[f"p{i}_tier"])
         i += 1
     return out

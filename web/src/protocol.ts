@@ -85,6 +85,7 @@ export interface Update {
   seat: number;
   view: View;
   log: string[];
+  actor: number; // whose move this update shows; -1 before anyone's
   prompt: Prompt | null;
   result: Result | null;
 }
@@ -99,9 +100,14 @@ export interface TableOptions {
 export type Request =
   | { type: "new"; players: string[]; seed?: number }
   | { type: "answer"; choice: number }
-  | { type: "load"; record: GameRecord };
+  | { type: "load"; record: GameRecord }
+  | { type: "export"; records: GameRecord[] };
+
+/** The requests that play the game; each answers with updates. */
+export type GameRequest = Exclude<Request, { type: "export" }>;
 
 export type WorkerMessage =
   | { type: "ready"; options: TableOptions; python: string }
   | { type: "updates"; id: number; updates: Update[] }
+  | { type: "text"; id: number; text: string }
   | { type: "error"; id: number | null; message: string };

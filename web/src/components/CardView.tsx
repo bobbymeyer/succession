@@ -61,6 +61,7 @@ export function CardView({ card, size = "md", live = false, selected = false, on
   return (
     <div
       className={classes.join(" ")}
+      data-uid={card.uid}
       onPointerEnter={(e) => e.pointerType === "mouse" && hover(card)}
       onPointerLeave={(e) => e.pointerType === "mouse" && hover(null)}
     >

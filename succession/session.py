@@ -140,6 +140,8 @@ class GameSession:
         self.timeout = False
         self.over = False
         self.prompt: Optional[Prompt] = None
+        #: Whose turn was played last (or skipped), for a front end to animate.
+        self.last_actor = -1
 
         # The action being resolved when a human was asked mid-card, the game
         # as it stood just before it, and the answers collected for it so far.
@@ -168,6 +170,7 @@ class GameSession:
 
         player = state.current
         if not start_turn(state, self.rng):
+            self.last_actor = player
             return None
         actions = legal_actions(state, player)
         seat = self.seats[player]
@@ -227,6 +230,7 @@ class GameSession:
             self._snapshot = copy.deepcopy((self.state, self.rng.getstate()))
             self._answers = {}
         self._resolving = (player, action)
+        self.last_actor = player
         for seat in self.humans:
             self.seats[seat].answers = list(self._answers.get(seat, ()))
 

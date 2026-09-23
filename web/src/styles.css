@@ -256,3 +256,40 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   .my-agenda { width: auto; }
   .my-agenda .card { --w: var(--w-xs); }
 }
+
+/* -- the latest move, while the bots think -------------------------------- */
+.prompt .latest { font-family: var(--serif); font-size: 1.05rem; color: var(--gold-bright); }
+
+/* -- the end of the game -------------------------------------------------- */
+.game-over {
+  width: min(94vw, 46rem);
+  max-height: 92vh;
+  background: var(--rail);
+  color: var(--ink);
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  padding: 20px 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.game-over::backdrop { background: rgba(5, 8, 14, 0.7); }
+.game-over[open] { animation: rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+@keyframes rise { from { transform: translateY(16px); opacity: 0; } }
+.game-over h2 { font-family: var(--serif); font-size: 1.9rem; text-transform: none; letter-spacing: 0; color: var(--gold-bright); margin: 0; }
+.game-over h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); font-family: inherit; margin: 16px 0 8px; }
+.standings { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 10px; }
+.standings li { display: flex; gap: 10px; align-items: center; padding: 8px; border: 1px solid var(--line); border-radius: 10px; }
+.standings li.won { border-color: var(--gold-bright); background: rgba(240, 200, 101, 0.12); }
+.standings img { width: 56px; border-radius: 4px; flex: none; }
+.badge { display: inline-block; margin-top: 4px; padding: 1px 8px; border-radius: 999px; background: var(--gold); color: var(--cloth-deep); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.final-court { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.final-court li { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: 0.7rem; color: var(--muted); }
+.final-court .thumb { display: block; width: 100%; aspect-ratio: 496 / 692; padding: 0; border: none; border-radius: 5px; overflow: hidden; background: var(--parchment); }
+.final-court .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.final-court .thumb.vacant { background: none; border: 1px dashed var(--line); }
+.export { margin-top: 12px; color: var(--muted); }
+.export summary { cursor: pointer; }
+code { font-family: ui-monospace, monospace; font-size: 0.85em; color: var(--ink); }
+@media (max-width: 560px) {
+  .final-court { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .game-over h2 { font-size: 1.5rem; }
+}

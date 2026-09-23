@@ -9,6 +9,7 @@ type PyTable = {
   new_game(request: string): string;
   answer(choice: number): string;
   load(record: string): string;
+  export(records: string): string;
 };
 
 let table: PyTable | null = null;
@@ -54,6 +55,10 @@ self.onmessage = async (event: MessageEvent) => {
   await ready;
   if (!table) return; // boot failed and already said so
   try {
+    if (data.type === "export") {
+      post({ type: "text", id: data.id, text: table.export(JSON.stringify(data.records)) });
+      return;
+    }
     let json: string;
     if (data.type === "new") json = table.new_game(JSON.stringify({ players: data.players, seed: data.seed }));
     else if (data.type === "answer") json = table.answer(data.choice);

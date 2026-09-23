@@ -10,6 +10,7 @@ show the bots moving one at a time at whatever pace it likes:
     {"seat": 2,                 # whose eyes `view` is through (-1: nobody's)
      "view": {...},             # session.view(seat)
      "log": ["[t4] P1 ..."],    # log lines new since the previous update
+     "actor": 1,                # whose move this update shows (-1: nobody's yet)
      "prompt": {...} | null,    # the question waiting on a human, if any
      "result": {...} | null}    # set once the game is over
 
@@ -24,6 +25,7 @@ from typing import Optional
 
 from .agendas import AGENDAS
 from .bots import BOT_TIERS
+from .logsink import csv_text, row
 from .session import HUMAN, OVER, GameSession, Prompt
 from .state import Config
 
@@ -74,6 +76,23 @@ class Table:
     def record(self) -> str:
         return json.dumps(self._live().record())
 
+    def export(self, records: str) -> str:
+        """Finished games as the CSV `python -m succession analyze` reads.
+
+        Each record is replayed and logged by the simulator's own code, so a
+        game played in the browser is a row like any batch run's. Unfinished
+        records are skipped.
+        """
+
+        rows, width = [], 0
+        for record in json.loads(records):
+            session = GameSession.replay(record, trace=False)
+            if not session.over:
+                continue
+            rows.append(row(session.result(game_id=len(rows)), session.config))
+            width = max(width, session.config.num_players)
+        return csv_text(rows, width)
+
     # -- plumbing -----------------------------------------------------------
     def _live(self) -> GameSession:
         if self.session is None:
@@ -102,6 +121,7 @@ class Table:
             "seat": seat,
             "view": session.view(seat),
             "log": new,
+            "actor": session.last_actor,
             "prompt": None,
             "result": None,
         }

@@ -32,7 +32,7 @@ python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
 python -m succession play                              # take a seat against the bots
-python -m unittest discover -s tests                   # 138 rule, session and print tests
+python -m unittest discover -s tests                   # 140 rule, session and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -160,7 +160,27 @@ the table has done since: each courtier's live estate, faith, house and origin
 under the card, changed ones in red, and any Defense they carry. Click any card
 to see it full size.
 
-Still to come: animation, and publishing to GitHub Pages.
+Cards move the way they would on a table: a card played from your hand glides
+to where it lands, a bot's card flies out of that bot's place, and whatever
+just moved glows for a moment. The bot speed setting paces it (Instant turns
+it off, as does the system's reduced-motion setting).
+
+**Human games are playtest data.** Every finished game is kept in the browser
+as its record -- seed, rules, and each decision -- and "Download games as CSV"
+replays them through the simulator and writes the same log `run` does, one row
+per game, with `human` as a tier:
+
+```bash
+python -m succession analyze games.csv              # humans beside the bots
+python -m succession analyze games.csv batch.csv    # or pooled with a batch run
+```
+
+A log may mix table sizes; seats a smaller table did not have are left blank.
+The end-of-game screen also copies or downloads the one game's record, which
+`python -m succession play --replay` or the page's "Load a saved game" plays
+back move for move.
+
+Still to come: publishing to GitHub Pages.
 
 ## The bots
 

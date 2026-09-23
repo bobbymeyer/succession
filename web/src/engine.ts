@@ -1,11 +1,11 @@
 // The page's handle on the worker: send a request, get back its updates.
 
-import type { Request, TableOptions, Update, WorkerMessage } from "./protocol";
+import type { GameRecord, GameRequest, Request, TableOptions, Update, WorkerMessage } from "./protocol";
 
 export class Engine {
   private worker: Worker;
   private next = 1;
-  private waiting = new Map<number, { resolve: (u: Update[]) => void; reject: (e: Error) => void }>();
+  private waiting = new Map<number, { resolve: (value: unknown) => void; reject: (e: Error) => void }>();
   readonly ready: Promise<{ options: TableOptions; python: string }>;
 
   constructor() {
@@ -26,6 +26,7 @@ export class Engine {
         this.waiting.delete(message.id);
         if (!call) return;
         if (message.type === "updates") call.resolve(message.updates);
+        else if (message.type === "text") call.resolve(message.text);
         else call.reject(new Error(message.message));
       };
       this.worker.onerror = (event) => reject(new Error(event.message || "the game engine failed to start"));
@@ -35,10 +36,19 @@ export class Engine {
     this.worker.postMessage({ type: "boot", base });
   }
 
-  send(request: Request): Promise<Update[]> {
+  send(request: GameRequest): Promise<Update[]> {
+    return this.call(request);
+  }
+
+  /** Finished games as the CSV `python -m succession analyze` reads. */
+  exportCsv(records: GameRecord[]): Promise<string> {
+    return this.call({ type: "export", records });
+  }
+
+  private call<T>(request: Request): Promise<T> {
     const id = this.next++;
-    return new Promise((resolve, reject) => {
-      this.waiting.set(id, { resolve, reject });
+    return new Promise<T>((resolve, reject) => {
+      this.waiting.set(id, { resolve: resolve as (value: unknown) => void, reject });
       this.worker.postMessage({ ...request, id });
     });
   }

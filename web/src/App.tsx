@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
+import { EMPTY, measure, play, type Snapshot } from "./flip";
+import { clearGames, download, saveGame, savedGames } from "./history";
 import { build, cardIsLive, choose, clickCard, FIELDS, seatIsLive, type Selection } from "./moves";
-import type { Card, GameRecord, Request, TableOptions, Update } from "./protocol";
+import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./protocol";
 import { playerName, readableLog, visibleCards } from "./names";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
+import { GameOver, headline } from "./components/GameOver";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { PickPanel, TurnPanel } from "./components/PromptPanel";
 import { Setup } from "./components/Setup";
@@ -22,6 +25,11 @@ function savedSpeed(): Speed {
   return "Normal";
 }
 
+/** How long a card takes to cross the table: most of the pause between moves. */
+function glide(speed: Speed): number {
+  return Math.min(600, SPEEDS[speed] * 0.7);
+}
+
 export function App() {
   const engine = useMemo(() => new Engine(), []);
   const [options, setOptions] = useState<TableOptions | null>(null);
@@ -37,6 +45,8 @@ export function App() {
   const [selection, setSelection] = useState<Selection>({});
   const [picked, setPicked] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [overOpen, setOverOpen] = useState(false);
+  const [saved, setSaved] = useState<number | null>(() => savedGames().length);
 
   const [art, setArt] = useState<Art>(NO_ART);
   const [inspecting, setInspecting] = useState<Card | null>(null);
@@ -54,11 +64,16 @@ export function App() {
   const timer = useRef<number | null>(null);
   const speedRef = useRef(speed);
   speedRef.current = speed;
+  // Where every card was just before the update now being drawn.
+  const before = useRef<{ snapshot: Snapshot; actor: number } | null>(null);
+  const fresh = useRef(false);
 
   const pump = useCallback(() => {
     timer.current = null;
     const next = queue.current.shift();
     if (!next) return;
+    before.current = { snapshot: fresh.current ? EMPTY : measure(), actor: next.actor };
+    fresh.current = false;
     setShown(next);
     setLog((l) => [...l, ...next.log.map((text) => ({ text, view: next.view }))]);
     setPending(queue.current.length);
@@ -68,18 +83,35 @@ export function App() {
     }
   }, []);
 
+  useLayoutEffect(() => {
+    const from = before.current;
+    before.current = null;
+    if (from && shown) play(from.snapshot, from.actor, shown.view.you, glide(speedRef.current));
+  }, [shown]);
+
+  // A finished game is kept for export, and its results come up once the
+  // last bot move has played out.
+  const result = shown?.result ?? null;
+  useEffect(() => {
+    if (!result || pending > 0) return;
+    setSaved(saveGame(result.record) ? savedGames().length : null);
+    setOverOpen(true);
+  }, [result, pending]);
+
   const send = useCallback(
-    async (request: Request, fresh = false) => {
-      if (fresh) preload(art);
+    async (request: GameRequest, restart = false) => {
+      if (restart) preload(art);
       setBusy(true);
       setError(null);
       try {
         const updates = await engine.send(request);
-        if (fresh) {
+        if (restart) {
           if (timer.current !== null) window.clearTimeout(timer.current);
           timer.current = null;
           queue.current = [];
+          fresh.current = true;
           setLog([]);
+          setOverOpen(false);
         }
         queue.current.push(...updates);
         setPending(queue.current.length);
@@ -96,6 +128,14 @@ export function App() {
     [engine, pump, art],
   );
 
+  const exportCsv = useCallback(async () => {
+    try {
+      download("succession-games.csv", await engine.exportCsv(savedGames()), "text/csv");
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [engine]);
+
   const changeSpeed = (s: Speed) => {
     setSpeed(s);
     try {
@@ -108,6 +148,11 @@ export function App() {
       window.clearTimeout(timer.current);
       pump();
     }
+  };
+
+  const toSetup = () => {
+    setOverOpen(false);
+    setShown(null);
   };
 
   if (fatal) {
@@ -130,8 +175,14 @@ export function App() {
         <main className="app">
           <Setup
             options={options}
+            saved={saved}
             onDeal={(players, seed) => send({ type: "new", players, seed }, true)}
             onLoad={(record: GameRecord) => send({ type: "load", record }, true)}
+            onExport={exportCsv}
+            onClear={() => {
+              clearGames();
+              setSaved(savedGames().length);
+            }}
           />
           {error && <p className="error">{error}</p>}
         </main>
@@ -139,12 +190,13 @@ export function App() {
     );
   }
 
-  const { view, prompt, result } = shown;
+  const { view, prompt } = shown;
   const waiting = pending > 0 || busy;
   const cards = visibleCards(view);
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
   const pickPrompt = !waiting && prompt && prompt.kind !== "turn" ? prompt : null;
   const builder = turnPrompt ? build(turnPrompt.options, selection) : null;
+  const latest = log.length ? readableLog(log[log.length - 1].view, log[log.length - 1].text) : null;
 
   let act: Interaction = NO_INTERACTION;
   if (turnPrompt && builder) {
@@ -178,106 +230,107 @@ export function App() {
       setError("Couldn't copy to the clipboard.");
     }
   };
+  // The same table again, freshly dealt.
+  const playAgain = () => {
+    if (!result) return;
+    send({ type: "new", players: result.record.config.players as string[] }, true);
+  };
 
   return (
     <UiContext.Provider value={ui}>
-    <main className="app game">
-      <Board view={view} act={act} />
-      <div className="rail">
-      <aside className="side">
-        <div className="controls">
-          <label>
-            Bot speed{" "}
-            <select aria-label="Bot speed" value={speed} onChange={(e) => changeSpeed(e.target.value as Speed)}>
-              {Object.keys(SPEEDS).map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-          <button type="button" onClick={() => setShown(null)}>
-            New game
-          </button>
-        </div>
-
-        {result ? (
-          <div className="prompt over" data-testid="game-over">
-            <div className="winners">
-              {result.winners.map((w) => {
-                const agenda = view.players[w].agenda;
-                const src = agenda && art.agenda(agenda.name);
-                return src ? <img key={w} src={src} alt={agenda!.name} /> : null;
-              })}
-            </div>
-            <h2>
-              {result.timeout
-                ? "No winner"
-                : result.winners.includes(view.you)
-                  ? "You win"
-                  : `${result.winners.map((w) => playerName(view, w)).join(" and ")} ${result.winners.length > 1 ? "win" : "wins"}`}
-            </h2>
-            <ul>
-              {view.players.map((p) => (
-                <li key={p.seat}>
-                  {playerName(view, p.seat)}: {p.agenda?.name}
-                  {result.winners.includes(p.seat) ? " (won)" : ""}
-                </li>
-              ))}
-            </ul>
-            <p>After {result.turns} turns.</p>
-            <div className="buttons">
-              <button type="button" className="primary" onClick={() => setShown(null)}>
+      <main className="app game">
+        <Board view={view} act={act} />
+        <div className="rail">
+          <aside className="side">
+            <div className="controls">
+              <label>
+                Bot speed{" "}
+                <select aria-label="Bot speed" value={speed} onChange={(e) => changeSpeed(e.target.value as Speed)}>
+                  {Object.keys(SPEEDS).map((s) => (
+                    <option key={s}>{s}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" onClick={toSetup}>
                 New game
               </button>
-              <button type="button" onClick={copyRecord}>
-                {copied ? "Copied" : "Copy game record"}
-              </button>
             </div>
-          </div>
-        ) : turnPrompt && builder ? (
-          <TurnPanel
-            view={view}
-            prompt={turnPrompt}
-            builder={builder}
-            cards={cards}
-            onChoose={(value) => setSelection(choose(builder, value))}
-            onSelectAction={(a) => setSelection(Object.fromEntries(FIELDS.map((f) => [f, a[f]])))}
-            onConfirm={() => builder.chosen && send({ type: "answer", choice: builder.chosen.index })}
-            onReset={() => setSelection({})}
-          />
-        ) : pickPrompt ? (
-          <PickPanel
-            prompt={pickPrompt}
-            picked={picked}
-            onPick={setPicked}
-            onConfirm={() => picked !== null && send({ type: "answer", choice: picked })}
-          />
-        ) : (
-          <div className="prompt">
-            <p className="thinking">{playerName(view, view.current)} to play…</p>
-          </div>
-        )}
-        {error && <p className="error">{error}</p>}
-        {hovered && (
-          <div className="preview" aria-hidden="true">
-            <CardDetail card={hovered} />
-          </div>
-        )}
-      </aside>
 
-      <section className="log" aria-label="Game log">
-          <h2>Log</h2>
-          <ol reversed>
-            {log
-              .slice()
-              .reverse()
-              .map((line, i) => (
-                <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
-              ))}
-          </ol>
-      </section>
-      </div>
-      <Inspect card={inspecting} onClose={() => setInspecting(null)} />
-    </main>
+            {result && !waiting ? (
+              <div className="prompt over" data-testid="game-over">
+                <h2>{headline(view, result)}</h2>
+                <div className="buttons">
+                  <button type="button" className="primary" onClick={() => setOverOpen(true)}>
+                    Results
+                  </button>
+                  <button type="button" onClick={playAgain}>
+                    Play again
+                  </button>
+                </div>
+              </div>
+            ) : turnPrompt && builder ? (
+              <TurnPanel
+                view={view}
+                prompt={turnPrompt}
+                builder={builder}
+                cards={cards}
+                onChoose={(value) => setSelection(choose(builder, value))}
+                onSelectAction={(a) => setSelection(Object.fromEntries(FIELDS.map((f) => [f, a[f]])))}
+                onConfirm={() => builder.chosen && send({ type: "answer", choice: builder.chosen.index })}
+                onReset={() => setSelection({})}
+              />
+            ) : pickPrompt ? (
+              <PickPanel
+                prompt={pickPrompt}
+                picked={picked}
+                onPick={setPicked}
+                onConfirm={() => picked !== null && send({ type: "answer", choice: picked })}
+              />
+            ) : (
+              <div className="prompt" aria-live="polite">
+                {latest && <p className="latest">{latest}</p>}
+                <p className="thinking">{playerName(view, view.current)} to play…</p>
+              </div>
+            )}
+            {error && <p className="error">{error}</p>}
+            {hovered && (
+              <div className="preview" aria-hidden="true">
+                <CardDetail card={hovered} />
+              </div>
+            )}
+          </aside>
+
+          <section className="log" aria-label="Game log">
+            <h2>Log</h2>
+            <ol reversed>
+              {log
+                .slice()
+                .reverse()
+                .map((line, i) => (
+                  <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
+                ))}
+            </ol>
+          </section>
+        </div>
+        <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+        {result && (
+          <GameOver
+            open={overOpen && !waiting}
+            view={view}
+            result={result}
+            saved={saved}
+            copied={copied}
+            onClose={() => setOverOpen(false)}
+            onPlayAgain={playAgain}
+            onNewTable={toSetup}
+            onCopy={copyRecord}
+            onDownloadRecord={() =>
+              download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
+            }
+            onExport={exportCsv}
+          />
+        )}
+      </main>
     </UiContext.Provider>
   );
 }
