@@ -44,7 +44,7 @@ test("a game played by clicking the board", async ({ page }) => {
   await start(page, errors);
   // Anything lit up is a real choice; keep clicking until a move is built.
   const choices = page.locator(
-    "button.card.live, .seat-button, .prompt .buttons button:not(.primary):not(:text-is('Back')), [data-testid=pick-option]",
+    ".card.live > button.face, button.chair:not(:disabled), .seat-take, .prompt .buttons button:not(.primary):not(:text-is('Back')), [data-testid=pick-option]",
   );
   for (let i = 0; i < 2000; i++) {
     await settled(page);

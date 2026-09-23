@@ -1,48 +1,106 @@
 import type { Attribute, Card } from "../protocol";
+import { useUi } from "../art";
 
-const ATTRIBUTES: Attribute[] = ["estate", "faith", "family", "origin"];
+export const ATTRIBUTES: Attribute[] = ["estate", "faith", "family", "origin"];
+
+export type CardSize = "xs" | "sm" | "md" | "lg";
 
 interface Props {
   card: Card;
+  size?: CardSize;
   live?: boolean;
   selected?: boolean;
   onClick?: () => void;
+  /** Courtiers: print the live attributes under the card. */
+  caption?: boolean;
 }
 
-// A plain card: name, type line, and a courtier's live attributes. The card
-// art replaces most of this in the next milestone; the attributes stay, since
-// they change in play and the printed card cannot show that.
-export function CardView({ card, live = false, selected = false, onClick }: Props) {
+/** A courtier's attributes as they stand now; changed ones are marked. */
+export function Attributes({ card }: { card: Card }) {
+  return (
+    <span className="attrs">
+      {ATTRIBUTES.map((a) => {
+        const changed = card.changed?.includes(a);
+        return (
+          <span key={a} className={changed ? "attr changed" : "attr"} title={changed ? `${a} changed in play` : a}>
+            {card[a] as string}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function Face({ card }: { card: Card }) {
+  const { art } = useUi();
+  const src = art.card(card.name);
+  if (src) return <img src={src} alt={card.name} draggable={false} />;
+  // No picture (the game rendition was not built): set the card in type.
+  return (
+    <span className="text-face">
+      <span className="card-name">{card.name}</span>
+      <span className="card-type">
+        {card.kind}
+        {card.estate ? ` · ${card.estate}` : ""}
+      </span>
+    </span>
+  );
+}
+
+// One card on the table. Clicking a lit-up card makes a choice; clicking any
+// other card picks it up to look at. The printed card shows printed
+// attributes, so a courtier whose attributes changed in play says so on top.
+export function CardView({ card, size = "md", live = false, selected = false, onClick, caption = false }: Props) {
+  const { inspect, hover } = useUi();
   const courtier = card.kind === "Courtier";
-  const classes = ["card", `kind-${card.kind.toLowerCase()}`];
+  const changed = courtier && (card.changed?.length ?? 0) > 0;
+  const classes = ["card", `size-${size}`];
   if (live) classes.push("live");
   if (selected) classes.push("selected");
-  const body = (
-    <>
-      <span className="card-name">{card.name}</span>
-      {courtier ? (
-        <span className="card-attrs">
-          {ATTRIBUTES.map((a) => (
-            <span key={a} className={card.changed?.includes(a) ? "attr changed" : "attr"} title={a}>
-              {card[a] as string}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <span className="card-type">
-          {card.kind}
-          {card.estate ? ` · ${card.estate}` : ""}
-        </span>
-      )}
-      {card.defense && <span className="card-defense">Shielded: {card.defense.name}</span>}
-    </>
-  );
-  if (!onClick || !live) {
-    return <div className={classes.join(" ")}>{body}</div>;
-  }
+
   return (
-    <button type="button" className={classes.join(" ")} onClick={onClick} aria-pressed={selected}>
-      {body}
-    </button>
+    <div
+      className={classes.join(" ")}
+      onPointerEnter={(e) => e.pointerType === "mouse" && hover(card)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && hover(null)}
+    >
+      <button
+        type="button"
+        className="face"
+        aria-pressed={live ? selected : undefined}
+        aria-label={live ? `Choose ${card.name}` : `Look at ${card.name}`}
+        onClick={live && onClick ? onClick : () => inspect(card)}
+      >
+        <Face card={card} />
+        {changed && <span className="changed-flag">Changed</span>}
+      </button>
+      {live && (
+        <button type="button" className="look" aria-label={`Look at ${card.name}`} onClick={() => inspect(card)}>
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M10.5 10.5 14 14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </button>
+      )}
+      {card.defense && (
+        <button type="button" className="shield" onClick={() => inspect(card.defense!)} title="Look at the defense">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M8 1.5 2.5 3.5v4c0 3.3 2.4 5.9 5.5 7 3.1-1.1 5.5-3.7 5.5-7v-4Z" fill="currentColor" />
+          </svg>
+          {card.defense.name}
+        </button>
+      )}
+      {caption && courtier && <Attributes card={card} />}
+    </div>
+  );
+}
+
+/** The back of a card: someone's hand, the deck, a hidden agenda. */
+export function CardBack({ size = "xs", label }: { size?: CardSize; label?: string }) {
+  const { art } = useUi();
+  return (
+    <div className={`card back size-${size}`} aria-label={label} role={label ? "img" : undefined}>
+      <span className="face">{art.back ? <img src={art.back} alt="" draggable={false} /> : <span className="text-face" />}</span>
+    </div>
   );
 }

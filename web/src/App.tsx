@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Engine } from "./engine";
+import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { build, cardIsLive, choose, clickCard, FIELDS, seatIsLive, type Selection } from "./moves";
-import type { GameRecord, Request, TableOptions, Update } from "./protocol";
+import type { Card, GameRecord, Request, TableOptions, Update } from "./protocol";
 import { playerName, readableLog, visibleCards } from "./names";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
+import { CardDetail, Inspect } from "./components/Inspect";
 import { PickPanel, TurnPanel } from "./components/PromptPanel";
 import { Setup } from "./components/Setup";
 
@@ -36,8 +38,15 @@ export function App() {
   const [picked, setPicked] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [art, setArt] = useState<Art>(NO_ART);
+  const [inspecting, setInspecting] = useState<Card | null>(null);
+  const [hovered, setHovered] = useState<Card | null>(null);
+  const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered }), [art]);
+
   useEffect(() => {
     engine.ready.then((r) => setOptions(r.options)).catch((e: Error) => setFatal(e.message));
+    // Without pictures the game still plays, drawn as type.
+    loadArt().then(setArt, () => setArt(NO_ART));
   }, [engine]);
 
   // Bot turns arrive all at once; show them one at a time.
@@ -61,6 +70,7 @@ export function App() {
 
   const send = useCallback(
     async (request: Request, fresh = false) => {
+      if (fresh) preload(art);
       setBusy(true);
       setError(null);
       try {
@@ -83,7 +93,7 @@ export function App() {
         setCopied(false);
       }
     },
-    [engine, pump],
+    [engine, pump, art],
   );
 
   const changeSpeed = (s: Speed) => {
@@ -116,14 +126,16 @@ export function App() {
   }
   if (!shown) {
     return (
-      <main className="app">
-        <Setup
-          options={options}
-          onDeal={(players, seed) => send({ type: "new", players, seed }, true)}
-          onLoad={(record: GameRecord) => send({ type: "load", record }, true)}
-        />
-        {error && <p className="error">{error}</p>}
-      </main>
+      <UiContext.Provider value={ui}>
+        <main className="app">
+          <Setup
+            options={options}
+            onDeal={(players, seed) => send({ type: "new", players, seed }, true)}
+            onLoad={(record: GameRecord) => send({ type: "load", record }, true)}
+          />
+          {error && <p className="error">{error}</p>}
+        </main>
+      </UiContext.Provider>
     );
   }
 
@@ -168,8 +180,10 @@ export function App() {
   };
 
   return (
+    <UiContext.Provider value={ui}>
     <main className="app game">
       <Board view={view} act={act} />
+      <div className="rail">
       <aside className="side">
         <div className="controls">
           <label>
@@ -187,6 +201,13 @@ export function App() {
 
         {result ? (
           <div className="prompt over" data-testid="game-over">
+            <div className="winners">
+              {result.winners.map((w) => {
+                const agenda = view.players[w].agenda;
+                const src = agenda && art.agenda(agenda.name);
+                return src ? <img key={w} src={src} alt={agenda!.name} /> : null;
+              })}
+            </div>
             <h2>
               {result.timeout
                 ? "No winner"
@@ -236,8 +257,14 @@ export function App() {
           </div>
         )}
         {error && <p className="error">{error}</p>}
+        {hovered && (
+          <div className="preview" aria-hidden="true">
+            <CardDetail card={hovered} />
+          </div>
+        )}
+      </aside>
 
-        <section className="log" aria-label="Game log">
+      <section className="log" aria-label="Game log">
           <h2>Log</h2>
           <ol reversed>
             {log
@@ -247,8 +274,10 @@ export function App() {
                 <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
               ))}
           </ol>
-        </section>
-      </aside>
+      </section>
+      </div>
+      <Inspect card={inspecting} onClose={() => setInspecting(null)} />
     </main>
+    </UiContext.Provider>
   );
 }

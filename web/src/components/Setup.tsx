@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { GameRecord, TableOptions } from "../protocol";
 import { tierName } from "../names";
+import { useUi } from "../art";
 
 interface Props {
   options: TableOptions;
@@ -17,6 +18,7 @@ export function Setup({ options, onDeal, onLoad }: Props) {
   const [record, setRecord] = useState("");
   const [recordError, setRecordError] = useState("");
   const size = table.length + 1;
+  const { art } = useUi();
 
   const deal = () => {
     const n = seed.trim() === "" ? undefined : Number(seed);
@@ -33,8 +35,13 @@ export function Setup({ options, onDeal, onLoad }: Props) {
 
   return (
     <div className="setup">
-      <h1>Court of Succession</h1>
-      <p className="lede">A playtest table. You against the simulator's bots; seats are drawn at random.</p>
+      <header className="title">
+        {art.back && <img src={art.back} alt="" />}
+        <div>
+          <h1>Court of Succession</h1>
+          <p className="lede">A playtest table: you against the simulator's bots. Seats are drawn at random.</p>
+        </div>
+      </header>
 
       <h2>The table</h2>
       <ol className="seats-list">

@@ -32,7 +32,7 @@ python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
 python -m succession play                              # take a seat against the bots
-python -m unittest discover -s tests                   # 136 rule, session and print tests
+python -m unittest discover -s tests                   # 138 rule, session and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -61,6 +61,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/boardsheet.py` | Lays the seat cards out as a print-at-home PDF |
 | `tools/webbundle.py` | Zips `succession/` for the browser game to run under Pyodide |
 | `web/` | The browser game: React on top of this package running in Pyodide |
+| `web/public/cards/` | The game's card pictures and `manifest.json`, from `mpcfill.py --profile game` |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
@@ -148,8 +149,18 @@ Both `dev` and `build` first copy Pyodide out of `node_modules` and zip
 build. The site uses relative paths throughout: it can be served from any
 directory, or iframed into another page.
 
-This is milestone 2 of the browser game -- a working but bare board. Card art,
-animation and publishing to GitHub Pages come next.
+The cards on the table are the printed cards: `tools/mpcfill.py --profile game`
+composes every card, agenda and seat exactly as the print deck does, trims and
+shrinks them to 496px WebP (3.8 MB for all 100), and writes them with a
+`manifest.json` into `web/public/cards/`. They are committed, like the
+`docs/cards/` thumbnails, so building the site needs no Pillow; re-run the
+profile after changing a card or its art, and `tests/test_game_cards.py` fails
+until you do. A printed card shows printed attributes, so the page adds what
+the table has done since: each courtier's live estate, faith, house and origin
+under the card, changed ones in red, and any Defense they carry. Click any card
+to see it full size.
+
+Still to come: animation, and publishing to GitHub Pages.
 
 ## The bots
 

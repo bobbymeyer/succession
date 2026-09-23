@@ -1,6 +1,7 @@
-import type { View } from "../protocol";
-import { playerName } from "../names";
-import { CardView } from "./CardView";
+import type { Card, Player, View } from "../protocol";
+import { useUi } from "../art";
+import { playerName, tierName } from "../names";
+import { CardBack, CardView } from "./CardView";
 
 export interface Interaction {
   cardLive(uid: number): boolean;
@@ -20,74 +21,139 @@ export const NO_INTERACTION: Interaction = {
   onSeat: () => {},
 };
 
+/** A hidden agenda is a card back; a revealed one is the agenda card. */
+function Agenda({ player, size }: { player: Player; size: "xs" | "sm" | "md" }) {
+  const { art, inspect } = useUi();
+  if (!player.agenda) return <CardBack size={size} label="Hidden agenda" />;
+  const src = art.agenda(player.agenda.name);
+  // An agenda is not a card in the engine's sense; show it as one to look at.
+  const asCard: Card = { uid: -1, name: player.agenda.name, kind: "Agenda", estate: null };
+  return (
+    <button
+      type="button"
+      className={`card agenda-card size-${size}`}
+      onClick={() => src && inspect(asCard)}
+      aria-label={`Agenda: ${player.agenda.name}`}
+    >
+      <span className="face">
+        {src ? <img src={src} alt={player.agenda.name} /> : <span className="text-face">{player.agenda.name}</span>}
+      </span>
+    </button>
+  );
+}
+
+function Opponent({ view, player }: { view: View; player: Player }) {
+  const classes = ["opponent"];
+  if (player.seat === view.current && !view.over) classes.push("current");
+  if (view.winners.includes(player.seat)) classes.push("winner");
+  const shown = Math.min(player.hand, 7);
+  return (
+    <div className={classes.join(" ")} aria-label={playerName(view, player.seat)}>
+      <div className="who">
+        <strong>P{player.seat}</strong> {tierName(player.tier)}
+        {player.skips_next_turn && <span className="flag">Skips next turn</span>}
+      </div>
+      <div className="holding">
+        <div className="fan" aria-label={`${player.hand} cards in hand`}>
+          {Array.from({ length: shown }, (_, i) => (
+            <CardBack key={i} />
+          ))}
+          <span className="count">{player.hand}</span>
+        </div>
+        <Agenda player={player} size="xs" />
+      </div>
+      <div className="agenda-name">{player.agenda ? player.agenda.name : "Agenda hidden"}</div>
+    </div>
+  );
+}
+
 export function Board({ view, act }: { view: View; act: Interaction }) {
-  const card = (c: Parameters<typeof CardView>[0]["card"]) => (
+  const { art } = useUi();
+  const card = (c: Card, size: "sm" | "md" | "lg", caption = true) => (
     <CardView
       key={c.uid}
       card={c}
+      size={size}
+      caption={caption}
       live={act.cardLive(c.uid)}
       selected={act.cardSelected(c.uid)}
       onClick={() => act.onCard(c.uid)}
     />
   );
+  const opponents = view.players.filter((p) => p.seat !== view.you);
+  const me = view.you >= 0 ? view.players[view.you] : null;
 
   return (
     <div className="board">
-      <section className="players" aria-label="Players">
-        {view.players.map((p) => {
-          const classes = ["player"];
-          if (p.seat === view.current && !view.over) classes.push("current");
-          if (p.seat === view.you) classes.push("you");
-          if (view.winners.includes(p.seat)) classes.push("winner");
-          return (
-            <div key={p.seat} className={classes.join(" ")}>
-              <strong>{playerName(view, p.seat)}</strong>
-              <span>{p.hand} in hand</span>
-              <span className="agenda">{p.agenda ? p.agenda.name : "Agenda hidden"}</span>
-              {p.skips_next_turn && <span className="flag">Skips next turn</span>}
+      <section className="opponents" aria-label="Opponents">
+        {opponents.map((p) => (
+          <Opponent key={p.seat} view={view} player={p} />
+        ))}
+        <div className="status" aria-label="Table status">
+          <div className="piles">
+            <div className="pile">
+              <CardBack size="xs" label="Deck" />
+              <span>
+                Deck <strong>{view.deck}</strong>
+              </span>
             </div>
-          );
-        })}
+            <div className="pile">
+              {view.discard_top ? (
+                <CardView card={view.discard_top} size="xs" />
+              ) : (
+                <div className="card size-xs empty-slot" />
+              )}
+              <span>
+                Discard <strong>{view.discard}</strong>
+              </span>
+            </div>
+          </div>
+          <div className="turn">
+            Turn <strong>{view.turn}</strong>
+            {view.removed > 0 && <span className="muted"> · {view.removed} out of the game</span>}
+          </div>
+          {view.frozen.board ? (
+            <div className="seal">Siege: nothing on the board can change</div>
+          ) : view.frozen.inner ? (
+            <div className="seal">Quarantine: the inner circle is sealed</div>
+          ) : null}
+        </div>
       </section>
 
-      <section className="status" aria-label="Table status">
-        <span>Turn {view.turn}</span>
-        <span>Deck {view.deck}</span>
-        <span>
-          Discard {view.discard}
-          {view.discard_top ? ` (top: ${view.discard_top.name})` : ""}
-        </span>
-        {view.removed > 0 && <span>Out of the game {view.removed}</span>}
-        {view.frozen.board ? (
-          <span className="flag">Siege: the whole board is sealed</span>
-        ) : view.frozen.inner ? (
-          <span className="flag">Quarantine: the inner circle is sealed</span>
-        ) : null}
-      </section>
-
-      <section className="inner" aria-label="Inner circle">
-        <h2>Inner circle</h2>
+      <section className="court" aria-label="Inner circle">
+        <h2>The inner circle</h2>
         <div className="seats">
           {view.seats.map((s) => {
             const live = act.seatLive(s.seat);
             const classes = ["seat", `estate-${s.estate.toLowerCase()}`];
             if (live) classes.push("live");
             if (act.seatSelected(s.seat)) classes.push("selected");
-            const label = (
-              <span className="seat-name">
-                {s.seat} <small>{s.estate}</small>
-              </span>
-            );
+            if (!s.courtier) classes.push("vacant");
+            const src = art.seat(s.seat);
             return (
               <div key={s.seat} className={classes.join(" ")}>
-                {live ? (
-                  <button type="button" className="seat-button" onClick={() => act.onSeat(s.seat)}>
-                    {label}
-                  </button>
+                <div className="seat-label">
+                  {s.seat}
+                  <small>{s.estate}</small>
+                </div>
+                {s.courtier ? (
+                  card(s.courtier, "md")
                 ) : (
-                  label
+                  <button
+                    type="button"
+                    className="card size-md chair"
+                    disabled={!live}
+                    onClick={() => act.onSeat(s.seat)}
+                    aria-label={live ? `Choose ${s.seat}` : `${s.seat}, empty`}
+                  >
+                    <span className="face">{src ? <img src={src} alt="" /> : <span className="text-face">Empty</span>}</span>
+                  </button>
                 )}
-                {s.courtier ? card(s.courtier) : <div className="empty">Empty</div>}
+                {s.courtier && live && (
+                  <button type="button" className="seat-take" onClick={() => act.onSeat(s.seat)}>
+                    Choose {s.seat}
+                  </button>
+                )}
               </div>
             );
           })}
@@ -95,16 +161,23 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
       </section>
 
       <section className="outer" aria-label="Outer circle">
-        <h2>Outer circle</h2>
-        <div className="row">{view.outer.length ? view.outer.map(card) : <div className="empty">Nobody</div>}</div>
+        <h2>The outer circle</h2>
+        <div className="row">
+          {view.outer.length ? view.outer.map((c) => card(c, "sm")) : <p className="muted">Nobody waits outside.</p>}
+        </div>
       </section>
 
-      {view.you >= 0 && (
+      {me && (
         <section className="mine" aria-label="Your hand">
-          <h2>
-            Your hand <span className="agenda">Agenda: {view.players[view.you].agenda?.name}</span>
-          </h2>
-          <div className="row">{view.hand.length ? view.hand.map(card) : <div className="empty">No cards</div>}</div>
+          <div className="my-agenda">
+            <h2>Agenda</h2>
+            <Agenda player={me} size="md" />
+            <div className="agenda-name">{me.agenda?.name}</div>
+          </div>
+          <div className="my-hand">
+            <h2>Your hand</h2>
+            <div className="row">{view.hand.length ? view.hand.map((c) => card(c, "lg", false)) : <p className="muted">No cards.</p>}</div>
+          </div>
         </section>
       )}
     </div>
