@@ -1,6 +1,7 @@
 // The move builder is pure logic; test it without a browser.
 import { expect, test } from "@playwright/test";
 import { build, choose, clickCard } from "../src/moves";
+import { readableLog } from "../src/names";
 import type { Action } from "../src/protocol";
 
 let index = 0;
@@ -56,4 +57,18 @@ test("a click on something that is not a choice does nothing", () => {
   const b = build(ACTIONS, {});
   expect(clickCard(ACTIONS, b, 99)).toBeNull();
   expect(clickCard(ACTIONS, b, 1)).toBeNull(); // a target, but no card chosen yet
+});
+
+test("the log speaks to you in the second person", () => {
+  const view = {
+    you: 1,
+    players: [0, 1, 2].map((seat) => ({ seat, tier: seat === 1 ? "human" : "greedy", hand: 5, agenda: null, skips_next_turn: false })),
+  } as unknown as Parameters<typeof readableLog>[0];
+  expect(readableLog(view, "[t3] P1 discards Famine and draws")).toBe("You discard Famine and draw");
+  expect(readableLog(view, "[t3] P2 discards Famine and draws")).toBe("P2 Greedy bot discards Famine and draws");
+  expect(readableLog(view, "[t4] P1 moves Horse Breaker into Lord General")).toBe("You move Horse Breaker into Lord General");
+  expect(readableLog(view, "[t5] P1 play Promotion")).toBe("You play Promotion");
+  expect(readableLog(view, "[t5] P0 play Promotion")).toBe("P0 Greedy bot plays Promotion");
+  expect(readableLog(view, "[t6] Horse Breaker survives P1's choice")).toBe("Horse Breaker survives your choice");
+  expect(readableLog(view, "[t7] P1 skips their turn")).toBe("You skip your turn");
 });

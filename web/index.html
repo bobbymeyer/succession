@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Court of Succession</title>
+    <script>
+      // Every path in this page is relative to its own address, which must end
+      // in a slash. Opened without one -- /succession behind a proxy, say --
+      // they would all miss, so add it before anything else loads.
+      if (!/\/$|\.[a-z0-9]+$/i.test(location.pathname)) {
+        location.replace(location.pathname + "/" + location.search + location.hash);
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

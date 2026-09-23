@@ -47,21 +47,31 @@ the CSVs.
 ## 2. At bobbymeyer.com/succession/ (Netlify)
 
 bobbymeyer.com is served by Netlify, which can proxy a path to another site.
-Add these lines to the site's `_redirects` file (or the equivalent
-`[[redirects]]` blocks in `netlify.toml`):
+The site's `netlify.toml` carries one rule for it:
 
+```toml
+[[redirects]]
+  from = "/succession/*"
+  to = "https://bobbymeyer.github.io/succession/:splat"
+  status = 200
+  force = true
 ```
-/succession   /succession/                                    301!
-/succession/* https://bobbymeyer.github.io/succession/:splat  200!
-```
+
+(or, in a `_redirects` file,
+`/succession/*  https://bobbymeyer.github.io/succession/:splat  200!`).
+Netlify strips a trailing slash before it matches, so the splat covers the bare
+`/succession` as well, with an empty splat.
 
 The game then lives at `https://www.bobbymeyer.com/succession/` on your own
 domain -- linkable, full-page, and embeddable from any page on the site with
 the iframe above pointed at `/succession/` instead.
 
-The first line matters. The game loads its files relative to its own address,
-so it must be opened with the trailing slash; without that rule GitHub's own
-redirect would send visitors to the github.io address.
+The game loads its files relative to its own address, so that address has to
+end in a slash. Don't add a rule redirecting `/succession` to `/succession/`:
+Netlify matches a rule with or without the trailing slash, so it would redirect
+`/succession/` to itself forever. Instead the one rule gives both addresses the
+game's page, and the page adds a missing slash itself before it loads anything
+(`web/index.html`; `web/tests/proxy.spec.ts` plays a game that way).
 
 ## Updating it
 

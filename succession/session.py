@@ -53,7 +53,8 @@ COURTIER = "courtier"    # a purge: name one of `options`, courtier uids
 DISCARD = "discard"      # a forced discard: throw away one of `options`, hand uids
 OVER = "over"            # nothing left to decide
 
-RECORD_VERSION = 1
+#: 2: Discard & Draw. A version-1 record was played before it, without the draw.
+RECORD_VERSION = 2
 
 
 class NeedChoice(Exception):
@@ -277,10 +278,14 @@ class GameSession:
     def replay(cls, record: dict, *, bot_factory: Callable = make_bot, trace: bool = True) -> "GameSession":
         """Rebuild a game from `record()`, stopped where the record ends."""
 
-        if record.get("version") != RECORD_VERSION:
-            raise ValueError(f"unsupported record version {record.get('version')!r}")
+        version = record.get("version")
+        if version not in (1, RECORD_VERSION):
+            raise ValueError(f"unsupported record version {version!r}")
+        config = dict(record["config"])
+        if version == 1:
+            config.setdefault("discard_draws", False)
         session = cls(
-            config_from_json(record["config"]),
+            config_from_json(config),
             record["seed"],
             bot_factory=bot_factory,
             trace=trace,

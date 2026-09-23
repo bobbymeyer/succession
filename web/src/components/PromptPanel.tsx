@@ -29,7 +29,7 @@ function label(field: Field, value: Value, view: View, cards: Map<number, Card>)
     return cards.get(value as number)?.name ?? `card ${value}`;
   }
   if (field === "target_player") return playerName(view, value as number);
-  if (field === "kind") return { play: "Play it", discard: "Discard it", move: "Move", pass: "Pass" }[value as string] ?? String(value);
+  if (field === "kind") return { play: "Play it", discard: "Discard & Draw", move: "Move", pass: "Pass" }[value as string] ?? String(value);
   return String(value);
 }
 

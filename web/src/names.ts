@@ -19,11 +19,19 @@ export function playerName(view: View, seat: number): string {
 
 /** The engine's log says "P2"; the page says who that is. */
 export function readableLog(view: View, line: string): string {
-  return line
-    .replace(/^\[t\d+\]\s*/, "")
-    // The engine logs every seat as "P2 play ..."; "You play", "P2 plays".
-    .replace(/^P(\d+) play /, (_, n: string) => (Number(n) === view.you ? `P${n} play ` : `P${n} plays `))
-    .replace(/\bP(\d+)\b/g, (_, n: string) => (Number(n) < view.players.length ? playerName(view, Number(n)) : `P${n}`));
+  const you = `P${view.you}`;
+  return (
+    line
+      .replace(/^\[t\d+\]\s*/, "")
+      // The engine writes "P2 play ...", "P2 discards ... and draws": third
+      // person for everyone. Put the verbs right for the seat that is "You".
+      .replace(/^P(\d+) play /, (_, n: string) => (Number(n) === view.you ? `P${n} play ` : `P${n} plays `))
+      .replace(new RegExp(`^${you} (discard|move|skip|name)s\\b`), `${you} $1`)
+      .replace(new RegExp(`^(${you} discard .*) and draws$`), "$1 and draw")
+      .replace(new RegExp(`\\b${you}'s\\b`, "g"), "your")
+      .replace(new RegExp(`^(${you} skip) their turn`), "$1 your turn")
+      .replace(/\bP(\d+)\b/g, (_, n: string) => (Number(n) < view.players.length ? playerName(view, Number(n)) : `P${n}`))
+  );
 }
 
 /** Every card the viewer can see, by uid. */

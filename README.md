@@ -32,7 +32,7 @@ python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
 python -m succession play                              # take a seat against the bots
-python -m unittest discover -s tests                   # 140 rule, session and print tests
+python -m unittest discover -s tests                   # 147 rule, session and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -267,6 +267,26 @@ Win rate by agenda    Barbarian Conquest              31.6%
    | with a strategic bot | 16.0% | 53.6 turns |
 
 Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
+
+### Discard & Draw
+
+Those numbers predate Discard & Draw, which replaces a discarded card at once.
+It changes less than it sounds: about a quarter of all turns are discards, but
+hands mostly sit at the limit of seven, where the top-of-turn draw was skipped
+anyway, so the replacement mostly arrives a turn sooner rather than adding a
+card. Over 4,000 games each (`--seed 1`, default mix):
+
+| | plain discard | Discard & Draw |
+|---|---|---|
+| strategic / greedy / naive | 58.3% / 27.6% / 10.4% | 59.9% / 26.0% / 10.0% |
+| spread across the eight agendas | 7.0 points | 4.6 points |
+| Barbarian Conquest (the top agenda) | 31.5% | 29.3% |
+| mean game length | 54.3 turns | 54.3 turns |
+| double wins | 6.6% | 5.9% |
+
+The bots price a discard the way they always have: their lookahead does not
+draw the replacement, which would show them the top of the deck.
+`--discard-no-draw` plays the old rule.
 
 ### One cynic makes the faiths divide evenly
 

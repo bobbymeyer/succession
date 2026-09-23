@@ -943,7 +943,8 @@ class TestDeckAndTurns(unittest.TestCase):
                 seen.append(len(state.hands[player]))
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=8)
+        # Without Discard & Draw, so the discards do not refill the hand.
+        config = Config(max_turns=8, discard_draws=False)
         play_game(config, seed=1, bot_factory=lambda t, s, r: Watcher(s, r))
         # Dealt five, drew a sixth before being asked to act.
         self.assertEqual(seen[0], config.starting_hand + 1)
@@ -961,13 +962,61 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=10)
+        config = Config(max_turns=10, discard_draws=False)
         result = play_game(
             config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True
         )
         state = result.final_state
         dealt = config.starting_hand * config.num_players
         self.assertEqual(len(state.deck), len(state.cards) - dealt - result.turns)
+
+    def test_discard_and_draw_keeps_the_hand_whole(self):
+        """A turn spent discarding draws a replacement straight away."""
+
+        state = setup_game(Config(), random.Random(3))
+        player = state.current
+        draw(state, player, random.Random(0))  # the top-of-turn draw
+        hand_before = list(state.hands[player])
+        deck_top = state.deck[-1]
+        thrown = hand_before[0]
+        apply_action(state, player, Action(DISCARD, card=thrown), random.Random(0))
+        self.assertEqual(len(state.hands[player]), len(hand_before))
+        self.assertNotIn(thrown, state.hands[player])
+        self.assertEqual(state.discard[-1], thrown)
+        self.assertIn(deck_top, state.hands[player])  # the replacement is the top card
+
+    def test_two_cards_leave_the_deck_per_discard_turn(self):
+        class Discarder:
+            observes = False
+
+            def __init__(self, seat, rng):
+                self.rng = rng
+
+            def choose(self, state, player, actions):
+                return next(a for a in actions if a.kind == DISCARD)
+
+        config = Config(max_turns=4)
+        result = play_game(config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True)
+        dealt = config.starting_hand * config.num_players
+        # One at the top of each turn, one to replace each discard.
+        self.assertEqual(len(result.final_state.deck), len(result.final_state.cards) - dealt - 2 * result.turns)
+
+    def test_a_bots_lookahead_does_not_draw_the_replacement(self):
+        """The replacement is hidden: a lookahead must not see the deck's top."""
+
+        state = setup_game(Config(), random.Random(3))
+        player = state.current
+        thrown = state.hands[player][0]
+        after = simulate(state, player, Action(DISCARD, card=thrown))
+        self.assertEqual(len(after.hands[player]), len(state.hands[player]) - 1)
+        self.assertEqual(after.deck, state.deck)
+
+    def test_the_move_is_called_discard_and_draw(self):
+        state = setup_game(Config(), random.Random(3))
+        uid = state.hands[state.current][0]
+        self.assertEqual(Action(DISCARD, card=uid).describe(state), f"discard & draw: {state.name(uid)}")
+        plain = setup_game(Config(discard_draws=False), random.Random(3))
+        self.assertEqual(Action(DISCARD, card=uid).describe(plain), f"discard {plain.name(uid)}")
 
     def test_a_player_always_has_a_legal_action(self):
         state = setup_game(Config(), random.Random(5))
