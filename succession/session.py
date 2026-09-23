@@ -39,7 +39,7 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Callable, Optional
 
 from .actions import Action, legal_actions
-from .agendas import AGENDAS_BY_KEY
+from .agendas import AGENDAS_BY_KEY, conditions, count_board, rules_for
 from .bots import make_bot
 from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
 from .enums import SEAT_ESTATE, SEATS
@@ -339,6 +339,10 @@ def card_json(state: GameState, uid: int) -> dict:
         data["changed"] = [a for a in attributes if getattr(live, a) != getattr(printed, a)]
         #: Attributes whose one mutation has been spent.
         data["mutated"] = [a for a in attributes if live.mutated(a)]
+        #: A barbarian's people, printed on the card beside their origin. It
+        #: goes with the printed origin: whoever Goes Native has no people.
+        people = printed.people.value
+        data["people"] = people if people != "None" and live.origin == printed.origin else None
         defense = state.defenses.get(uid)
         data["defense"] = card_json(state, defense) if defense is not None else None
     return data
@@ -368,11 +372,23 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
     is over all agendas are shown.
     """
 
+    counts, rules = count_board(state), rules_for(state)
+
     def agenda(p: int) -> Optional[dict]:
         if p != player and not state.revealed[p] and not over:
             return None
         a = AGENDAS_BY_KEY[state.agendas[p]]
-        return {"key": a.key, "name": a.name}
+        status = conditions(counts, a, rules)
+        return {
+            "key": a.key,
+            "name": a.name,
+            "met": all(c.met for c in status),
+            #: Clause by clause: what the board has, what the agenda needs.
+            "status": [
+                {"label": c.label, "have": c.have, "need": c.need, "met": c.met, "waiting": c.waiting}
+                for c in status
+            ],
+        }
 
     seats = []
     for seat in SEATS:

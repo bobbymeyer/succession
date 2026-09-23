@@ -218,6 +218,39 @@ class Views(unittest.TestCase):
         self.assertTrue(all(p["agenda"] for p in view["players"]))
 
 
+class AgendaStatus(unittest.TestCase):
+    def test_every_clause_met_is_exactly_the_win(self):
+        from succession.agendas import AGENDAS, conditions, count_board, rules_for, satisfied_counts
+
+        checked = won = 0
+        for seed in range(12):
+            for config in (Config(players=(HUMAN, "greedy", "naive")), Config(players=(HUMAN, "naive"), faith_seats=5, house_rising_requires_preferred_seat=False)):
+                session = GameSession(config, seed)
+                rng = random.Random(seed)
+                prompt = session.advance()
+                while True:
+                    counts, rules = count_board(session.state), rules_for(session.state)
+                    for agenda in AGENDAS:
+                        status = conditions(counts, agenda, rules)
+                        self.assertEqual(all(c.met for c in status), satisfied_counts(counts, agenda, rules), agenda.key)
+                        checked += 1
+                        won += all(c.met for c in status)
+                    if prompt.kind == OVER:
+                        break
+                    choice = rng.randrange(len(prompt.options)) if prompt.kind == TURN else rng.choice(prompt.options)
+                    prompt = session.answer(choice)
+        self.assertGreater(won, 0)  # the met side was exercised, not only the unmet
+
+    def test_the_view_carries_your_agenda_status(self):
+        session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), 3)
+        prompt = session.advance()
+        mine = session.view(prompt.player)["players"][prompt.player]["agenda"]
+        self.assertFalse(mine["met"])
+        self.assertTrue(mine["status"])
+        for clause in mine["status"]:
+            self.assertEqual(set(clause), {"label", "have", "need", "met", "waiting"})
+
+
 class Terminal(unittest.TestCase):
     def test_a_whole_game_from_the_terminal(self):
         session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), 21)

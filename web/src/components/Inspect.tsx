@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Card } from "../protocol";
 import { useUi } from "../art";
-import { ATTRIBUTES } from "./CardView";
+import { attributeText, GRID } from "./CardView";
 
 /** A card at full size, and what the printed card cannot say. */
 export function CardDetail({ card }: { card: Card }) {
@@ -13,11 +13,11 @@ export function CardDetail({ card }: { card: Card }) {
       {src ? <img className="detail-image" src={src} alt={card.name} /> : <h3>{card.name}</h3>}
       {courtier && (
         <dl className="live-attrs">
-          {ATTRIBUTES.map((a) => (
+          {GRID.map(({ attribute: a, label }) => (
             <div key={a} className={card.changed?.includes(a) ? "changed" : ""}>
-              <dt>{a === "family" ? "house" : a}</dt>
+              <dt>{label}</dt>
               <dd>
-                {card[a] as string}
+                {a === "origin" && card.people ? `${card.origin} · ${card.people}` : attributeText(card, a)}
                 {card.changed?.includes(a) && <small> changed in play</small>}
                 {card.mutated?.includes(a) && <small> · its one mutation is spent</small>}
               </dd>

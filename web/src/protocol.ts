@@ -17,6 +17,7 @@ export interface Card {
   origin?: string;
   changed?: Attribute[];
   mutated?: Attribute[];
+  people?: string | null; // a barbarian's people, beside their origin
   defense?: Card | null;
 }
 
@@ -26,11 +27,26 @@ export interface Seat {
   courtier: Card | null;
 }
 
+export interface Clause {
+  label: string;
+  have: number;
+  need: number;
+  met: boolean;
+  waiting: number | null; // helpful courtiers in the outer circle
+}
+
+export interface Agenda {
+  key: string;
+  name: string;
+  met: boolean;
+  status: Clause[];
+}
+
 export interface Player {
   seat: number;
   tier: string; // "human", "naive", "greedy", "strategic"
   hand: number;
-  agenda: { key: string; name: string } | null; // null while hidden
+  agenda: Agenda | null; // null while hidden
   skips_next_turn: boolean;
 }
 

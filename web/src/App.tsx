@@ -6,6 +6,7 @@ import { clearGames, download, saveGame, savedGames } from "./history";
 import { build, cardIsLive, choose, clickCard, FIELDS, seatIsLive, type Selection } from "./moves";
 import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./protocol";
 import { playerName, readableLog, visibleCards } from "./names";
+import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { GameOver, headline } from "./components/GameOver";
 import { FrameControls } from "./components/Frame";
@@ -47,6 +48,7 @@ export function App() {
   const [picked, setPicked] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [overOpen, setOverOpen] = useState(false);
+  const [tab, setTab] = useState<"agenda" | "log">("agenda");
   const [saved, setSaved] = useState<number | null>(() => savedGames().length);
 
   const [art, setArt] = useState<Art>(NO_ART);
@@ -237,6 +239,55 @@ export function App() {
     send({ type: "new", players: result.record.config.players as string[] }, true);
   };
 
+  // Your agenda and the log share one slot under the question, a tab each.
+  const myAgenda = view.you >= 0 ? view.players[view.you].agenda : null;
+  const showing = myAgenda ? tab : "log";
+  const tabs = (
+    <section className="tabbed" aria-label="Agenda and log">
+      <div className="tabs" role="tablist">
+        {myAgenda && (
+          <button
+            type="button"
+            role="tab"
+            id="tab-agenda"
+            aria-selected={showing === "agenda"}
+            aria-controls="tabpanel"
+            onClick={() => setTab("agenda")}
+          >
+            Agenda{" "}
+            <small className={myAgenda.met ? "met" : ""}>
+              {myAgenda.status.filter((c) => c.met).length}/{myAgenda.status.length}
+            </small>
+          </button>
+        )}
+        <button
+          type="button"
+          role="tab"
+          id="tab-log"
+          aria-selected={showing === "log"}
+          aria-controls="tabpanel"
+          onClick={() => setTab("log")}
+        >
+          Log
+        </button>
+      </div>
+      <div className="tabpanel" id="tabpanel" role="tabpanel" aria-labelledby={`tab-${showing}`}>
+        {showing === "agenda" && myAgenda ? (
+          <AgendaTracker agenda={myAgenda} />
+        ) : (
+          <ol className="log" reversed aria-label="Game log">
+            {log
+              .slice()
+              .reverse()
+              .map((line, i) => (
+                <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
+              ))}
+          </ol>
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
@@ -303,18 +354,7 @@ export function App() {
               </div>
             )}
           </aside>
-
-          <section className="log" aria-label="Game log">
-            <h2>Log</h2>
-            <ol reversed>
-              {log
-                .slice()
-                .reverse()
-                .map((line, i) => (
-                  <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
-                ))}
-            </ol>
-          </section>
+          {tabs}
         </div>
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {result && (
