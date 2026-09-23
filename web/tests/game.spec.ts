@@ -110,3 +110,14 @@ test("the end of a game: results, export, play again", async ({ page }) => {
   await expect(page.getByText("Your games (1 finished in this browser)")).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test("every screen credits bobbymeyer.com", async ({ page }) => {
+  await page.goto("./");
+  const credit = page.getByRole("link", { name: "designed by bobbymeyer." });
+  await expect(credit).toBeVisible({ timeout: 90_000 });
+  await expect(credit).toHaveAttribute("href", "https://bobbymeyer.com");
+  await expect(credit).toHaveAttribute("target", "_top");
+  await page.getByTestId("deal").click();
+  await page.locator(".all-moves, [data-testid=pick-option], [data-testid=game-over]").first().waitFor();
+  await expect(page.getByRole("link", { name: "designed by bobbymeyer." })).toBeVisible();
+});

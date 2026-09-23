@@ -362,3 +362,8 @@ a.button:hover { border-color: var(--gold); }
 .tabs small.met { color: var(--gold-bright); }
 .tabpanel { padding: 12px; }
 .tabpanel .log { margin: 0; padding: 0; list-style: none; max-height: 24rem; overflow: auto; font-size: 0.84rem; }
+
+/* -- the credit, at the foot of every screen -------------------------------- */
+.credit { grid-column: 1 / -1; margin: 28px 0 4px; text-align: center; font-size: 0.8rem; }
+.credit a { color: var(--muted); text-decoration: none; letter-spacing: 0.02em; }
+.credit a:hover, .credit a:focus-visible { color: var(--gold-bright); text-decoration: underline; text-underline-offset: 3px; }

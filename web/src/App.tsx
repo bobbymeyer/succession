@@ -8,6 +8,7 @@ import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./prot
 import { playerName, readableLog, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
+import { Credit } from "./components/Credit";
 import { GameOver, headline } from "./components/GameOver";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
@@ -188,6 +189,7 @@ export function App() {
             }}
           />
           {error && <p className="error">{error}</p>}
+          <Credit />
         </main>
       </UiContext.Provider>
     );
@@ -356,6 +358,7 @@ export function App() {
           </aside>
           {tabs}
         </div>
+        <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {result && (
           <GameOver
