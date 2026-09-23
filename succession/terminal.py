@@ -99,7 +99,7 @@ def format_result(session: GameSession) -> str:
         you = " (you)" if p["seat"] in session.humans else ""
         lines.append(f"P{p['seat']} {p['tier']}{you}: {p['agenda']['name']}{mark}")
     if session.timeout:
-        lines.append(f"No winner after {session.state.turn} turns.")
+        lines.append(f"Chaos grips the empire. No one wins after {session.state.turn} turns.")
     else:
         lines.append(f"Game over after {session.state.turn} turns.")
     return "\n".join(lines)

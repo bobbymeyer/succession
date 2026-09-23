@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function headline(view: View, result: Result): string {
-  if (result.timeout) return "No one takes the throne";
+  if (result.timeout) return "Chaos grips the empire";
   if (result.winners.includes(view.you)) return result.winners.length > 1 ? "You share the win" : "You win";
   const names = result.winners.map((w) => playerName(view, w));
   return `${names.join(" and ")} ${names.length > 1 ? "win" : "wins"}`;
@@ -46,9 +46,10 @@ export function GameOver(props: Props) {
   return (
     <section className="prompt over" data-testid="game-over" aria-labelledby="over-title">
       <h2 id="over-title">{headline(view, result)}</h2>
+      {result.timeout && <p className="no-winner">No one wins.</p>}
       <p className="muted">
-        After {result.turns} turns ({rounds} rounds).
-        {result.timeout ? " The turn limit ran out with no agenda met." : ""}
+        {result.timeout ? "The turn limit ran out" : "After"} {result.turns} turns ({rounds} rounds)
+        {result.timeout ? " with no agenda met." : "."}
       </p>
 
       {result.winners.map((w) => {

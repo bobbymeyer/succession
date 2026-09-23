@@ -233,6 +233,7 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 /* -- the end of the game ------------------------------------------------- */
 /* The winner turns their agenda over... */
 .prompt.over h2 { margin: 0 0 2px; }
+.prompt.over .no-winner { font-family: var(--serif); font-size: 1.1rem; margin: 0 0 4px; }
 .revealed-agenda {
   --seat: var(--gold-bright);
   display: flex; gap: 12px; align-items: center; margin: 10px 0 12px;

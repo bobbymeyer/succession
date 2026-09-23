@@ -141,7 +141,7 @@ test("the end of a game: the reveal, export, play again", async ({ page }) => {
   await expect(page.locator("dialog[open]")).toHaveCount(0);
   const revealed = await dialog.getByTestId("revealed-agenda").count();
   if (revealed) await expect(page.locator(".seat.won-by")).not.toHaveCount(0);
-  else await expect(dialog).toContainText("No one takes the throne");
+  else await expect(dialog).toContainText("Chaos grips the empire");
 
   // The finished game downloads as a log `analyze` reads.
   await dialog.getByText("Save this game").click();
