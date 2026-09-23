@@ -11,7 +11,7 @@ import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
-import { GameOver, headline } from "./components/GameOver";
+import { GameOver, winningCourt } from "./components/GameOver";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { DiscardPile, StatusPanel } from "./components/Status";
@@ -89,7 +89,6 @@ export function App() {
   const [selection, setSelection] = useState<Selection>({});
   const [picked, setPicked] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
-  const [overOpen, setOverOpen] = useState(false);
   const [tab, setTab] = useState<"agenda" | "log">("agenda");
   const [dropping, setDropping] = useState<Set<string>>(() => new Set());
   const dragging = useRef<Drag | null>(null);
@@ -164,13 +163,11 @@ export function App() {
     play(from.snapshot, from.actor, shown.view.you, duration);
   }, [shown]);
 
-  // A finished game is kept for export, and its results come up once the
-  // last bot move has played out.
+  // A finished game is kept for export once the last bot move has played out.
   const result = shown?.result ?? null;
   useEffect(() => {
     if (!result || pending > 0) return;
     setSaved(saveGame(result.record) ? savedGames().length : null);
-    setOverOpen(true);
   }, [result, pending]);
 
   const send = useCallback(
@@ -186,7 +183,6 @@ export function App() {
           queue.current = [];
           fresh.current = true;
           setLog([]);
-          setOverOpen(false);
         }
         queue.current.push(...updates);
         setPending(queue.current.length);
@@ -226,7 +222,6 @@ export function App() {
   };
 
   const toSetup = () => {
-    setOverOpen(false);
     setShown(null);
   };
 
@@ -476,7 +471,7 @@ export function App() {
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
-        <Board view={view} act={act} playing={playing} />
+        <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} />
         <div className="rail">
           <aside className="side">
             <div className="controls">
@@ -497,17 +492,19 @@ export function App() {
             </div>
 
             {result && !waiting ? (
-              <div className="prompt over" data-testid="game-over">
-                <h2>{headline(view, result)}</h2>
-                <div className="buttons">
-                  <button type="button" className="primary" onClick={() => setOverOpen(true)}>
-                    Results
-                  </button>
-                  <button type="button" onClick={playAgain}>
-                    Play again
-                  </button>
-                </div>
-              </div>
+              <GameOver
+                view={view}
+                result={result}
+                saved={saved}
+                copied={copied}
+                onPlayAgain={playAgain}
+                onNewTable={toSetup}
+                onCopy={copyRecord}
+                onDownloadRecord={() =>
+                  download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
+                }
+                onExport={exportCsv}
+              />
             ) : turnPrompt || pickPrompt ? (
               <StatusPanel hint={hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
             ) : (
@@ -528,23 +525,6 @@ export function App() {
         </div>
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
-        {result && (
-          <GameOver
-            open={overOpen && !waiting}
-            view={view}
-            result={result}
-            saved={saved}
-            copied={copied}
-            onClose={() => setOverOpen(false)}
-            onPlayAgain={playAgain}
-            onNewTable={toSetup}
-            onCopy={copyRecord}
-            onDownloadRecord={() =>
-              download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
-            }
-            onExport={exportCsv}
-          />
-        )}
       </main>
     </UiContext.Provider>
   );

@@ -38,7 +38,7 @@ test("a whole game inside another site's iframe", async ({ page, baseURL }) => {
 
   for (let i = 0; i < 400 && (await playFromList(frame)); i++);
 
-  const dialog = frame.getByTestId("game-over-dialog");
+  const dialog = frame.getByTestId("game-over");
   await expect(dialog).toBeVisible();
   await dialog.getByText("Save this game").click();
   const [file] = await Promise.all([page.waitForEvent("download"), dialog.getByTestId("export").click()]);

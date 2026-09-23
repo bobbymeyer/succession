@@ -106,7 +106,19 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
 
 // `playing` is a bot whose card is still on its way to the table: until it
 // lands, it is still that bot's turn as far as anyone watching can tell.
-export function Board({ view, act, playing = null }: { view: View; act: Interaction; playing?: number | null }) {
+// `won` is the court that won the game, each courtier with its winner's
+// colour; they light up and bounce once the game is over.
+export function Board({
+  view,
+  act,
+  playing = null,
+  won,
+}: {
+  view: View;
+  act: Interaction;
+  playing?: number | null;
+  won?: Map<number, string>;
+}) {
   const turn = playing ?? (view.over ? null : view.current);
   const { art } = useUi();
   // Board courtiers are places to drop an action on; hand cards are not.
@@ -153,16 +165,23 @@ export function Board({ view, act, playing = null }: { view: View; act: Interact
       <section className="court" aria-label="Inner circle">
         <h2>The inner circle</h2>
         <div className="seats">
-          {view.seats.map((s) => {
+          {view.seats.map((s, i) => {
             const live = act.seatLive(s.seat);
             const classes = ["seat", `estate-${s.estate.toLowerCase()}`];
+            const winner = s.courtier ? won?.get(s.courtier.uid) : undefined;
+            if (winner) classes.push("won-by");
             if (live) classes.push("live");
             if (act.seatSelected(s.seat)) classes.push("selected");
             if (!s.courtier) classes.push("vacant");
             if (act.dropLive(`seat:${s.seat}`)) classes.push("drop-live");
             const src = art.seat(s.seat);
             return (
-              <div key={s.seat} className={classes.join(" ")} data-drop={`seat:${s.seat}`}>
+              <div
+                key={s.seat}
+                className={classes.join(" ")}
+                data-drop={`seat:${s.seat}`}
+                style={winner ? ({ "--win": winner, "--i": i } as React.CSSProperties) : undefined}
+              >
                 <div className="seat-label">
                   {s.seat}
                   <small>{s.estate}</small>

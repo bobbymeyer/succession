@@ -107,7 +107,7 @@ test("a card dragged onto the discard pile is discarded and replaced", async ({ 
   expect(errors).toEqual([]);
 });
 
-test("the end of a game: results, export, play again", async ({ page }) => {
+test("the end of a game: the reveal, export, play again", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -116,13 +116,16 @@ test("the end of a game: results, export, play again", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("deal").click({ timeout: 90_000 });
 
-  const dialog = page.getByTestId("game-over-dialog");
+  const dialog = page.getByTestId("game-over");
   for (let i = 0; i < 400 && (await playFromList(page)); i++);
 
-  // The results come up on their own, with every agenda turned over.
+  // No window in the way: the winner turns their agenda over in the rail,
+  // and the courtiers who won it light up on the board.
   await expect(dialog).toBeVisible();
-  await expect(dialog.locator(".standings li")).toHaveCount(4);
-  await expect(dialog.locator(".standings li.won")).not.toHaveCount(0);
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  const revealed = await dialog.getByTestId("revealed-agenda").count();
+  if (revealed) await expect(page.locator(".seat.won-by")).not.toHaveCount(0);
+  else await expect(dialog).toContainText("No one takes the throne");
 
   // The finished game downloads as a log `analyze` reads.
   await dialog.getByText("Save this game").click();

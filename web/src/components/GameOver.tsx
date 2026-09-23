@@ -1,15 +1,13 @@
-import { useEffect, useRef } from "react";
+import type { CSSProperties } from "react";
 import type { Result, View } from "../protocol";
 import { useUi } from "../art";
-import { playerName } from "../names";
+import { playerName, seatColour } from "../names";
 
 interface Props {
-  open: boolean;
   view: View;
   result: Result;
   saved: number | null; // games kept in this browser; null if storage is off
   copied: boolean;
-  onClose(): void;
   onPlayAgain(): void;
   onNewTable(): void;
   onCopy(): void;
@@ -24,61 +22,61 @@ export function headline(view: View, result: Result): string {
   return `${names.join(" and ")} ${names.length > 1 ? "win" : "wins"}`;
 }
 
-export function GameOver(props: Props) {
-  const { open, view, result, saved, copied } = props;
-  const { art, inspect } = useUi();
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const d = dialog.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
-  }, [open]);
+/**
+ * Every seated courtier who won the game, with the colour of the winner they
+ * won it for. The board lights these up.
+ */
+export function winningCourt(view: View): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const w of view.winners) {
+    for (const uid of view.players[w]?.agenda?.seated ?? []) {
+      if (!out.has(uid)) out.set(uid, seatColour(w));
+    }
+  }
+  return out;
+}
 
+// The end of the game, in the rail where the question usually is: the winner
+// turns their agenda over, and the court that won it lights up on the board.
+export function GameOver(props: Props) {
+  const { view, result, saved, copied } = props;
+  const { art } = useUi();
   const rounds = Math.ceil(result.turns / view.players.length);
+
   return (
-    <dialog ref={dialog} className="game-over" data-testid="game-over-dialog" onClose={props.onClose} aria-labelledby="over-title">
+    <section className="prompt over" data-testid="game-over" aria-labelledby="over-title">
       <h2 id="over-title">{headline(view, result)}</h2>
       <p className="muted">
         After {result.turns} turns ({rounds} rounds).
         {result.timeout ? " The turn limit ran out with no agenda met." : ""}
       </p>
 
-      <ul className="standings">
-        {view.players.map((p) => {
-          const won = result.winners.includes(p.seat);
-          const src = p.agenda ? art.agenda(p.agenda.name) : null;
-          return (
-            <li key={p.seat} className={won ? "won" : ""}>
-              {src ? <img src={src} alt="" /> : null}
-              <div>
-                <strong>{playerName(view, p.seat)}</strong>
-                <div>{p.agenda?.name}</div>
-                {won && <span className="badge">Winner</span>}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      <h3>The court at the end</h3>
-      <ol className="final-court">
-        {view.seats.map((s) => {
-          const src = s.courtier ? art.card(s.courtier.name) : null;
-          return (
-            <li key={s.seat}>
-              {s.courtier ? (
-                <button type="button" className="thumb" onClick={() => inspect(s.courtier!)} aria-label={`Look at ${s.courtier.name}`}>
-                  {src ? <img src={src} alt="" /> : <span>{s.courtier.name}</span>}
-                </button>
-              ) : (
-                <span className="thumb vacant" />
-              )}
-              <small>{s.seat}</small>
-            </li>
-          );
-        })}
-      </ol>
+      {result.winners.map((w) => {
+        const agenda = view.players[w]?.agenda;
+        if (!agenda) return null;
+        const src = art.agenda(agenda.name);
+        const seated = agenda.seated.length;
+        return (
+          <figure
+            key={w}
+            className="revealed-agenda"
+            data-testid="revealed-agenda"
+            style={{ "--seat": seatColour(w) } as CSSProperties}
+          >
+            <div className="flip" aria-hidden="true">
+              <div className="side back">{art.back ? <img src={art.back} alt="" /> : null}</div>
+              <div className="side front">{src ? <img src={src} alt="" /> : <span className="text-face">{agenda.name}</span>}</div>
+            </div>
+            <figcaption>
+              <span className="who">{w === view.you ? "Your agenda" : `${playerName(view, w)} reveals`}</span>
+              <strong>{agenda.name}</strong>
+              <span className="muted">
+                {seated} {seated === 1 ? "courtier" : "courtiers"} in the inner circle carried it
+              </span>
+            </figcaption>
+          </figure>
+        );
+      })}
 
       <div className="buttons">
         <button type="button" className="primary" onClick={props.onPlayAgain} data-testid="play-again">
@@ -86,9 +84,6 @@ export function GameOver(props: Props) {
         </button>
         <button type="button" onClick={props.onNewTable}>
           Change the table
-        </button>
-        <button type="button" onClick={props.onClose}>
-          Look at the board
         </button>
       </div>
 
@@ -120,6 +115,6 @@ export function GameOver(props: Props) {
           </>
         )}
       </details>
-    </dialog>
+    </section>
   );
 }

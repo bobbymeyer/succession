@@ -39,6 +39,7 @@ export interface Agenda {
   name: string;
   met: boolean;
   status: Clause[];
+  seated: number[]; // uids of the seated courtiers that count toward it
 }
 
 export interface Player {

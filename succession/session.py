@@ -39,7 +39,7 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Callable, Optional
 
 from .actions import Action, legal_actions
-from .agendas import AGENDAS_BY_KEY, conditions, count_board, rules_for
+from .agendas import AGENDAS_BY_KEY, conditions, contributors, count_board, rules_for
 from .bots import make_bot
 from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
 from .enums import SEAT_ESTATE, SEATS
@@ -393,6 +393,8 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
                 {"label": c.label, "have": c.have, "need": c.need, "met": c.met, "waiting": c.waiting}
                 for c in status
             ],
+            #: The seated courtiers that count toward it.
+            "seated": contributors(state, a),
         }
 
     seats = []

@@ -328,6 +328,30 @@ def conditions(
     raise ValueError(f"unknown agenda kind: {kind}")  # pragma: no cover
 
 
+def contributors(state: "GameState", agenda: Agenda) -> list[int]:
+    """The seated courtiers an agenda counts, in seat order.
+
+    For a won agenda these are the courtiers who won it: the family's or the
+    faith's seats, the barbarians, or, for Balance, the whole court.
+    """
+
+    cstate = state.cstate
+    out = []
+    for uid in state.seats.values():
+        if uid is None:
+            continue
+        c = cstate[uid]
+        kind = agenda.kind
+        if (
+            (kind == HOUSE_RISING and c.family.value == agenda.param)
+            or (kind == FAITH_ASCENDANT and c.faith.value == agenda.param)
+            or (kind == CONQUEST and c.origin is Origin.BARBARIAN)
+            or kind == BALANCE
+        ):
+            out.append(uid)
+    return out
+
+
 # --- state-level convenience wrappers --------------------------------------
 def satisfied(state: "GameState", agenda: Agenda) -> bool:
     return satisfied_counts(count_board(state), agenda, rules_for(state))
