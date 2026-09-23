@@ -44,7 +44,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
-from succession.enums import SEAT_ESTATE, Family, Origin, People, Seat  # noqa: E402
+from succession.enums import SEAT_ESTATE, Family, Seat  # noqa: E402
 from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
@@ -380,9 +380,9 @@ def accent_for(card: CardDef) -> tuple[int, int, int]:
 
 def courtier_attributes(card: CardDef) -> list[tuple[str, str]]:
     courtier = COURTIERS_BY_NAME[card.name]
+    # A barbarian is printed as Barbarian: which people they come from is
+    # flavour for the art (tools/make_art_prompts.py), not a rule.
     origin = courtier.origin.value
-    if courtier.origin is Origin.BARBARIAN and courtier.people is not People.NONE:
-        origin = f"{origin} \u00b7 {courtier.people.value}"
     house = "None" if courtier.family is Family.NONE else courtier.family.value
     return [
         ("Estate", courtier.estate.value),

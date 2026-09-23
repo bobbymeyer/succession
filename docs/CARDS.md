@@ -60,14 +60,14 @@ Forty courtiers. These four printed attributes are the whole of what an agenda r
 | <img src="cards/30-risen-from-the-ranks.jpg" alt="Risen from the Ranks" width="132"> | **Risen from the Ranks**<br><sub>Card 30</sub> | Courtier · Military | Military · The One God · None · Imperial |
 | <img src="cards/31-coin-counter-of-the-assembly.jpg" alt="Coin-Counter of the Assembly" width="132"> | **Coin-Counter of the Assembly**<br><sub>Card 31</sub> | Courtier · Merchant | Merchant · The One God · None · Imperial |
 | <img src="cards/32-widow-of-the-temple.jpg" alt="Widow of the Temple" width="132"> | **Widow of the Temple**<br><sub>Card 32</sub> | Courtier · Church | Church · The One God · None · Imperial |
-| <img src="cards/33-priest-of-the-two-horned-god.jpg" alt="Priest of the Two-Horned God" width="132"> | **Priest of the Two-Horned God**<br><sub>Card 33</sub> | Courtier · Church | Church · Mystery Cults · None · Barbarian · Egyptian |
-| <img src="cards/34-master-mason.jpg" alt="Master Mason" width="132"> | **Master Mason**<br><sub>Card 34</sub> | Courtier · Commons | Commons · Mystery Cults · None · Barbarian · Egyptian |
-| <img src="cards/35-cataphract-of-the-iron-bridge.jpg" alt="Cataphract of the Iron Bridge" width="132"> | **Cataphract of the Iron Bridge**<br><sub>Card 35</sub> | Courtier · Military | Military · The One God · None · Barbarian · Persian |
-| <img src="cards/36-caravan-lord-of-the-salt-road.jpg" alt="Caravan-Lord of the Salt Road" width="132"> | **Caravan-Lord of the Salt Road**<br><sub>Card 36</sub> | Courtier · Merchant | Merchant · The One God · None · Barbarian · Persian |
-| <img src="cards/37-hundred-kill-rider.jpg" alt="Hundred-Kill Rider" width="132"> | **Hundred-Kill Rider**<br><sub>Card 37</sub> | Courtier · Military | Military · The One God · None · Barbarian · Scythian |
-| <img src="cards/38-blade-for-any-banner.jpg" alt="Blade for Any Banner" width="132"> | **Blade for Any Banner**<br><sub>Card 38</sub> | Courtier · Military | Military · Mystery Cults · None · Barbarian · Scythian |
-| <img src="cards/39-warlord-of-the-iron-grove.jpg" alt="Warlord of the Iron Grove" width="132"> | **Warlord of the Iron Grove**<br><sub>Card 39</sub> | Courtier · Military | Military · Old Gods · None · Barbarian · German |
-| <img src="cards/40-master-swordsmith.jpg" alt="Master Swordsmith" width="132"> | **Master Swordsmith**<br><sub>Card 40</sub> | Courtier · Commons | Commons · Old Gods · None · Barbarian · German |
+| <img src="cards/33-priest-of-the-two-horned-god.jpg" alt="Priest of the Two-Horned God" width="132"> | **Priest of the Two-Horned God**<br><sub>Card 33</sub> | Courtier · Church | Church · Mystery Cults · None · Barbarian |
+| <img src="cards/34-master-mason.jpg" alt="Master Mason" width="132"> | **Master Mason**<br><sub>Card 34</sub> | Courtier · Commons | Commons · Mystery Cults · None · Barbarian |
+| <img src="cards/35-cataphract-of-the-iron-bridge.jpg" alt="Cataphract of the Iron Bridge" width="132"> | **Cataphract of the Iron Bridge**<br><sub>Card 35</sub> | Courtier · Military | Military · The One God · None · Barbarian |
+| <img src="cards/36-caravan-lord-of-the-salt-road.jpg" alt="Caravan-Lord of the Salt Road" width="132"> | **Caravan-Lord of the Salt Road**<br><sub>Card 36</sub> | Courtier · Merchant | Merchant · The One God · None · Barbarian |
+| <img src="cards/37-hundred-kill-rider.jpg" alt="Hundred-Kill Rider" width="132"> | **Hundred-Kill Rider**<br><sub>Card 37</sub> | Courtier · Military | Military · The One God · None · Barbarian |
+| <img src="cards/38-blade-for-any-banner.jpg" alt="Blade for Any Banner" width="132"> | **Blade for Any Banner**<br><sub>Card 38</sub> | Courtier · Military | Military · Mystery Cults · None · Barbarian |
+| <img src="cards/39-warlord-of-the-iron-grove.jpg" alt="Warlord of the Iron Grove" width="132"> | **Warlord of the Iron Grove**<br><sub>Card 39</sub> | Courtier · Military | Military · Old Gods · None · Barbarian |
+| <img src="cards/40-master-swordsmith.jpg" alt="Master Swordsmith" width="132"> | **Master Swordsmith**<br><sub>Card 40</sub> | Courtier · Commons | Commons · Old Gods · None · Barbarian |
 
 ## Event
 
