@@ -46,6 +46,17 @@ class TableTests(unittest.TestCase):
             human = table.session.humans[0]
             self.assertTrue(all(u["seat"] == human for u in seen))
 
+    def test_a_new_game_starts_with_the_table_as_dealt(self):
+        # Before anyone moves, so the page can show you your agenda and wait.
+        for seed in range(6):
+            table = Table()
+            first = json.loads(table.new_game(json.dumps({"seed": seed})))[0]
+            human = table.session.humans[0]
+            self.assertEqual(first["view"]["turn"], 0)
+            self.assertEqual((first["actor"], first["action"], first["prompt"]), (-1, None, None))
+            self.assertEqual(first["view"]["players"][human]["agenda"]["key"], table.session.state.agendas[human])
+            self.assertTrue(first["view"]["hand"])
+
     def test_the_default_table_is_you_and_one_of_each_bot(self):
         table = Table()
         table.new_game("{}")

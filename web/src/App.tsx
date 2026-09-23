@@ -12,6 +12,7 @@ import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
+import { Briefing } from "./components/Briefing";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { DiscardPile, StatusPanel } from "./components/Status";
@@ -126,6 +127,9 @@ export function App() {
   // Where every card was just before the update now being drawn.
   const before = useRef<{ snapshot: Snapshot; actor: number; action: Action | null } | null>(null);
   const fresh = useRef(false);
+  // A new deal stops at the table as dealt until you have read your agenda.
+  const hold = useRef(false);
+  const [briefing, setBriefing] = useState(false);
   // The bot whose card is still crossing the table keeps the spotlight until
   // it lands; after that it passes to whoever is thinking next.
   const [playing, setPlaying] = useState<number | null>(null);
@@ -140,6 +144,13 @@ export function App() {
     setShown(next);
     setLog((l) => [...l, ...next.log.map((text) => ({ text, view: next.view }))]);
     setPending(queue.current.length);
+    if (hold.current) {
+      hold.current = false;
+      if (next.view.you >= 0 && next.view.players[next.view.you]?.agenda) {
+        setBriefing(true);
+        return; // the bots wait for Begin
+      }
+    }
     if (queue.current.length) {
       const delay = next.prompt ? 0 : SPEEDS[speedRef.current];
       timer.current = window.setTimeout(pump, delay);
@@ -182,6 +193,8 @@ export function App() {
           timer.current = null;
           queue.current = [];
           fresh.current = true;
+          hold.current = request.type === "new";
+          setBriefing(false);
           setLog([]);
         }
         queue.current.push(...updates);
@@ -221,7 +234,13 @@ export function App() {
     }
   };
 
+  const begin = useCallback(() => {
+    setBriefing(false);
+    if (timer.current === null) pump();
+  }, [pump]);
+
   const toSetup = () => {
+    setBriefing(false);
     setShown(null);
   };
 
@@ -525,6 +544,7 @@ export function App() {
         </div>
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+        {briefing && <Briefing view={view} onBegin={begin} />}
       </main>
     </UiContext.Provider>
   );

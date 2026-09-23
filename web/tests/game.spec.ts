@@ -13,6 +13,22 @@ async function start(page: Page, errors: string[], seed?: number) {
   await page.getByTestId("deal").click();
 }
 
+test("a round opens on your agenda and waits for you to begin", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 3);
+  const briefing = page.getByTestId("briefing");
+  await expect(briefing).toBeVisible();
+  const mine = await briefing.locator("h2").innerText();
+  // Nobody has moved: the bots wait until you begin.
+  await page.waitForTimeout(1500);
+  await expect(page.locator(".status .turn")).toHaveText("Turn 0");
+  await page.getByTestId("begin").click();
+  await expect(briefing).toBeHidden();
+  await settle(page);
+  await expect(page.getByTestId("agenda-tracker").locator("strong").first()).toHaveText(mine);
+  expect(errors).toEqual([]);
+});
+
 test("a game played from the move list", async ({ page }) => {
   const errors: string[] = [];
   await start(page, errors);
@@ -155,6 +171,6 @@ test("every screen credits bobbymeyer.com", async ({ page }) => {
   await expect(credit).toHaveAttribute("href", "https://bobbymeyer.com");
   await expect(credit).toHaveAttribute("target", "_top");
   await page.getByTestId("deal").click();
-  await page.locator(".all-moves, [data-testid=pick-option], [data-testid=game-over]").first().waitFor();
+  await settle(page);
   await expect(page.getByRole("link", { name: "designed by bobbymeyer." })).toBeVisible();
 });

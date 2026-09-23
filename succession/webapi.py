@@ -57,7 +57,9 @@ class Table:
             seed = random.randrange(2**31)
         self.session = GameSession(Config(players=players), int(seed))
         self._sent = 0
-        return self._play_on([], None)
+        # The table as dealt comes first, before anyone has moved: the page
+        # shows each person their agenda there and waits for them to begin.
+        return self._play_on([self._update(None)], None)
 
     def answer(self, choice: int) -> str:
         """Answer the waiting prompt: an action index, or a card uid mid-card."""

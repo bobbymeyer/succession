@@ -242,18 +242,18 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   animation: rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 @keyframes rise { from { transform: translateY(12px); opacity: 0; } }
-.revealed-agenda .flip {
+.revealed-agenda .flip, .agenda-flip {
   position: relative; flex: none; width: 104px; aspect-ratio: 496 / 692;
   transform-style: preserve-3d; perspective: 600px;
   animation: turn-over 900ms 250ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
 }
-.revealed-agenda .side {
+.revealed-agenda .side, .agenda-flip .side {
   position: absolute; inset: 0; border-radius: 6px; overflow: hidden;
   backface-visibility: hidden; background: var(--parchment);
   box-shadow: 0 0 0 2px var(--seat), 0 0 18px color-mix(in srgb, var(--seat) 55%, transparent);
 }
-.revealed-agenda .side img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.revealed-agenda .side.back { transform: rotateY(180deg); }
+.revealed-agenda .side img, .agenda-flip .side img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.revealed-agenda .side.back, .agenda-flip .side.back { transform: rotateY(180deg); }
 @keyframes turn-over { from { transform: rotateY(180deg); } to { transform: rotateY(0); } }
 .revealed-agenda figcaption { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .revealed-agenda .who { color: var(--seat); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }
@@ -275,7 +275,28 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   100% { transform: translateY(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .revealed-agenda, .revealed-agenda .flip, .seat.won-by > .card > .face { animation: none; }
+  .revealed-agenda, .revealed-agenda .flip, .seat.won-by > .card > .face, .briefing, .agenda-flip { animation: none; }
+}
+/* -- the start of a round: your agenda, and Begin ------------------------- */
+.briefing {
+  width: min(94vw, 40rem);
+  background: var(--rail); color: var(--ink);
+  border: 1px solid var(--gold); border-radius: 16px;
+  padding: 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.briefing[open] { display: flex; gap: 22px; align-items: center; animation: rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.briefing::backdrop { background: rgba(5, 8, 14, 0.62); backdrop-filter: blur(2px); }
+.briefing .agenda-flip { --seat: var(--gold-bright); width: min(210px, 40vw); animation-delay: 350ms; }
+.briefing .kicker { color: var(--gold-bright); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
+.briefing h2 { font-family: var(--serif); font-size: 1.6rem; text-transform: none; letter-spacing: 0; color: var(--ink); margin: 4px 0 10px; line-height: 1.15; }
+.briefing p { margin: 0 0 8px; }
+.briefing-clauses { margin: 0 0 12px; padding-left: 1.1rem; }
+.briefing-clauses li { margin: 2px 0; }
+.briefing form { margin-top: 14px; }
+.briefing button.primary { font-size: 1rem; padding: 0.5rem 1.2rem; }
+@media (max-width: 560px) {
+  .briefing[open] { flex-direction: column; text-align: center; }
+  .briefing-clauses { list-style: none; padding: 0; }
 }
 .export { margin-top: 12px; color: var(--muted); }
 .export summary { cursor: pointer; }
