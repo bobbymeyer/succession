@@ -32,7 +32,7 @@ python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
 python -m succession play                              # take a seat against the bots
-python -m unittest discover -s tests                   # 130 rule, session and print tests
+python -m unittest discover -s tests                   # 136 rule, session and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -51,6 +51,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `succession/bots.py` | Naive, greedy, and strategic bots |
 | `succession/session.py` | A game that stops for human seats: prompts, player views, records |
 | `succession/terminal.py` | The `play` command's front end |
+| `succession/webapi.py` | The JSON calls the browser game makes into a session |
 | `succession/logsink.py` | CSV and SQLite writers, one row per game |
 | `succession/analysis.py` | Batch summary statistics |
 | `succession/runner.py` | CLI (`run`, `analyze`, `demo`) |
@@ -58,6 +59,8 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/gallery.py` | The web rendition's self-contained index page |
 | `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
 | `tools/boardsheet.py` | Lays the seat cards out as a print-at-home PDF |
+| `tools/webbundle.py` | Zips `succession/` for the browser game to run under Pyodide |
+| `web/` | The browser game: React on top of this package running in Pyodide |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
@@ -118,11 +121,35 @@ rules, and each decision you made. `--replay game.json` plays it back to where
 it stopped and hands you the next move -- which makes a bug report one small
 file.
 
-The terminal is the first front end on `succession/session.py`, which is what
-the browser version will be built on. `GameSession` runs the same turn loop as
+The terminal is one front end on `succession/session.py`; the browser game is
+the other. `GameSession` runs the same turn loop as
 `play_game()`, so a human seat plays exactly the game a bot seat would, and
 `view()` is the whole of what a seat is shown: the board, your own hand and
 agenda, and other players' hand sizes.
+
+## The browser game
+
+`web/` is the same game in a browser. The page runs this very package under
+[Pyodide](https://pyodide.org) (Python compiled to WebAssembly) in a Web
+Worker, so the rules and bots in the browser are the ones in this checkout, not
+a port of them. The page never works out a rule: it shows `session.view()`, and
+builds a move by narrowing the engine's list of legal actions as you click.
+
+```bash
+cd web
+npm install
+npm run dev              # http://localhost:5173, rebuilt as you edit
+npm run build            # web/dist: a static site, Pyodide included
+npx playwright test      # whole games in Chromium, against the build
+```
+
+Both `dev` and `build` first copy Pyodide out of `node_modules` and zip
+`succession/` into `web/public/`, so a change to the rules shows up on the next
+build. The site uses relative paths throughout: it can be served from any
+directory, or iframed into another page.
+
+This is milestone 2 of the browser game -- a working but bare board. Card art,
+animation and publishing to GitHub Pages come next.
 
 ## The bots
 

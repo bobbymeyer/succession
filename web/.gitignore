@@ -1,0 +1,7 @@
+node_modules/
+dist/
+public/pyodide/
+public/engine.zip
+test-results/
+playwright-report/
+*.tsbuildinfo

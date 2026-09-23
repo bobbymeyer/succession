@@ -184,11 +184,13 @@ class GameSession:
             if prompt is not None:
                 return prompt
 
-    def answer(self, choice: int) -> Prompt:
+    def answer(self, choice: int, *, advance: bool = True) -> Optional[Prompt]:
         """Answer the waiting prompt and play on to the next one.
 
         `choice` is an index into `prompt.options` for a TURN, and one of the
-        card uids in `prompt.options` for a COURTIER or DISCARD.
+        card uids in `prompt.options` for a COURTIER or DISCARD. With
+        `advance=False` only the answered action is played, as `step()` would,
+        and None means play can continue.
         """
 
         prompt = self.prompt
@@ -216,7 +218,9 @@ class GameSession:
             player, action = self._resolving
             result = self._resolve(player, action, snapshot=False)
 
-        return result if result is not None else self.advance()
+        if result is not None or not advance:
+            return result
+        return self.advance()
 
     def _resolve(self, player: int, action: Action, *, snapshot: bool = True) -> Optional[Prompt]:
         if snapshot and self.humans:
@@ -399,7 +403,6 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
         "discard_top": card_json(state, state.discard[-1]) if state.discard else None,
         "removed": len(state.removed),
         "frozen": {"inner": state.inner_frozen, "board": state.board_frozen},
-        "log": list(state.log),
     }
 
 

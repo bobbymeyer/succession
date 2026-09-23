@@ -1,0 +1,140 @@
+/* Bare on purpose: the card art and the real layout arrive in milestone 3.
+   This only has to be legible, show what is clickable, and fit a phone. */
+
+:root {
+  --bg: #f6f2ea;
+  --panel: #fffdf8;
+  --ink: #2a241c;
+  --muted: #6d6456;
+  --line: #d9cfbf;
+  --accent: #8a5a12;
+  --live: #1f6feb;
+  --live-bg: #e8f0fe;
+  --selected: #b3261e;
+  --changed: #9a3412;
+  --church: #6b4fa0;
+  --military: #9b2c2c;
+  --merchant: #8a6d12;
+  --commons: #2f6b3a;
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1814;
+    --panel: #25211b;
+    --ink: #ece4d6;
+    --muted: #a89c88;
+    --line: #3e372d;
+    --accent: #e0a64a;
+    --live: #7aa7ff;
+    --live-bg: #1f2a3d;
+    --selected: #ff8a80;
+    --changed: #fdba74;
+    --church: #b39ddb;
+    --military: #ef9a9a;
+    --merchant: #e6c86e;
+    --commons: #8fcf99;
+  }
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); }
+h1, h2 { margin: 0 0 0.5rem; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+
+button, select, input, textarea {
+  font: inherit;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+}
+button { cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); font-weight: 600; }
+button.link { background: none; border: none; padding: 0.15rem 0; text-align: left; color: var(--live); }
+button.selected { border-color: var(--selected); outline: 2px solid var(--selected); }
+:focus-visible { outline: 2px solid var(--live); outline-offset: 2px; }
+
+.app { max-width: 1400px; margin: 0 auto; padding: 16px; }
+.loading, .thinking { color: var(--muted); }
+.error { color: var(--selected); }
+.buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0; }
+
+/* -- setup ------------------------------------------------------------- */
+.setup { max-width: 34rem; }
+.setup .lede, .setup .hint { color: var(--muted); }
+.seats-list { padding-left: 1.5rem; }
+.seats-list li { margin: 0.4rem 0; }
+.seats-list li > * + * { margin-left: 0.5rem; }
+.seed { display: block; margin: 1rem 0; }
+.seed input { width: 10rem; margin-left: 0.5rem; }
+.load { margin-top: 1.5rem; }
+.load textarea { display: block; width: 100%; margin: 0.5rem 0; font-family: ui-monospace, monospace; font-size: 0.8rem; }
+
+/* -- game layout ------------------------------------------------------- */
+.game { display: grid; grid-template-columns: minmax(0, 1fr) 22rem; gap: 16px; align-items: start; }
+@media (max-width: 900px) { .game { grid-template-columns: minmax(0, 1fr); } }
+.side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 12px; }
+@media (max-width: 900px) { .side { position: static; } }
+
+.board { display: flex; flex-direction: column; gap: 16px; }
+.board section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.empty { color: var(--muted); font-style: italic; padding: 0.5rem; }
+
+.players { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 8px; }
+.player { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.player.current { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.player.winner { background: var(--live-bg); }
+.player .agenda { color: var(--muted); font-size: 0.85rem; }
+.flag { color: var(--selected); font-weight: 600; font-size: 0.85rem; }
+.status { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; }
+
+.seats { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 8px; }
+.seat { border: 1px dashed var(--line); border-radius: 8px; padding: 6px; display: flex; flex-direction: column; gap: 6px; }
+.seat.live { border: 2px solid var(--live); background: var(--live-bg); }
+.seat.selected { border: 2px solid var(--selected); }
+.seat-name { font-weight: 600; font-size: 0.9rem; }
+.seat-name small { font-weight: 400; color: var(--muted); }
+.seat-button { background: none; border: none; padding: 0; text-align: left; color: var(--live); }
+.estate-church .seat-name { color: var(--church); }
+.estate-military .seat-name { color: var(--military); }
+.estate-merchant .seat-name { color: var(--merchant); }
+.estate-commons .seat-name { color: var(--commons); }
+
+/* -- cards ------------------------------------------------------------- */
+.card {
+  display: flex; flex-direction: column; gap: 3px;
+  width: 10rem; min-height: 4.5rem; padding: 6px 8px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+  text-align: left;
+}
+.seat .card { width: auto; }
+button.card.live { border: 2px solid var(--live); background: var(--live-bg); }
+.card.selected { border: 2px solid var(--selected); outline: none; }
+.card-name { font-weight: 600; font-size: 0.9rem; }
+.card-type { color: var(--muted); font-size: 0.8rem; }
+.card-attrs { display: flex; flex-wrap: wrap; gap: 2px 6px; font-size: 0.75rem; color: var(--muted); }
+.attr.changed { color: var(--changed); font-weight: 700; }
+.attr.changed::after { content: "*"; }
+.card-defense { font-size: 0.75rem; color: var(--accent); }
+
+/* -- side panel -------------------------------------------------------- */
+.controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.prompt { background: var(--panel); border: 2px solid var(--accent); border-radius: 10px; padding: 12px; }
+.prompt p { margin: 0 0 0.5rem; }
+.prompt.over ul { padding-left: 1.2rem; }
+.all-moves { margin-top: 0.5rem; font-size: 0.9rem; }
+.all-moves ul { list-style: none; padding: 0; margin: 0.25rem 0 0; max-height: 16rem; overflow: auto; }
+.log { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.log ol { margin: 0; padding-left: 0; list-style: none; max-height: 24rem; overflow: auto; font-size: 0.85rem; }
+.log li { padding: 2px 0; border-bottom: 1px solid var(--line); }
+.mine h2 { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.mine h2 .agenda { color: var(--accent); }
