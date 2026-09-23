@@ -6,6 +6,7 @@ import { clearGames, download, saveGame, savedGames } from "./history";
 import { build, cardIsLive, choose, clickCard, FIELDS, seatIsLive, type Selection } from "./moves";
 import type { Card, GameRecord, GameRequest, TableOptions, Update } from "./protocol";
 import { playerName, readableLog, visibleCards } from "./names";
+import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { GameOver, headline } from "./components/GameOver";
 import { FrameControls } from "./components/Frame";
@@ -26,6 +27,21 @@ function savedSpeed(): Speed {
   return "Normal";
 }
 
+/** Wide enough for a column either side of the board. */
+const WIDE = "(min-width: 1180px)";
+
+function useMedia(query: string): boolean {
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const list = window.matchMedia?.(query);
+    if (!list) return;
+    const change = () => setMatches(list.matches);
+    list.addEventListener("change", change);
+    return () => list.removeEventListener("change", change);
+  }, [query]);
+  return matches;
+}
+
 /** How long a card takes to cross the table: most of the pause between moves. */
 function glide(speed: Speed): number {
   return Math.min(600, SPEEDS[speed] * 0.7);
@@ -33,6 +49,7 @@ function glide(speed: Speed): number {
 
 export function App() {
   const engine = useMemo(() => new Engine(), []);
+  const wide = useMedia(WIDE);
   const [options, setOptions] = useState<TableOptions | null>(null);
   const [fatal, setFatal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -237,9 +254,30 @@ export function App() {
     send({ type: "new", players: result.record.config.players as string[] }, true);
   };
 
+  // Your agenda and the log: a column of their own left of the board when
+  // there is room, under the question on the right when there is not.
+  const myAgenda = view.you >= 0 ? view.players[view.you].agenda : null;
+  const record = (
+    <>
+      {myAgenda && <AgendaTracker agenda={myAgenda} />}
+      <section className="log" aria-label="Game log">
+        <h2>Log</h2>
+        <ol reversed>
+          {log
+            .slice()
+            .reverse()
+            .map((line, i) => (
+              <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
+            ))}
+        </ol>
+      </section>
+    </>
+  );
+
   return (
     <UiContext.Provider value={ui}>
-      <main className="app game">
+      <main className={`app game${wide ? " wide" : ""}`}>
+        {wide && <div className="left">{record}</div>}
         <Board view={view} act={act} />
         <div className="rail">
           <aside className="side">
@@ -303,18 +341,7 @@ export function App() {
               </div>
             )}
           </aside>
-
-          <section className="log" aria-label="Game log">
-            <h2>Log</h2>
-            <ol reversed>
-              {log
-                .slice()
-                .reverse()
-                .map((line, i) => (
-                  <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
-                ))}
-            </ol>
-          </section>
+          {!wide && record}
         </div>
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {result && (

@@ -241,6 +241,93 @@ def progress_counts(
     return min(0.98, 0.85 * core + 0.15 * bench)
 
 
+@dataclass(frozen=True, slots=True)
+class Condition:
+    """One clause of an agenda, as it stands on the board.
+
+    `waiting` counts courtiers in the outer circle who would help, when that
+    means anything -- they are one move or one promotion from a seat.
+    """
+
+    label: str
+    have: int
+    need: int
+    waiting: int | None = None
+
+    @property
+    def met(self) -> bool:
+        return self.have >= self.need
+
+
+def conditions(
+    counts: BoardCounts, agenda: Agenda, rules: AgendaRules = DEFAULT_RULES
+) -> list[Condition]:
+    """The agenda clause by clause, for a player to see what is and isn't met.
+
+    All of them met is exactly `satisfied_counts`; a test holds the two to it.
+    """
+
+    kind = agenda.kind
+    if kind == HOUSE_RISING:
+        family = agenda.param
+        out = [
+            Condition(
+                f"House {family} holds {HOUSE_SEATS} seats",
+                counts.inner_family.get(family, 0),
+                HOUSE_SEATS,
+                counts.outer_family.get(family, 0),
+            )
+        ]
+        estate = rules.preferred_estate(family)
+        if rules.house_preferred_seat and estate is not None:
+            out.append(
+                Condition(
+                    f"{'One' if HOUSE_PREFERRED_SEATS == 1 else HOUSE_PREFERRED_SEATS} of them in a {estate} seat",
+                    _preferred_seats(counts, family, rules),
+                    HOUSE_PREFERRED_SEATS,
+                )
+            )
+        return out
+    if kind == FAITH_ASCENDANT:
+        return [
+            Condition(
+                f"{agenda.param} hold {rules.faith_seats} seats",
+                counts.inner_faith.get(agenda.param, 0),
+                rules.faith_seats,
+                counts.outer_faith.get(agenda.param, 0),
+            )
+        ]
+    if kind == CONQUEST:
+        return [
+            Condition(
+                f"{CONQUEST_BARBARIANS} barbarians seated",
+                counts.inner_barbarians,
+                CONQUEST_BARBARIANS,
+                counts.barbarians_in_play - counts.inner_barbarians,
+            )
+        ]
+    if kind == BALANCE:
+        out = [Condition(f"{rules.balance_seats} of 7 seats filled", counts.inner_filled, rules.balance_seats)]
+        out += [
+            Condition(f"House {f.value} seated", counts.inner_family.get(f.value, 0), 1, counts.outer_family.get(f.value, 0))
+            for f in FAMILIES
+        ]
+        out += [
+            Condition(f"{f.value} seated", counts.inner_faith.get(f.value, 0), 1, counts.outer_faith.get(f.value, 0))
+            for f in FAITHS
+        ]
+        out.append(
+            Condition(
+                f"{rules.balance_barbarians} barbarians seated",
+                counts.inner_barbarians,
+                rules.balance_barbarians,
+                counts.barbarians_in_play - counts.inner_barbarians,
+            )
+        )
+        return out
+    raise ValueError(f"unknown agenda kind: {kind}")  # pragma: no cover
+
+
 # --- state-level convenience wrappers --------------------------------------
 def satisfied(state: "GameState", agenda: Agenda) -> bool:
     return satisfied_counts(count_board(state), agenda, rules_for(state))

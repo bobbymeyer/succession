@@ -1,9 +1,7 @@
 import type { Attribute, Card } from "../protocol";
 import { useUi } from "../art";
 
-export const ATTRIBUTES: Attribute[] = ["estate", "faith", "family", "origin"];
-
-export type CardSize = "xs" | "sm" | "md" | "lg";
+export type CardSize = "xxs" | "xs" | "sm" | "md" | "lg";
 
 interface Props {
   card: Card;
@@ -15,15 +13,45 @@ interface Props {
   caption?: boolean;
 }
 
-/** A courtier's attributes as they stand now; changed ones are marked. */
+/** The grid every courtier's details keep, in play or in the inspector. */
+export const GRID: { attribute: Attribute; label: string }[] = [
+  { attribute: "estate", label: "Estate" },
+  { attribute: "faith", label: "Faith" },
+  { attribute: "family", label: "House" },
+  { attribute: "origin", label: "Origin" },
+];
+
+/** What a cell shows: a barbarian's people ride along with their origin. */
+export function attributeText(card: Card, attribute: Attribute): string {
+  const value = card[attribute] as string;
+  if (attribute === "origin" && card.people) return card.people;
+  if (attribute === "family" && value === "None") return "No house";
+  if (attribute === "faith" && value === "None") return "No faith";
+  return value;
+}
+
+/**
+ * A courtier's attributes as they stand now, always in the same places:
+ *
+ *   Estate | Faith
+ *   House  | Origin (or people)
+ *
+ * Changed ones are marked.
+ */
 export function Attributes({ card }: { card: Card }) {
   return (
-    <span className="attrs">
-      {ATTRIBUTES.map((a) => {
-        const changed = card.changed?.includes(a);
+    <span className="attrs" role="list">
+      {GRID.map(({ attribute, label }) => {
+        const changed = card.changed?.includes(attribute);
+        const text = attributeText(card, attribute);
         return (
-          <span key={a} className={changed ? "attr changed" : "attr"} title={changed ? `${a} changed in play` : a}>
-            {card[a] as string}
+          <span
+            key={attribute}
+            role="listitem"
+            className={`attr attr-${attribute}${changed ? " changed" : ""}`}
+            title={`${label}: ${card[attribute] as string}${changed ? " (changed in play)" : ""}`}
+          >
+            {text}
           </span>
         );
       })}

@@ -19,6 +19,7 @@
   --military: #d27a70;
   --merchant: #5fb3ba;
   --commons: #d39a5e;
+  --w-xxs: 18px;
   --w-xs: 34px;
   --w-sm: 84px;
   --w-md: 104px;
@@ -69,6 +70,7 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 
 /* -- cards --------------------------------------------------------------- */
 .card { position: relative; display: flex; flex-direction: column; gap: 4px; flex: none; width: var(--w); }
+.size-xxs { --w: var(--w-xxs); }
 .size-xs { --w: var(--w-xs); }
 .size-sm { --w: var(--w-sm); }
 .size-md { --w: var(--w-md); }
@@ -116,9 +118,8 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   width: fit-content; max-width: var(--w);
 }
 .shield svg { width: 11px; height: 11px; flex: none; }
-.attrs { display: flex; flex-wrap: wrap; gap: 0 6px; font-size: 0.7rem; line-height: 1.3; color: var(--muted); max-width: var(--w); }
-.attr.changed { color: var(--pick); font-weight: 700; }
-.attr.changed::after { content: "*"; }
+/* Changed in play: red and underlined, no wider than the printed word. */
+.attr.changed { color: var(--pick); text-decoration: underline dotted; text-underline-offset: 2px; }
 
 /* -- setup ---------------------------------------------------------------- */
 .setup { max-width: 36rem; margin: 3vh auto; }
@@ -155,23 +156,8 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 .board > section { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
 
-.opponents { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr)); gap: 10px; background: none !important; border: none !important; padding: 0 !important; }
-.opponent { min-width: 0; background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
-.opponent.current { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(201, 162, 78, 0.3); }
-.opponent.winner { border-color: var(--gold-bright); background: rgba(201, 162, 78, 0.16); }
-.opponent .who { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
-.opponent .who strong { color: var(--gold); }
-.holding { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.fan { display: flex; align-items: center; }
-.fan .card + .card { margin-left: -24px; }
-.fan .count { margin-left: 8px; font-weight: 700; font-size: 1.1rem; }
-.agenda-name { font-size: 0.75rem; color: var(--muted); }
 .agenda-card { padding: 0; border: none; background: none; }
 
-.status { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 12px; }
-.piles { display: flex; flex-wrap: wrap; gap: 8px 14px; }
-.pile { display: flex; align-items: center; gap: 8px; }
-.pile .shield, .pile .attrs { display: none; }
 .empty-slot .face, .card.empty-slot { width: var(--w-xs); aspect-ratio: 496 / 692; border: 1px dashed var(--line); border-radius: 3px; }
 .seal { color: var(--cloth-deep); background: var(--pick); padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
 
@@ -192,11 +178,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 .seat.selected { border-color: var(--pick); }
 .seat-take { font-size: 0.75rem; padding: 2px 8px; border-color: var(--gold-bright); color: var(--gold-bright); }
 
-.mine { display: flex; gap: 20px; align-items: flex-start; }
-.my-agenda { flex: none; width: var(--w-md); }
-.my-agenda .agenda-name { margin-top: 4px; }
-.my-hand { min-width: 0; flex: 1; }
-.my-hand .row { gap: 12px; padding-top: 8px; }
 
 /* -- side panel ----------------------------------------------------------- */
 .controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -251,10 +232,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   .app { padding: 12px; }
   .side { margin: -12px -12px 0; padding: 8px 12px; }
   .court .seats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .mine { flex-direction: column; gap: 8px; }
-  .my-agenda { display: flex; gap: 10px; align-items: center; }
-  .my-agenda { width: auto; }
-  .my-agenda .card { --w: var(--w-xs); }
 }
 
 /* -- the latest move, while the bots think -------------------------------- */
@@ -308,3 +285,82 @@ a.button:hover { border-color: var(--gold); }
 .controls.frame { justify-content: flex-start; flex-wrap: wrap; }
 .controls.frame:empty { display: none; }
 .controls.frame button, .controls.frame a.button { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+
+/* -- the table strip: other players and the piles, one line high ---------- */
+.opponents { display: flex; flex-wrap: wrap; gap: 6px; background: none !important; border: none !important; padding: 0 !important; }
+.opponent, .status {
+  display: inline-flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 4px 10px; font-size: 0.82rem;
+  background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 999px;
+}
+.opponent.current { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px rgba(201, 162, 78, 0.3); }
+.opponent.winner { border-color: var(--gold-bright); background: rgba(201, 162, 78, 0.16); }
+.opponent .who strong { color: var(--gold); margin-right: 2px; }
+.hand-count, .pile, .their-agenda { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.their-agenda .agenda-name { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.status { margin-left: auto; border-style: dashed; }
+.status .turn { color: var(--muted); }
+.status .seal { padding: 1px 8px; font-size: 0.75rem; }
+.card.size-xxs .face { border-radius: 2px; box-shadow: none; }
+.card.size-xxs .shield, .card.size-xxs .attrs, .card.size-xxs .changed-flag, .card.size-xxs .look { display: none; }
+.card.size-xxs.empty-slot { height: calc(var(--w-xxs) * 692 / 496); border: 1px dashed var(--line); border-radius: 2px; }
+
+/* -- a courtier's details, always in the same four places --------------- */
+/*   Estate | Faith                                                          */
+/*   House  | Origin                                                         */
+.attrs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+  /* Never narrower than the longest single word needs, whatever the card. */
+  width: max(var(--w), 6.75rem); align-self: center;
+  font-size: 0.64rem; line-height: 1.25; color: var(--muted);
+}
+.attr { min-width: 0; padding: 1px 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.04); }
+.attr-estate { color: var(--ink); }
+
+/* -- your hand -------------------------------------------------------------- */
+.mine .row { gap: 12px; padding-top: 8px; }
+
+/* -- your agenda, clause by clause ----------------------------------------- */
+.tracker { background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.tracker.done { border-color: var(--gold-bright); background: rgba(240, 200, 101, 0.1); }
+.tracker-head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.tracker-head strong { font-family: var(--serif); font-size: 1.05rem; display: block; line-height: 1.2; }
+.tracker-card { padding: 0; border: none; background: none; flex: none; }
+.tracker-card img { width: 44px; border-radius: 3px; }
+.tracker-score { font-size: 0.8rem; color: var(--gold-bright); margin-top: 2px; }
+.clauses { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.clauses li { display: grid; grid-template-columns: 1.1rem 1fr auto; gap: 2px 6px; align-items: baseline; font-size: 0.85rem; }
+.clauses .mark { color: var(--muted); font-weight: 700; }
+.clauses li.met .mark { color: var(--gold-bright); }
+.clauses .clause small { color: var(--muted); }
+.clauses .count { font-variant-numeric: tabular-nums; color: var(--muted); }
+.clauses li.met .count { color: var(--gold-bright); }
+.clauses .bar { grid-column: 2 / 4; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.clauses .bar span { display: block; height: 100%; background: var(--gold); transition: width 300ms ease; }
+.clauses li.met .bar span { background: var(--gold-bright); }
+
+/* -- three columns when there is room ------------------------------------- */
+.game.wide {
+  grid-template-columns: 15.5rem minmax(0, 1fr) 19rem;
+  grid-template-areas: "left board rail";
+}
+.left {
+  grid-area: left; position: sticky; top: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: calc(100vh - 32px); min-height: 0;
+}
+.left .log { flex: 1; min-height: 8rem; display: flex; flex-direction: column; }
+.left .log ol { max-height: none; flex: 1; min-height: 0; }
+@media (max-width: 900px) {
+  .game { grid-template-areas: "side" "board" "agenda" "log"; }
+  .tracker { grid-area: agenda; }
+  .status { margin-left: 0; }
+}
+
+.controls button { white-space: nowrap; }
+.hidden-agenda {
+  display: inline-grid; place-items: center;
+  width: calc(var(--w-xxs) + 2px); height: calc(var(--w-xxs) * 692 / 496);
+  border: 1px dashed var(--muted); border-radius: 2px;
+  color: var(--muted); font-size: 0.7rem; font-weight: 700;
+}
