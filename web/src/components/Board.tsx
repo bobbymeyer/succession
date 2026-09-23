@@ -60,9 +60,9 @@ function Agenda({ player, size }: { player: Player; size: "xxs" | "xs" | "sm" | 
 
 // A compact place at the table: who, how many cards, their agenda (a card
 // back until it is revealed). The whole row stays one line high.
-function Opponent({ view, player, act }: { view: View; player: Player; act: Interaction }) {
+function Opponent({ view, player, act, turn }: { view: View; player: Player; act: Interaction; turn: number | null }) {
   const classes = ["opponent"];
-  if (player.seat === view.current && !view.over) classes.push("current");
+  if (player.seat === turn) classes.push("current");
   if (view.winners.includes(player.seat)) classes.push("winner");
   const live = act.playerLive(player.seat);
   if (live) classes.push("live");
@@ -104,7 +104,10 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
   );
 }
 
-export function Board({ view, act }: { view: View; act: Interaction }) {
+// `playing` is a bot whose card is still on its way to the table: until it
+// lands, it is still that bot's turn as far as anyone watching can tell.
+export function Board({ view, act, playing = null }: { view: View; act: Interaction; playing?: number | null }) {
+  const turn = playing ?? (view.over ? null : view.current);
   const { art } = useUi();
   // Board courtiers are places to drop an action on; hand cards are not.
   const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => (
@@ -130,7 +133,7 @@ export function Board({ view, act }: { view: View; act: Interaction }) {
     <div className="board">
       <section className="opponents" aria-label="Opponents">
         {opponents.map((p) => (
-          <Opponent key={p.seat} view={view} player={p} act={act} />
+          <Opponent key={p.seat} view={view} player={p} act={act} turn={turn} />
         ))}
         <div className="status" aria-label="Table status">
           <span className="pile" title="Draw pile">

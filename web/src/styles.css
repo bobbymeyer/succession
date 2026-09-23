@@ -289,7 +289,17 @@ a.button:hover { border-color: var(--gold); }
   padding: 4px 10px; font-size: 0.82rem;
   background: rgba(28, 40, 64, 0.55); border: 1px solid var(--line); border-radius: 999px;
 }
-.opponent.current { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px rgba(201, 162, 78, 0.3); }
+/* Whoever is taking a turn: lit in their own colour and a fifth larger. Zoom
+   (not a transform) so the strip makes room; the strip is always tall enough
+   for it, so the board below never jumps. */
+.opponents { align-items: center; min-height: calc(var(--chip-h) * 1.2); --chip-h: 35px; }
+.opponent { transition: zoom 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
+.opponent.current {
+  zoom: 1.2;
+  border-color: var(--seat, var(--gold));
+  background: color-mix(in srgb, var(--seat, var(--gold)) 16%, rgba(28, 40, 64, 0.8));
+  box-shadow: 0 0 0 1px var(--seat, var(--gold)), 0 0 16px color-mix(in srgb, var(--seat, var(--gold)) 55%, transparent);
+}
 .opponent.winner { border-color: var(--gold-bright); background: rgba(201, 162, 78, 0.16); }
 .opponent .who strong { color: var(--seat, var(--gold)); margin-right: 2px; }
 .hand-count, .pile, .their-agenda { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }

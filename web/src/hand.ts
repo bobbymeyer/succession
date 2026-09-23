@@ -30,8 +30,8 @@ function landing(action: Action): Element | null {
   return q(".discard-pile");
 }
 
-const HOLD = 260;
-const FADE = 220;
+export const HOLD = 260;
+export const FADE = 220;
 
 /**
  * Show `actor`'s hand making `action`. Call after the new board is drawn but

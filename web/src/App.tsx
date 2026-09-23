@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
-import { showHand } from "./hand";
+import { FADE, HOLD, showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
 import { drops, settled, stage, type Stage } from "./play";
@@ -127,6 +127,10 @@ export function App() {
   // Where every card was just before the update now being drawn.
   const before = useRef<{ snapshot: Snapshot; actor: number; action: Action | null } | null>(null);
   const fresh = useRef(false);
+  // The bot whose card is still crossing the table keeps the spotlight until
+  // it lands; after that it passes to whoever is thinking next.
+  const [playing, setPlaying] = useState<number | null>(null);
+  const playingTimer = useRef<number | null>(null);
 
   const pump = useCallback(() => {
     timer.current = null;
@@ -148,6 +152,11 @@ export function App() {
     before.current = null;
     if (!from || !shown) return;
     const duration = glide(speedRef.current);
+    if (playingTimer.current !== null) window.clearTimeout(playingTimer.current);
+    playingTimer.current = null;
+    const bot = from.actor >= 0 && from.actor !== shown.view.you && duration > 0;
+    setPlaying(bot ? from.actor : null);
+    if (bot) playingTimer.current = window.setTimeout(() => setPlaying(null), duration + HOLD + FADE);
     // A bot's hand first, measured before the cards set off.
     if (from.action && from.actor >= 0 && from.actor !== shown.view.you && from.snapshot.cards.size) {
       showHand(from.actor, from.action, seatColour(from.actor), duration);
@@ -467,7 +476,7 @@ export function App() {
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
-        <Board view={view} act={act} />
+        <Board view={view} act={act} playing={playing} />
         <div className="rail">
           <aside className="side">
             <div className="controls">
