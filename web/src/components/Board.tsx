@@ -1,7 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Card, Player, View } from "../protocol";
 import { useUi } from "../art";
-import { playerName, tierName } from "../names";
+import { playerName, seatColour, tierName } from "../names";
 import { CardBack, CardView } from "./CardView";
 
 export interface Interaction {
@@ -70,6 +70,7 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
   return (
     <div
       className={classes.join(" ")}
+      style={{ "--seat": seatColour(player.seat) } as React.CSSProperties}
       data-player={player.seat}
       data-drop={`player:${player.seat}`}
       aria-label={playerName(view, player.seat)}
@@ -79,6 +80,7 @@ function Opponent({ view, player, act }: { view: View; player: Player; act: Inte
       onKeyDown={live ? (e) => (e.key === "Enter" || e.key === " ") && act.onPlayer(player.seat) : undefined}
     >
       <span className="who">
+        <span className="seat-dot" aria-hidden="true" />
         <strong>P{player.seat}</strong> {tierName(player.tier).replace(" bot", "")}
       </span>
       <span className="hand-count" data-hand={player.seat} title={`${player.hand} cards in hand`}>

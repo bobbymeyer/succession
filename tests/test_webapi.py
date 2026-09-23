@@ -91,6 +91,21 @@ class TableTests(unittest.TestCase):
         human = table.session.humans[0]
         self.assertTrue(all(u["actor"] != human for u in updates))
 
+    def test_updates_say_what_was_played(self):
+        table = Table()
+        updates = json.loads(table.new_game(json.dumps({"seed": 5})))
+        moved = [u for u in updates if u["action"]]
+        self.assertTrue(moved)
+        for u in moved:
+            self.assertIn(u["action"]["kind"], {"play", "move", "discard", "pass"})
+            self.assertTrue(u["action"]["text"])
+        # Whatever a bot played is on the table for everyone: never a card
+        # still in someone else's hand.
+        me = table.session.humans[0]
+        hidden = {uid for p, hand in enumerate(table.session.state.hands) if p != me for uid in hand}
+        last = moved[-1]["action"]
+        self.assertNotIn(last["card"], hidden)
+
     def test_export_is_a_log_analyze_reads(self):
         import tempfile
 

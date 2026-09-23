@@ -291,7 +291,7 @@ a.button:hover { border-color: var(--gold); }
 }
 .opponent.current { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 12px rgba(201, 162, 78, 0.3); }
 .opponent.winner { border-color: var(--gold-bright); background: rgba(201, 162, 78, 0.16); }
-.opponent .who strong { color: var(--gold); margin-right: 2px; }
+.opponent .who strong { color: var(--seat, var(--gold)); margin-right: 2px; }
 .hand-count, .pile, .their-agenda { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
 .their-agenda .agenda-name { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .status { margin-left: auto; border-style: dashed; }
@@ -413,3 +413,15 @@ a.button:hover { border-color: var(--gold); }
 .discard-pile .pile-text h2 { margin: 0; }
 .discard-pile.drop-live { background: rgba(240, 200, 101, 0.12); }
 .discard-pile .card.empty-slot { height: calc(var(--w-md) * 692 / 496); border: 1px dashed var(--line); border-radius: 6px; }
+
+/* -- each seat's colour, and a bot's hand as it plays ----------------------- */
+.seat-dot { display: inline-block; width: 9px; height: 9px; margin-right: 5px; border-radius: 50%; background: var(--seat); vertical-align: 1px; }
+.opponent .hand-count .card { outline: 2px solid var(--seat); outline-offset: 1px; border-radius: 2px; }
+.hand-trail { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 40; overflow: visible; }
+.hand-trail line { stroke-width: 2.5; stroke-linecap: round; opacity: 0.85; filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.6)); }
+.hand-dot {
+  position: fixed; z-index: 41; pointer-events: none;
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 3px solid var(--hand); background: color-mix(in srgb, var(--hand) 35%, transparent);
+  transform: translate(-50%, -50%);
+}

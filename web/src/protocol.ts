@@ -101,6 +101,7 @@ export interface Update {
   view: View;
   log: string[];
   actor: number; // whose move this update shows; -1 before anyone's
+  action: Action | null; // that move, all of it face up on the table
   prompt: Prompt | null;
   result: Result | null;
 }

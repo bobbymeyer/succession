@@ -2,11 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
+import { showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
 import { drops, settled, stage, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
-import { playerName, readableLog, visibleCards } from "./names";
+import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
@@ -124,14 +125,14 @@ export function App() {
   const speedRef = useRef(speed);
   speedRef.current = speed;
   // Where every card was just before the update now being drawn.
-  const before = useRef<{ snapshot: Snapshot; actor: number } | null>(null);
+  const before = useRef<{ snapshot: Snapshot; actor: number; action: Action | null } | null>(null);
   const fresh = useRef(false);
 
   const pump = useCallback(() => {
     timer.current = null;
     const next = queue.current.shift();
     if (!next) return;
-    before.current = { snapshot: fresh.current ? EMPTY : measure(), actor: next.actor };
+    before.current = { snapshot: fresh.current ? EMPTY : measure(), actor: next.actor, action: next.action };
     fresh.current = false;
     setShown(next);
     setLog((l) => [...l, ...next.log.map((text) => ({ text, view: next.view }))]);
@@ -145,7 +146,13 @@ export function App() {
   useLayoutEffect(() => {
     const from = before.current;
     before.current = null;
-    if (from && shown) play(from.snapshot, from.actor, shown.view.you, glide(speedRef.current));
+    if (!from || !shown) return;
+    const duration = glide(speedRef.current);
+    // A bot's hand first, measured before the cards set off.
+    if (from.action && from.actor >= 0 && from.actor !== shown.view.you && from.snapshot.cards.size) {
+      showHand(from.actor, from.action, seatColour(from.actor), duration);
+    }
+    play(from.snapshot, from.actor, shown.view.you, duration);
   }, [shown]);
 
   // A finished game is kept for export, and its results come up once the

@@ -11,6 +11,7 @@ show the bots moving one at a time at whatever pace it likes:
      "view": {...},             # session.view(seat)
      "log": ["[t4] P1 ..."],    # log lines new since the previous update
      "actor": 1,                # whose move this update shows (-1: nobody's yet)
+     "action": {...} | null,    # the move itself -- all of it face up on the table
      "prompt": {...} | null,    # the question waiting on a human, if any
      "result": {...} | null}    # set once the game is over
 
@@ -26,7 +27,7 @@ from typing import Optional
 from .agendas import AGENDAS
 from .bots import BOT_TIERS
 from .logsink import csv_text, row
-from .session import HUMAN, OVER, GameSession, Prompt
+from .session import HUMAN, OVER, GameSession, Prompt, action_json
 from .state import Config
 
 PLAYER_TYPES = (HUMAN, *BOT_TIERS)
@@ -122,6 +123,11 @@ class Table:
             "view": session.view(seat),
             "log": new,
             "actor": session.last_actor,
+            "action": (
+                action_json(session.state, session.last_action, -1)
+                if session.last_action is not None
+                else None
+            ),
             "prompt": None,
             "result": None,
         }
