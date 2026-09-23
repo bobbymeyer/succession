@@ -19,5 +19,11 @@ export default defineConfig({
       url: "http://127.0.0.1:4174/",
       reuseExistingServer: !process.env.CI,
     },
+    {
+      // The site under /succession behind a proxy, for tests/proxy.spec.ts.
+      command: "node tests/prefix-server.mjs",
+      url: "http://127.0.0.1:4175/succession/",
+      reuseExistingServer: !process.env.CI,
+    },
   ],
 });
