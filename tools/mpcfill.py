@@ -7,6 +7,7 @@ that MPC Autofill's desktop tool feeds to MakePlayingCards.
 
     python tools/mpcfill.py                       # both renditions into build/
     python tools/mpcfill.py --profile web         # just the browsable one
+    python tools/mpcfill.py --profile game        # the browser game's cards
     python tools/mpcfill.py --no-agendas          # 84 cards instead of 92
     python tools/mpcfill.py --only 26,41          # re-render two cards while tweaking
 
@@ -29,6 +30,7 @@ Needs Pillow (`pip install pillow`); the simulator itself stays stdlib-only.
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import sys
 import xml.etree.ElementTree as ET
@@ -919,7 +921,9 @@ def save(image: Image.Image, path: Path, fmt: str, quality: int, dpi: int) -> Pa
     """
 
     path = path.with_suffix(f".{fmt}")
-    if fmt == "jpg":
+    if fmt == "webp":
+        image.save(path, "WEBP", quality=quality, method=6)
+    elif fmt == "jpg":
         image.save(path, "JPEG", quality=quality, subsampling=0, dpi=(dpi, dpi))
     else:
         image.save(path, "PNG", dpi=(dpi, dpi))
@@ -942,12 +946,13 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--profile",
         default="print,web",
-        metavar="print,web,docs",
+        metavar="print,web,docs,game",
         help=(
             "comma-separated renditions to build: print (full bleed for MPC), "
             "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md), "
-            "board (a print-at-home PDF of the seat cards). 'all' builds every "
-            "one. Default print,web"
+            "board (a print-at-home PDF of the seat cards), game (the browser "
+            "game's cards, into web/public/cards). 'all' builds every one. "
+            "Default print,web"
         ),
     )
     parser.add_argument(
@@ -965,6 +970,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--docs-dpi", type=int, default=110, help="thumbnail resolution for the docs rendition"
     )
+    parser.add_argument(
+        "--game-dir",
+        type=Path,
+        default=REPO_ROOT / "web" / "public" / "cards",
+        help="where the game rendition writes its cards and manifest.json",
+    )
+    parser.add_argument(
+        "--game-dpi", type=int, default=200, help="game rendition resolution (default 200: 496px wide)"
+    )
+    parser.add_argument("--game-quality", type=int, default=80, help="WebP quality for the game rendition")
     parser.add_argument(
         "--zip-link",
         default="",
@@ -1008,7 +1023,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    known = {"print", "web", "docs", "board"}
+    known = {"print", "web", "docs", "board", "game"}
     chosen = known if args.profile == "all" else {p.strip() for p in args.profile.split(",") if p.strip()}
     if args.profile == "both":  # the spelling this flag used to take
         chosen = {"print", "web"}
@@ -1016,6 +1031,7 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(f"unknown profile: {', '.join(sorted(chosen - known))}")
     want_print, want_web, want_docs = ("print" in chosen), ("web" in chosen), ("docs" in chosen)
     want_board = "board" in chosen
+    want_game = "game" in chosen
     if want_board and not args.include_seats:
         parser.error("--profile board is the seat cards; it cannot be used with --no-seats")
     if not chosen:
@@ -1039,6 +1055,7 @@ def main(argv: list[str] | None = None) -> int:
             args.web_dpi if want_web else 0,
             args.docs_dpi if want_docs else 0,
             args.board_dpi if want_board else 0,
+            args.game_dpi if want_game else 0,
         )
     )
     fonts = Fonts(tuple(args.font_dir))
@@ -1057,7 +1074,12 @@ def main(argv: list[str] | None = None) -> int:
     print_dir = args.out / "mpc" / "cards"
     web_dir = args.out / "web" / "cards"
     docs_dir = args.docs_dir / "cards"
-    for directory, wanted in ((print_dir, want_print), (web_dir, want_web), (docs_dir, want_docs)):
+    game_dir = args.game_dir
+    #: What the game looks each card up by: the name the engine reports.
+    game_manifest: dict = {"cards": {}, "agendas": {}, "seats": {}, "back": ""}
+    for directory, wanted in (
+        (print_dir, want_print), (web_dir, want_web), (docs_dir, want_docs), (game_dir, want_game)
+    ):
         if wanted:
             directory.mkdir(parents=True, exist_ok=True)
     only = {int(n) for n in args.only.split(",")} if args.only else None
@@ -1086,6 +1108,14 @@ def main(argv: list[str] | None = None) -> int:
                 doc = save(
                     trimmed(image, layout, args.docs_dpi), doc, "jpg", args.web_quality, args.docs_dpi
                 )
+            if want_game:
+                save(
+                    trimmed(image, layout, args.game_dpi),
+                    game_dir / slug,
+                    "webp",
+                    args.game_quality,
+                    args.game_dpi,
+                )
         return printed.resolve(), web.name, doc.name
 
     slots: list[tuple[Path, str]] = []
@@ -1104,6 +1134,7 @@ def main(argv: list[str] | None = None) -> int:
         if len(by_index[asset.index]) > 1:
             alternates.append(f"{asset.index:02d} {card.name} ({len(by_index[asset.index])} versions)")
         slots.append((printed, card.name.lower()))
+        game_manifest["cards"][card.name] = f"{slug}.webp"
         type_line = card_text.type_line(card)
         entries.append(
             gallery.Entry(
@@ -1140,6 +1171,7 @@ def main(argv: list[str] | None = None) -> int:
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
             slots.append((printed, name.lower()))
+            game_manifest["agendas"][name] = f"{slug}.webp"
             entries.append(
                 gallery.Entry(
                     slot=len(entries),
@@ -1185,6 +1217,7 @@ def main(argv: list[str] | None = None) -> int:
             if image is not None:
                 seat_images.append(trimmed(image, layout, args.board_dpi))
             slots.append((printed, seat.value.lower()))
+            game_manifest["seats"][seat.value] = f"{slug}.webp"
             entries.append(
                 gallery.Entry(
                     slot=len(entries),
@@ -1213,6 +1246,7 @@ def main(argv: list[str] | None = None) -> int:
             window = cover(art.convert("RGB"), window_size(layout), top_bias=0.5)
         back_image = framed(layout, NEUTRAL_ACCENT, window).convert("RGB")
     back_path, back_web, back_doc = emit(back_image, "00 Cardback", "00-cardback")
+    game_manifest["back"] = "00-cardback.webp"
 
     if want_print:
         mpc_dir = args.out / "mpc"
@@ -1275,6 +1309,22 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"\nDocs:  {len(rows)} cards + 1 back at {round(TRIM_W_IN * args.docs_dpi)}px wide "
             f"({docs_mb:.0f} MB)\n       {listing}"
+        )
+
+    if want_game:
+        if only is None:
+            files = set(game_manifest["cards"].values()) | set(game_manifest["agendas"].values())
+            files |= set(game_manifest["seats"].values()) | {game_manifest["back"]}
+            for orphan in sorted(p for p in game_dir.glob("*.webp") if p.name not in files):
+                orphan.unlink()
+                print(f"  removed orphaned game card: {orphan.name}")
+            game_manifest["width"] = round(TRIM_W_IN * args.game_dpi)
+            game_manifest["height"] = round(TRIM_H_IN * args.game_dpi)
+            (game_dir / "manifest.json").write_text(json.dumps(game_manifest, indent=1) + "\n")
+        game_mb = sum(f.stat().st_size for f in game_dir.glob("*.webp")) / 1e6
+        print(
+            f"\nGame:  {len(files) if only is None else 'some'} cards at "
+            f"{round(TRIM_W_IN * args.game_dpi)}px wide ({game_mb:.1f} MB)\n       {game_dir}"
         )
 
     if want_web:

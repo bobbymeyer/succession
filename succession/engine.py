@@ -464,6 +464,84 @@ def setup_game(config: Config, rng: random.Random, *, trace: bool = False) -> Ga
     return state
 
 
+def start_turn(state: GameState, rng) -> bool:
+    """Open the current player's turn: draw, or spend it if they must skip.
+
+    Returns False when the turn was skipped -- it is over, and play has already
+    passed to the next seat.
+    """
+
+    player = state.current
+    if state.skip_next[player]:
+        state.skip_next[player] = False
+        state.bump("turns_skipped")
+        state.note(f"P{player} skips their turn")
+        state.turn += 1
+        state.current = (state.current + 1) % state.config.num_players
+        return False
+
+    state.turn += 1
+    # Draw at the top of the turn: the card you pick up is one you may
+    # play this turn. A skipped turn draws nothing, since it never starts.
+    draw(state, player, rng)
+    return True
+
+
+def resolve_turn(state: GameState, player: int, action: Action, rng, deciders) -> bool:
+    """Play the chosen action, let the bots watch it, and check for a win.
+
+    Returns True when the game is over. Otherwise play passes to the next seat.
+    `deciders` answer the questions an event puts to the whole table, and any
+    of them that `observes` is shown the agenda progress the action caused.
+    """
+
+    watching = any(getattr(d, "observes", False) for d in deciders)
+    before = progress_vector(state) if watching else None
+    apply_action(state, player, action, rng, deciders=deciders)
+    if watching:
+        after = progress_vector(state)
+        for decider in deciders:
+            if getattr(decider, "observes", False):
+                decider.observe(player, before, after)
+
+    winners = check_winners(state)
+    if winners:
+        state.winners = winners
+        for p in winners:
+            state.revealed[p] = True
+        return True
+
+    state.current = (state.current + 1) % state.config.num_players
+    return False
+
+
+def game_result(
+    state: GameState,
+    tiers: list[str],
+    *,
+    game_id: int,
+    seed: int,
+    timeout: bool,
+    keep_state: bool = False,
+) -> GameResult:
+    config = state.config
+    return GameResult(
+        game_id=game_id,
+        seed=seed,
+        turns=state.turn,
+        rounds=(state.turn + config.num_players - 1) // config.num_players,
+        timeout=timeout,
+        winners=list(state.winners),
+        tiers=tiers,
+        agendas=list(state.agendas),
+        board=state.board_summary(),
+        counts=count_board(state),
+        stats=dict(state.stats),
+        reshuffles=state.reshuffles,
+        final_state=state if keep_state else None,
+    )
+
+
 def play_game(
     config: Config,
     seed: int,
@@ -479,58 +557,20 @@ def play_game(
         rng.shuffle(tiers)
     state = setup_game(config, rng, trace=trace)
     bots = [bot_factory(tier, seat, rng) for seat, tier in enumerate(tiers)]
-    watching = any(getattr(b, "observes", False) for b in bots)
 
     timeout = False
     while True:
         if state.turn >= config.max_turns:
             timeout = True
             break
-
         player = state.current
-        if state.skip_next[player]:
-            state.skip_next[player] = False
-            state.bump("turns_skipped")
-            state.note(f"P{player} skips their turn")
-            state.turn += 1
-            state.current = (state.current + 1) % config.num_players
+        if not start_turn(state, rng):
             continue
-
-        state.turn += 1
-        # Draw at the top of the turn: the card you pick up is one you may
-        # play this turn. A skipped turn draws nothing, since it never starts.
-        draw(state, player, rng)
         actions = legal_actions(state, player)
-        before = progress_vector(state) if watching else None
         action = bots[player].choose(state, player, actions)
-        apply_action(state, player, action, rng, deciders=bots)
-        if watching:
-            after = progress_vector(state)
-            for bot in bots:
-                if getattr(bot, "observes", False):
-                    bot.observe(player, before, after)
-
-        winners = check_winners(state)
-        if winners:
-            state.winners = winners
-            for p in winners:
-                state.revealed[p] = True
+        if resolve_turn(state, player, action, rng, bots):
             break
 
-        state.current = (state.current + 1) % config.num_players
-
-    return GameResult(
-        game_id=game_id,
-        seed=seed,
-        turns=state.turn,
-        rounds=(state.turn + config.num_players - 1) // config.num_players,
-        timeout=timeout,
-        winners=list(state.winners),
-        tiers=tiers,
-        agendas=list(state.agendas),
-        board=state.board_summary(),
-        counts=count_board(state),
-        stats=dict(state.stats),
-        reshuffles=state.reshuffles,
-        final_state=state if keep_state else None,
+    return game_result(
+        state, tiers, game_id=game_id, seed=seed, timeout=timeout, keep_state=keep_state
     )

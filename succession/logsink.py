@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import io
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -45,6 +46,10 @@ def _seat_column(seat) -> str:
 
 
 def columns(config: Config) -> list[str]:
+    return columns_for(config.num_players)
+
+
+def columns_for(num_players: int) -> list[str]:
     cols = [
         "game_id",
         "seed",
@@ -57,7 +62,7 @@ def columns(config: Config) -> list[str]:
         "winning_tiers",
         "reshuffles",
     ]
-    for p in range(config.num_players):
+    for p in range(num_players):
         cols += [f"p{p}_tier", f"p{p}_agenda", f"p{p}_won"]
     cols += [_seat_column(s) for s in SEATS]
     cols += [
@@ -152,6 +157,20 @@ class SqliteSink:
     def close(self) -> None:
         self.conn.commit()
         self.conn.close()
+
+
+def csv_text(rows: list[dict[str, Any]], num_players: int) -> str:
+    """Rows as one CSV, for games that may not share a table size.
+
+    The header has player columns for `num_players` seats; a game with fewer
+    leaves the rest blank, which `analyze` reads as the end of its table.
+    """
+
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=columns_for(num_players), restval="", lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(rows)
+    return out.getvalue()
 
 
 def open_sink(path: Path, config: Config, fmt: str):

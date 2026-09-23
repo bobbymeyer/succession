@@ -15,6 +15,7 @@ from .bots import BOT_TIERS, make_bot
 from .cards import build_cards
 from .courtiers import COURTIERS
 from .engine import GameResult, play_game, setup_game
+from .session import GameSession
 from .state import Config, GameState
 
 __all__ = [
@@ -25,6 +26,7 @@ __all__ = [
     "COURTIERS",
     "Config",
     "GameResult",
+    "GameSession",
     "GameState",
     "build_cards",
     "make_bot",
