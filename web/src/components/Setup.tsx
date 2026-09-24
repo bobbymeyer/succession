@@ -11,11 +11,12 @@ interface Props {
   onLoad(record: GameRecord): void;
   onExport(): void;
   onClear(): void;
+  onIntro(): void;
 }
 
 const DEFAULT_BOTS = ["naive", "greedy", "strategic"];
 
-export function Setup({ options, saved, onDeal, onLoad, onExport, onClear }: Props) {
+export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onIntro }: Props) {
   const bots = options.player_types.filter((t) => t !== "human");
   const [table, setTable] = useState<string[]>(DEFAULT_BOTS);
   const [seed, setSeed] = useState("");
@@ -44,6 +45,9 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear }: Pro
         <div>
           <h1>Court of Succession</h1>
           <p className="lede">A playtest table: you against the simulator's bots. Seats are drawn at random.</p>
+          <button type="button" className="link watch-intro" data-testid="watch-intro" onClick={onIntro}>
+            Watch introduction
+          </button>
         </div>
       </header>
 
