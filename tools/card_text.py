@@ -41,30 +41,27 @@ RULES: dict[str, str] = {
         "Event and the non-purge events still work."
     ),
     "Poisoning at the Feast": (
-        "Starting with you and going clockwise, every player names one "
-        "courtier in play, and that courtier dies. Each names against the "
-        "board as it then stands. A named courtier rolls a d6 and survives "
-        "on an even."
+        "Every player secretly names one courtier in play, and all are "
+        "revealed at once. Each named courtier rolls a d6: it survives on an "
+        "even, and dies on an odd. One named twice rolls once."
     ),
     "Plague": (
-        "Starting with you and going clockwise, every player names one "
-        "courtier in play, and that courtier dies. Each names against the "
-        "board as it then stands. Nobody is spared."
+        "Every player secretly names one courtier in play, and all are "
+        "revealed at once. Every named courtier dies. Nobody is spared."
     ),
     "Caravan": (
-        "Every player draws a card, starting with you and going clockwise. A "
-        "hand already holding seven draws nothing."
+        "Every player draws a card, starting with you and going clockwise."
     ),
     "Treasure Fleet": (
-        "Every player draws two cards, starting with you and going clockwise. "
-        "A hand already holding seven draws nothing."
+        "Every player draws two cards, starting with you and going clockwise."
     ),
     "Debasement of the Coinage": (
-        "Every player discards a card, starting with you and going clockwise."
+        "Every player chooses a card from their hand, and all of them are "
+        "discarded at once."
     ),
     "Famine": (
-        "Every player discards two cards, starting with you and going "
-        "clockwise."
+        "Every player chooses two cards from their hand, and all of them are "
+        "discarded at once."
     ),
     "Eclipse": (
         "Shuffle the discard pile back into the deck. This card resolves "

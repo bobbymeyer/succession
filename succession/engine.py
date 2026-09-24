@@ -147,8 +147,9 @@ def save_roll(state: GameState, rng) -> bool:
 
 # --- drawing ----------------------------------------------------------------
 def draw(state: GameState, player: int, rng, count: int = 1) -> None:
+    capped = not state.config.hand_limit_at_end_of_turn
     for _ in range(count):
-        if len(state.hands[player]) >= state.config.hand_limit:
+        if capped and len(state.hands[player]) >= state.config.hand_limit:
             return
         if not state.deck:
             if not state.discard:
@@ -345,17 +346,22 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
         state.note(f"the whole board is sealed until P{player}'s next turn")
 
     elif effect == EFFECT_PURGE:
-        for who in _players_from(state, player):
-            candidates = purge_targets(state)
-            if not candidates:
-                break
-            victim = _chooser(deciders, who).pick_courtier(state, who, candidates)
-            if card.save and save_roll(state, rng):
-                state.bump("saves_made")
-                state.note(f"{state.name(victim)} survives P{who}'s choice")
-                continue
-            state.note(f"P{who} names {state.name(victim)}")
-            kill(state, victim)
+        # Everyone names at once, against the same board; then it all happens.
+        # A courtier named twice dies (or rolls to survive) once.
+        candidates = purge_targets(state)
+        if candidates:
+            named = [
+                (who, _chooser(deciders, who).pick_courtier(state, who, candidates))
+                for who in _players_from(state, player)
+            ]
+            for who, victim in named:
+                state.note(f"P{who} names {state.name(victim)}")
+            for victim in dict.fromkeys(victim for _, victim in named):
+                if card.save and save_roll(state, rng):
+                    state.bump("saves_made")
+                    state.note(f"{state.name(victim)} survives")
+                    continue
+                kill(state, victim)
 
     elif effect == EFFECT_DRAW_ALL:
         for who in _players_from(state, player):
@@ -363,6 +369,9 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
         state.bump("cards_given", card.amount * state.config.num_players)
 
     elif effect == EFFECT_DISCARD_ALL:
+        # Everyone chooses from their own hand, then the cards all go face up
+        # on the pile together.
+        thrown = []
         for who in _players_from(state, player):
             for _ in range(card.amount):
                 hand = state.hands[who]
@@ -370,8 +379,9 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
                     break
                 choice = _chooser(deciders, who).pick_discard(state, who, hand)
                 hand.remove(choice)
-                state.discard.append(choice)
+                thrown.append(choice)
                 state.bump("cards_forced_out")
+        state.discard.extend(thrown)
 
     elif effect == EFFECT_RESHUFFLE:
         state.deck.extend(state.discard)
@@ -499,6 +509,30 @@ def start_turn(state: GameState, rng) -> bool:
     return True
 
 
+def enforce_hand_limit(state: GameState, player: int, deciders) -> None:
+    """End of a turn: a hand over the limit discards down to it, by choice.
+
+    Draws are never capped (`hand_limit_at_end_of_turn`), so an event can
+    leave a hand overfull; it is only trimmed as its owner's own turn ends.
+    """
+
+    if not state.config.hand_limit_at_end_of_turn:
+        return
+    hand = state.hands[player]
+    chooser = _chooser(deciders, player)
+    pick = (
+        getattr(chooser, "pick_limit_discard", None)
+        or getattr(chooser, "pick_discard", None)
+        or _DEFAULT_CHOICE.pick_discard
+    )
+    while len(hand) > state.config.hand_limit:
+        choice = pick(state, player, list(hand))
+        hand.remove(choice)
+        state.discard.append(choice)
+        state.bump("hand_limit_discards")
+        state.note(f"P{player} discards {state.name(choice)} to the hand limit")
+
+
 def resolve_turn(state: GameState, player: int, action: Action, rng, deciders) -> bool:
     """Play the chosen action, let the bots watch it, and check for a win.
 
@@ -516,6 +550,7 @@ def resolve_turn(state: GameState, player: int, action: Action, rng, deciders) -
             if getattr(decider, "observes", False):
                 decider.observe(player, before, after)
 
+    enforce_hand_limit(state, player, deciders)
     winners = check_winners(state)
     if winners:
         state.winners = winners

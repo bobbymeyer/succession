@@ -80,8 +80,10 @@ export interface Action {
 }
 
 export type Prompt =
-  | { kind: "turn"; player: number; options: Action[]; card: null }
-  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card };
+  | { kind: "turn"; player: number; options: Action[]; card: null; summary: ""; over: 0 }
+  // `card` is the event asking; null for a discard down to the hand limit as
+  // your turn ends, with `over` the cards still to go.
+  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card | null; summary: string; over: number };
 
 export interface GameRecord {
   version: number;

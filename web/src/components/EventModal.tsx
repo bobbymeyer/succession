@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { Card, EventReport, View } from "../protocol";
+import { useEffect, useRef, useState } from "react";
+import type { Card, EventReport, Prompt, View } from "../protocol";
 import { useUi } from "../art";
 import { playerName, readableLog, seatColour } from "../names";
 
@@ -66,6 +66,67 @@ export function EventModal({ report, view, onContinue }: { report: EventReport; 
             Continue
           </button>
         </form>
+      </div>
+    </dialog>
+  );
+}
+
+/** How long an event that needs your choice is announced before it asks. */
+export const ANNOUNCE_MS = 2600;
+
+// An event that stops to ask you something (name a courtier, discard) is
+// announced first, briefly: the card, what it does, and what it wants from
+// you. It closes itself, or on a click, and the question is waiting behind it.
+export function EventAnnouncement({
+  prompt,
+  actor,
+  view,
+  onDone,
+}: {
+  prompt: Prompt & { kind: "courtier" | "discard" };
+  actor: number;
+  view: View;
+  onDone(): void;
+}) {
+  const { art } = useUi();
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    const d = dialog.current;
+    if (d && !d.open) d.showModal();
+    const t = window.setTimeout(() => setClosing(true), ANNOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+  useEffect(() => {
+    if (!closing) return;
+    const t = window.setTimeout(() => dialog.current?.close(), 260);
+    return () => window.clearTimeout(t);
+  }, [closing]);
+
+  const card = prompt.card!;
+  const src = art.card(card.name);
+  const who = actor === view.you ? "You play" : actor >= 0 ? `${playerName(view, actor)} plays` : "An event";
+  const ask = prompt.kind === "courtier" ? "Name a courtier to die." : "Choose what to discard.";
+
+  return (
+    <dialog
+      ref={dialog}
+      className={`event-modal announce${closing ? " closing" : ""}`}
+      data-testid="event-announce"
+      onClose={onDone}
+      onClick={() => setClosing(true)}
+      aria-labelledby="announce-title"
+      style={{ "--seat": seatColour(Math.max(actor, 0)) } as React.CSSProperties}
+    >
+      <div className="event-art">{src ? <img src={src} alt="" /> : <span className="text-face">{card.name}</span>}</div>
+      <div className="event-text">
+        <span className="kicker">Event · {who}</span>
+        <h2 id="announce-title">{card.name}</h2>
+        <p className="event-summary">{prompt.summary}</p>
+        <p className="event-ask">
+          <strong>Your choice:</strong> {ask} Everyone chooses at once.
+        </p>
+        <div className="announce-timer" style={{ animationDuration: `${ANNOUNCE_MS}ms` }} aria-hidden="true" />
       </div>
     </dialog>
   );

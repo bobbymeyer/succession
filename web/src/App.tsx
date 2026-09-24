@@ -13,7 +13,7 @@ import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
-import { EventModal } from "./components/EventModal";
+import { EventAnnouncement, EventModal } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
@@ -136,6 +136,9 @@ export function App() {
   const [briefing, setBriefing] = useState(false);
   // An event stops play until it has been read.
   const [event, setEvent] = useState<Update | null>(null);
+  // An event that stops to ask you something is announced first, once.
+  const [announce, setAnnounce] = useState<Update | null>(null);
+  const announced = useRef("");
   // The bot whose card is still crossing the table keeps the spotlight until
   // it lands; after that it passes to whoever is thinking next.
   const [playing, setPlaying] = useState<number | null>(null);
@@ -155,6 +158,14 @@ export function App() {
       if (next.view.you >= 0 && next.view.players[next.view.you]?.agenda) {
         setBriefing(true);
         return; // the bots wait for Begin
+      }
+    }
+    const asking = next.prompt && next.prompt.kind !== "turn" ? next.prompt : null;
+    if (asking?.card) {
+      const key = `${asking.card.uid}:${next.view.turn}`;
+      if (announced.current !== key) {
+        announced.current = key;
+        setAnnounce(next);
       }
     }
     if (next.event) {
@@ -206,6 +217,7 @@ export function App() {
           hold.current = request.type === "new";
           setBriefing(false);
           setEvent(null);
+          setAnnounce(null);
           setLog([]);
         }
         queue.current.push(...updates);
@@ -258,6 +270,7 @@ export function App() {
   const toSetup = () => {
     setBriefing(false);
     setEvent(null);
+    setAnnounce(null);
     setShown(null);
   };
 
@@ -434,11 +447,13 @@ export function App() {
   const hint = now
     ? hintFor(now, view, cards)
     : pickPrompt
-      ? `${pickPrompt.card.name}: ${
-          pickPrompt.kind === "courtier"
-            ? "every player names a courtier to die. Click one of the lit courtiers."
-            : "every player discards. Click a lit card, or drag it to the discard pile."
-        }`
+      ? pickPrompt.card === null
+        ? `Your hand is over the limit of 7. Discard ${pickPrompt.over === 1 ? "one more card" : `${pickPrompt.over} more cards`} to end your turn: click a lit card, or drag it to the discard pile.`
+        : `${pickPrompt.card.name}: ${
+            pickPrompt.kind === "courtier"
+              ? "every player names a courtier to die, all at once. Click one of the lit courtiers."
+              : "every player discards, all at once. Click a lit card, or drag it to the discard pile."
+          }`
       : "";
   const pass = turnPrompt?.options.find((a) => a.kind === "pass") ?? null;
 
@@ -564,6 +579,15 @@ export function App() {
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {briefing && <Briefing view={view} onBegin={begin} />}
+        {announce?.prompt && announce.prompt.kind !== "turn" && (
+          <EventAnnouncement
+            key={announced.current}
+            prompt={announce.prompt}
+            actor={announce.actor}
+            view={announce.view}
+            onDone={() => setAnnounce(null)}
+          />
+        )}
         {event?.event && <EventModal key={event.event.card.uid + ":" + event.view.turn} report={event.event} view={event.view} onContinue={carryOn} />}
       </main>
     </UiContext.Provider>

@@ -63,17 +63,21 @@ DISCARD = "discard"      # a forced discard: throw away one of `options`, hand u
 OVER = "over"            # nothing left to decide
 
 #: 2: Discard & Draw. A version-1 record was played before it, without the draw.
-RECORD_VERSION = 2
+#: 3: the hand limit is checked at the end of the turn; earlier records capped
+#: draws instead.
+RECORD_VERSION = 3
 
 
 class NeedChoice(Exception):
     """Raised by a human seat asked to decide mid-card with no answer ready."""
 
-    def __init__(self, kind: str, player: int, options: list[int]) -> None:
+    def __init__(self, kind: str, player: int, options: list[int], *, limit: bool = False) -> None:
         super().__init__(f"P{player} must choose a {kind}")
         self.kind = kind
         self.player = player
         self.options = options
+        #: A discard down to the hand limit, rather than one a card asks for.
+        self.limit = limit
 
 
 class HumanSeat:
@@ -96,10 +100,13 @@ class HumanSeat:
     def pick_discard(self, state: GameState, player: int, hand) -> int:
         return self._next(DISCARD, player, hand)
 
-    def _next(self, kind: str, player: int, options) -> int:
+    def pick_limit_discard(self, state: GameState, player: int, hand) -> int:
+        return self._next(DISCARD, player, hand, limit=True)
+
+    def _next(self, kind: str, player: int, options, *, limit: bool = False) -> int:
         if self.answers:
             return self.answers.pop(0)
-        raise NeedChoice(kind, player, list(options))
+        raise NeedChoice(kind, player, list(options), limit=limit)
 
 
 @dataclass
@@ -112,6 +119,8 @@ class Prompt:
     options: list = field(default_factory=list)
     #: The event card asking, for COURTIER and DISCARD.
     card: int = -1
+    #: A DISCARD down to the hand limit as the turn ends (`card` is then -1).
+    limit: bool = False
 
 
 def seat_controllers(
@@ -161,7 +170,7 @@ class GameSession:
         # The action being resolved when a human was asked mid-card, the game
         # as it stood just before it, and the answers collected for it so far.
         self._resolving: Optional[tuple[int, Action]] = None
-        self._snapshot: Optional[tuple[GameState, object]] = None
+        self._snapshot: Optional[tuple[GameState, object, list]] = None
         self._answers: dict[int, list[int]] = {}
 
     # -- driving the game ---------------------------------------------------
@@ -233,7 +242,8 @@ class GameSession:
             self.prompt = None
             # Back to the moment before the card was played, and play it again
             # with this answer (and any earlier ones) ready.
-            self.state, rng_state = copy.deepcopy(self._snapshot)
+            self.state, rng_state, memories = copy.deepcopy(self._snapshot)
+            self._restore_memories(memories)
             self.rng.setstate(rng_state)
             player, action = self._resolving
             result = self._resolve(player, action, snapshot=False)
@@ -244,7 +254,7 @@ class GameSession:
 
     def _resolve(self, player: int, action: Action, *, snapshot: bool = True) -> Optional[Prompt]:
         if snapshot and self.humans:
-            self._snapshot = copy.deepcopy((self.state, self.rng.getstate()))
+            self._snapshot = copy.deepcopy((self.state, self.rng.getstate(), self._memories()))
             self._answers = {}
         self._resolving = (player, action)
         self.last_actor = player
@@ -262,7 +272,8 @@ class GameSession:
         except NeedChoice as need:
             # Leave the half-played board up so the human sees what they are
             # choosing against; `answer()` rewinds to the snapshot.
-            self.prompt = Prompt(need.kind, need.player, need.options, action.card)
+            card = -1 if need.limit else action.card
+            self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
             return self.prompt
 
         self._resolving = None
@@ -274,6 +285,20 @@ class GameSession:
             self.over = True
             return self._finish()
         return None
+
+    # A bot that watches the table (`observes`) remembers what it saw. The
+    # replay after a human's mid-turn answer shows it the same action again,
+    # so its memory is part of the snapshot too.
+    def _memories(self) -> list:
+        return [
+            {k: v for k, v in vars(seat).items() if k != "rng"} if getattr(seat, "observes", False) else None
+            for seat in self.seats
+        ]
+
+    def _restore_memories(self, memories: list) -> None:
+        for seat, memory in zip(self.seats, memories):
+            if memory is not None:
+                vars(seat).update(memory)
 
     def _finish(self) -> Prompt:
         self.over = True
@@ -303,11 +328,13 @@ class GameSession:
         """Rebuild a game from `record()`, stopped where the record ends."""
 
         version = record.get("version")
-        if version not in (1, RECORD_VERSION):
+        if version not in (1, 2, RECORD_VERSION):
             raise ValueError(f"unsupported record version {version!r}")
         config = dict(record["config"])
         if version == 1:
             config.setdefault("discard_draws", False)
+        if version in (1, 2):
+            config.setdefault("hand_limit_at_end_of_turn", False)
         session = cls(
             config_from_json(config),
             record["seed"],
@@ -335,6 +362,10 @@ class GameSession:
             "player": prompt.player,
             "options": options,
             "card": card_json(state, prompt.card) if prompt.card >= 0 else None,
+            #: The asking event's one-line summary, to announce it by.
+            "summary": EVENT_SUMMARY.get(state.card(prompt.card).name, "") if prompt.card >= 0 else "",
+            #: Cards still to go, when discarding down to the hand limit.
+            "over": len(state.hands[prompt.player]) - state.config.hand_limit if prompt.limit else 0,
         }
 
 
@@ -355,12 +386,12 @@ def config_from_json(data: dict) -> Config:
 EVENT_SUMMARY = {
     "Quarantine": "The court is sealed: no seat changes hands for a round.",
     "Siege": "The city is shut in: nothing on the board moves for a round.",
-    "Poisoning at the Feast": "Every player names a courtier to die. Each may survive the poison.",
-    "Plague": "Every player names a courtier to die. Nobody is spared.",
+    "Poisoning at the Feast": "Every player names a courtier to die, all at once. Each may survive the poison.",
+    "Plague": "Every player names a courtier to die, all at once. Nobody is spared.",
     "Caravan": "Trade arrives: a card for every player.",
     "Treasure Fleet": "A fleet arrives: two cards for every player.",
-    "Debasement of the Coinage": "The coin is worthless: every player discards a card.",
-    "Famine": "The granaries are empty: every player discards two cards.",
+    "Debasement of the Coinage": "The coin is worthless: every player discards a card, all at once.",
+    "Famine": "The granaries are empty: every player discards two cards, all at once.",
     "Eclipse": "The sky turns over: the discard pile goes back into the deck.",
     "Meteor": "Everything turns over: every hand is shuffled in and dealt back out.",
 }
@@ -411,31 +442,35 @@ def event_report(before: _Table, state: GameState) -> dict:
     elif effect == EFFECT_FREEZE_BOARD:
         say(f"The whole board is sealed until P{before.player}'s next turn.")
     elif effect == EFFECT_PURGE:
+        # Everyone named at once; then the named died, or rolled and lived.
         still = set(_in_play(state))
         by_name = {c["name"]: c for c in before.in_play.values()}
         for line in state.log[before.log:]:
             text = line.split("] ", 1)[-1]
-            if " names " in text:
-                who, name = text.split(" names ", 1)
-                victim = by_name.get(name)
-                if victim is not None and victim["uid"] not in still:
-                    say(f"{who} names {name}, who dies.", "loss")
+            if " names " not in text:
+                continue
+            who, name = text.split(" names ", 1)
+            victim = by_name.get(name)
+            if victim is None:
+                continue
+            if victim["uid"] in still:
+                say(f"{who} names {name}, who survives.", "gain")
+                if victim not in spared:
+                    spared.append(victim)
+            else:
+                say(f"{who} names {name}, who dies.", "loss")
+                if victim not in fallen:
                     fallen.append(victim)
-                    # Spared once, then named again.
-                    spared = [c for c in spared if c["uid"] != victim["uid"]]
-            elif " survives " in text:
-                name, rest = text.split(" survives ", 1)
-                say(f"{name} survives {rest}.", "gain")
-                if name in by_name and by_name[name]["uid"] in still:
-                    spared.append(by_name[name])
         if not effects:
-            say("Nobody is left to name.")
-        elif len(effects) < n:
-            say("No courtier is left for the rest to name.")
+            say("Nobody is in play to name.")
     elif effect == EFFECT_DRAW_ALL:
         for p in order:
             got = len(state.hands[p]) - before.hands[p]
-            full = len(state.hands[p]) >= state.config.hand_limit and got < card.amount
+            full = (
+                not state.config.hand_limit_at_end_of_turn
+                and len(state.hands[p]) >= state.config.hand_limit
+                and got < card.amount
+            )
             note = " (hand full)" if full else ""
             if got > 0:
                 say(f"P{p} draws {got}{note}", "gain")
