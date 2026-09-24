@@ -1,0 +1,65 @@
+# Build the print deck and publish it as a GitHub release, so the download
+# link in docs/CARDS.md and the README
+#   https://github.com/<owner>/<repo>/releases/latest/download/succession-print-deck.zip
+# always serves the cards as main prints them.
+#
+# It runs on its own whenever main changes something that is printed on a
+# card -- the card text, the layout, the cards themselves or their art -- and
+# can be run by hand from the Actions tab.
+
+name: Print deck release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "assets/**"
+      - "tools/mpcfill.py"
+      - "tools/card_text.py"
+      - "succession/cards.py"
+      - "succession/courtiers.py"
+      - "succession/enums.py"
+      - ".github/workflows/print-deck.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # to create the release
+
+concurrency:
+  group: print-deck
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and release the print deck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+      - name: Pillow and the card fonts
+        # The cards in the repository were drawn in DejaVu Serif (regular,
+        # bold) and Liberation Serif Italic; DejaVu's own italics would be
+        # picked first, so they go.
+        run: |
+          pip install pillow
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-dejavu-core fonts-liberation
+          sudo apt-get remove -y fonts-dejavu-extra || true
+          python -c "import sys; sys.path.insert(0, 'tools'); from mpcfill import Fonts; f = Fonts(); print(f.regular, f.bold, f.italic, sep='\n')"
+      - name: Build the deck
+        run: python tools/mpcfill.py --profile print --zip
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short=$(git rev-parse --short HEAD)
+          day=$(date -u +%Y-%m-%d)
+          tag="print-deck-${day}-${short}"
+          notes="The print-and-play deck as of ${short}: 100 cards at 600 DPI with bleed, plus the MPC Autofill order (succession.xml). See HOW TO PRINT.txt inside, and docs/CARDS.md for the card list."
+          gh release create "$tag" build/succession-print-deck.zip \
+            --target "$GITHUB_SHA" \
+            --title "Print deck ${day} (${short})" \
+            --notes "$notes" \
+            --latest
