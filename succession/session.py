@@ -38,11 +38,20 @@ import random
 from dataclasses import asdict, dataclass, field, fields
 from typing import Callable, Optional
 
-from .actions import Action, legal_actions
+from .actions import PLAY, Action, legal_actions
 from .agendas import AGENDAS_BY_KEY, conditions, contributors, count_board, rules_for
 from .bots import make_bot
+from .cards import (
+    EFFECT_DISCARD_ALL,
+    EFFECT_DRAW_ALL,
+    EFFECT_FREEZE_BOARD,
+    EFFECT_FREEZE_INNER,
+    EFFECT_PURGE,
+    EFFECT_REDEAL,
+    EFFECT_RESHUFFLE,
+)
 from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
-from .enums import SEAT_ESTATE, SEATS
+from .enums import SEAT_ESTATE, SEATS, CardKind
 from .state import Config, GameState
 
 HUMAN = "human"
@@ -145,6 +154,9 @@ class GameSession:
         #: (None for a skipped turn), for a front end to animate.
         self.last_actor = -1
         self.last_action: Optional[Action] = None
+        #: What the last action did to the table, if it was an event (see
+        #: `event_report`); None otherwise.
+        self.last_event: Optional[dict] = None
 
         # The action being resolved when a human was asked mid-card, the game
         # as it stood just before it, and the answers collected for it so far.
@@ -175,6 +187,7 @@ class GameSession:
         if not start_turn(state, self.rng):
             self.last_actor = player
             self.last_action = None
+            self.last_event = None
             return None
         actions = legal_actions(state, player)
         seat = self.seats[player]
@@ -236,8 +249,13 @@ class GameSession:
         self._resolving = (player, action)
         self.last_actor = player
         self.last_action = action
+        self.last_event = None
         for seat in self.humans:
             self.seats[seat].answers = list(self._answers.get(seat, ()))
+        event = (
+            action.kind == PLAY and self.state.card(action.card).kind is CardKind.EVENT
+        )
+        before = _Table(self.state, player, action.card) if event else None
 
         try:
             over = resolve_turn(self.state, player, action, self.rng, self.seats)
@@ -250,6 +268,8 @@ class GameSession:
         self._resolving = None
         self._snapshot = None
         self._answers = {}
+        if before is not None:
+            self.last_event = event_report(before, self.state)
         if over:
             self.over = True
             return self._finish()
@@ -331,6 +351,122 @@ def config_from_json(data: dict) -> Config:
 
 
 # --- the public picture of the game -----------------------------------------
+#: One line under an event's name, for the table to read at a glance.
+EVENT_SUMMARY = {
+    "Quarantine": "The court is sealed: no seat changes hands for a round.",
+    "Siege": "The city is shut in: nothing on the board moves for a round.",
+    "Poisoning at the Feast": "Every player names a courtier to die. Each may survive the poison.",
+    "Plague": "Every player names a courtier to die. Nobody is spared.",
+    "Caravan": "Trade arrives: a card for every player.",
+    "Treasure Fleet": "A fleet arrives: two cards for every player.",
+    "Debasement of the Coinage": "The coin is worthless: every player discards a card.",
+    "Famine": "The granaries are empty: every player discards two cards.",
+    "Eclipse": "The sky turns over: the discard pile goes back into the deck.",
+    "Meteor": "Everything turns over: every hand is shuffled in and dealt back out.",
+}
+
+
+class _Table:
+    """The parts of the table an event can change, just before it resolves."""
+
+    def __init__(self, state: GameState, player: int, card: int) -> None:
+        self.player = player
+        self.card = card
+        self.card_json = card_json(state, card)
+        # The event leaves its player's hand as it is played; count it gone.
+        self.hands = [len(h) - (p == player) for p, h in enumerate(state.hands)]
+        self.in_play = {uid: card_json(state, uid) for uid in _in_play(state)}
+        self.deck = len(state.deck)
+        self.discard = len(state.discard)
+        self.log = len(state.log)
+
+
+def _in_play(state: GameState) -> list[int]:
+    return [uid for uid in state.seats.values() if uid is not None] + list(state.outer)
+
+
+def event_report(before: _Table, state: GameState) -> dict:
+    """What an event just did to the table, for a front end to announce.
+
+    `effects` are lines in the log's own voice ("P2 draws 2"), each with a
+    tone: "loss", "gain" or "neutral". `fallen` and `spared` are the
+    courtiers a purge named, as they were; `discarded` the cards a forced
+    discard threw away, face up on the discard pile for everyone.
+    """
+
+    card = state.card(before.card)
+    n = state.config.num_players
+    order = [(before.player + i) % n for i in range(n)]
+    effects: list[dict] = []
+    fallen: list[dict] = []
+    spared: list[dict] = []
+    discarded: list[dict] = []
+
+    def say(text: str, tone: str = "neutral") -> None:
+        effects.append({"text": text, "tone": tone})
+
+    effect = card.effect
+    if effect == EFFECT_FREEZE_INNER:
+        say(f"The inner circle is sealed until P{before.player}'s next turn.")
+    elif effect == EFFECT_FREEZE_BOARD:
+        say(f"The whole board is sealed until P{before.player}'s next turn.")
+    elif effect == EFFECT_PURGE:
+        still = set(_in_play(state))
+        by_name = {c["name"]: c for c in before.in_play.values()}
+        for line in state.log[before.log:]:
+            text = line.split("] ", 1)[-1]
+            if " names " in text:
+                who, name = text.split(" names ", 1)
+                victim = by_name.get(name)
+                if victim is not None and victim["uid"] not in still:
+                    say(f"{who} names {name}, who dies.", "loss")
+                    fallen.append(victim)
+                    # Spared once, then named again.
+                    spared = [c for c in spared if c["uid"] != victim["uid"]]
+            elif " survives " in text:
+                name, rest = text.split(" survives ", 1)
+                say(f"{name} survives {rest}.", "gain")
+                if name in by_name and by_name[name]["uid"] in still:
+                    spared.append(by_name[name])
+        if not effects:
+            say("Nobody is left to name.")
+        elif len(effects) < n:
+            say("No courtier is left for the rest to name.")
+    elif effect == EFFECT_DRAW_ALL:
+        for p in order:
+            got = len(state.hands[p]) - before.hands[p]
+            full = len(state.hands[p]) >= state.config.hand_limit and got < card.amount
+            note = " (hand full)" if full else ""
+            if got > 0:
+                say(f"P{p} draws {got}{note}", "gain")
+            else:
+                say(f"P{p} draws nothing{note}", "neutral")
+    elif effect == EFFECT_DISCARD_ALL:
+        for p in order:
+            lost = before.hands[p] - len(state.hands[p])
+            if lost > 0:
+                say(f"P{p} discards {lost}", "loss")
+            else:
+                say(f"P{p} has nothing to discard", "neutral")
+        # The event itself goes on the pile after them.
+        thrown = [uid for uid in state.discard[before.discard:] if uid != before.card]
+        discarded = [card_json(state, uid) for uid in thrown]
+    elif effect == EFFECT_RESHUFFLE:
+        say(f"{before.discard} cards go back into the deck, which now holds {len(state.deck)}.")
+    elif effect == EFFECT_REDEAL:
+        say("Every hand goes into the deck and is dealt back out, each as big as it was.")
+
+    return {
+        "card": before.card_json,
+        "player": before.player,
+        "summary": EVENT_SUMMARY.get(card.name, ""),
+        "effects": effects,
+        "fallen": fallen,
+        "spared": spared,
+        "discarded": discarded,
+    }
+
+
 def card_json(state: GameState, uid: int) -> dict:
     card = state.card(uid)
     data = {

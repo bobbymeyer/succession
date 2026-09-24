@@ -97,12 +97,24 @@ export interface Result {
   record: GameRecord;
 }
 
+/** What an event did to the table (succession/session.py `event_report`). */
+export interface EventReport {
+  card: Card;
+  player: number;
+  summary: string;
+  effects: { text: string; tone: "loss" | "gain" | "neutral" }[];
+  fallen: Card[]; // courtiers named who died, as they were
+  spared: Card[]; // named, and survived
+  discarded: Card[]; // thrown away, face up on the pile
+}
+
 export interface Update {
   seat: number;
   view: View;
   log: string[];
   actor: number; // whose move this update shows; -1 before anyone's
   action: Action | null; // that move, all of it face up on the table
+  event: EventReport | null; // what that move did, when it was an event
   prompt: Prompt | null;
   result: Result | null;
 }

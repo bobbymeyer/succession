@@ -13,6 +13,7 @@ import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
+import { EventModal } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
@@ -133,6 +134,8 @@ export function App() {
   // A new deal stops at the table as dealt until you have read your agenda.
   const hold = useRef(false);
   const [briefing, setBriefing] = useState(false);
+  // An event stops play until it has been read.
+  const [event, setEvent] = useState<Update | null>(null);
   // The bot whose card is still crossing the table keeps the spotlight until
   // it lands; after that it passes to whoever is thinking next.
   const [playing, setPlaying] = useState<number | null>(null);
@@ -153,6 +156,10 @@ export function App() {
         setBriefing(true);
         return; // the bots wait for Begin
       }
+    }
+    if (next.event) {
+      setEvent(next);
+      return; // play goes on from Continue
     }
     if (queue.current.length) {
       const delay = next.prompt ? 0 : SPEEDS[speedRef.current];
@@ -198,6 +205,7 @@ export function App() {
           fresh.current = true;
           hold.current = request.type === "new";
           setBriefing(false);
+          setEvent(null);
           setLog([]);
         }
         queue.current.push(...updates);
@@ -242,8 +250,14 @@ export function App() {
     if (timer.current === null) pump();
   }, [pump]);
 
+  const carryOn = useCallback(() => {
+    setEvent(null);
+    if (timer.current === null && queue.current.length) timer.current = window.setTimeout(pump, 250);
+  }, [pump]);
+
   const toSetup = () => {
     setBriefing(false);
+    setEvent(null);
     setShown(null);
   };
 
@@ -550,6 +564,7 @@ export function App() {
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {briefing && <Briefing view={view} onBegin={begin} />}
+        {event?.event && <EventModal key={event.event.card.uid + ":" + event.view.turn} report={event.event} view={event.view} onContinue={carryOn} />}
       </main>
     </UiContext.Provider>
   );
