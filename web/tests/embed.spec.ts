@@ -3,8 +3,7 @@
 // bobbymeyer.com would be, so this is the cross-origin case: the worker,
 // Pyodide, storage and downloads all have to work from inside the frame.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { expect, test } from "@playwright/test";
-import { playFromList } from "./helpers";
+import { expect, playFromList, test } from "./helpers";
 
 // Served by the second web server in playwright.config.ts: a different origin
 // from the game's, and a real server -- Chrome will not let a page it cannot

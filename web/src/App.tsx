@@ -13,6 +13,7 @@ import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
+import { Intro, introSeen } from "./components/Intro";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { DiscardPile, StatusPanel } from "./components/Status";
@@ -78,6 +79,8 @@ function hintFor(s: Stage, view: View, cards: Map<number, Card>): string {
 export function App() {
   const engine = useMemo(() => new Engine(), []);
   const [options, setOptions] = useState<TableOptions | null>(null);
+  // The story plays on a first visit, over the engine's boot.
+  const [intro, setIntro] = useState(() => !introSeen());
   const [fatal, setFatal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -244,6 +247,7 @@ export function App() {
     setShown(null);
   };
 
+  if (intro) return <Intro onDone={() => setIntro(false)} />;
   if (fatal) {
     return (
       <main className="app">
@@ -272,6 +276,7 @@ export function App() {
               clearGames();
               setSaved(savedGames().length);
             }}
+            onIntro={() => setIntro(true)}
           />
           {error && <p className="error">{error}</p>}
           <Credit />

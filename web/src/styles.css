@@ -471,3 +471,61 @@ a.button:hover { border-color: var(--gold); }
   border: 3px solid var(--hand); background: color-mix(in srgb, var(--hand) 35%, transparent);
   transform: translate(-50%, -50%);
 }
+
+/* -- the introduction ------------------------------------------------------ */
+.intro {
+  position: fixed; inset: 0; z-index: 50; overflow: hidden; cursor: pointer;
+  background: #05080e; color: #f3ead6;
+  display: grid; place-items: center;
+}
+.intro-art {
+  position: absolute; inset: -4%;
+  background-size: cover;
+  opacity: 0; transform: scale(1.02);
+  transition: opacity 1400ms ease, transform 9s linear;
+}
+.intro-art.on { opacity: 1; transform: scale(1.1); }
+.intro-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, rgba(5, 8, 14, 0.25) 0%, rgba(5, 8, 14, 0.75) 70%, rgba(5, 8, 14, 0.95) 100%),
+    linear-gradient(to bottom, rgba(5, 8, 14, 0.2), rgba(5, 8, 14, 0.7));
+}
+.intro-lines {
+  position: relative; max-width: min(46rem, 88vw); text-align: center;
+  font-family: var(--serif); font-size: clamp(1.35rem, 3.2vw, 2.3rem); line-height: 1.35;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9), 0 0 2px rgba(0, 0, 0, 0.8);
+}
+.intro-lines p { margin: 0 0 0.6em; opacity: 0; transform: translateY(8px); transition: opacity 1200ms ease, transform 1200ms ease; }
+.intro-lines p.on { opacity: 1; transform: none; }
+.intro-title { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; cursor: default; }
+.intro-title img {
+  width: min(240px, 46vw); border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(240, 200, 101, 0.5), 0 0 60px rgba(240, 200, 101, 0.25), 0 20px 50px rgba(0, 0, 0, 0.7);
+  animation: title-in 1600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.intro-title h1 {
+  margin: 0; font-family: var(--serif); font-weight: 700; text-transform: uppercase;
+  font-size: clamp(2.4rem, 8vw, 5rem); letter-spacing: 0.22em; padding-left: 0.22em;
+  color: var(--gold-bright); text-shadow: 0 0 30px rgba(240, 200, 101, 0.35), 0 4px 20px rgba(0, 0, 0, 0.9);
+  animation: title-in 1800ms 500ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.intro-title button { font-size: 1.05rem; padding: 0.6rem 1.6rem; animation: title-in 900ms 1700ms ease both; }
+@keyframes title-in { from { opacity: 0; transform: scale(0.94); letter-spacing: 0.4em; } }
+.intro-title img { animation-name: fade-in; }
+@keyframes fade-in { from { opacity: 0; transform: scale(0.94); } }
+.intro-skip {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(5, 8, 14, 0.5); color: #f3ead6; border: 1px solid rgba(243, 234, 214, 0.35);
+  border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.85rem; cursor: pointer;
+}
+.intro-skip:hover { border-color: var(--gold-bright); }
+.intro-dots { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; pointer-events: none; }
+.intro-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(243, 234, 214, 0.3); transition: background 400ms; }
+.intro-dots span.on { background: var(--gold-bright); }
+.watch-intro { margin-top: 4px; font-size: 0.9rem; }
+@media (prefers-reduced-motion: reduce) {
+  .intro-art, .intro-art.on { transform: none; transition: opacity 600ms ease; }
+  .intro-lines p { transform: none; }
+  .intro-title img, .intro-title h1, .intro-title button { animation: none; }
+}

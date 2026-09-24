@@ -1,7 +1,7 @@
 // Whole games in a real browser: Pyodide boots, the engine deals, and a
 // player gets from the first move to the end.
-import { expect, test, type Page } from "@playwright/test";
-import { playFromList, random, settle } from "./helpers";
+import type { Page } from "@playwright/test";
+import { expect, playFromList, random, settle, test } from "./helpers";
 
 async function start(page: Page, errors: string[], seed?: number) {
   page.on("pageerror", (e) => errors.push(e.message));

@@ -2,8 +2,7 @@
 // docs/EMBED.md, opened without its trailing slash. The page must add the
 // slash itself -- a redirect rule for it would loop on Netlify -- and then
 // load and play as usual.
-import { expect, test } from "@playwright/test";
-import { settle } from "./helpers";
+import { expect, settle, test } from "./helpers";
 
 test("opened at /succession without the slash, the game puts it back and plays", async ({ page }) => {
   const errors: string[] = [];
