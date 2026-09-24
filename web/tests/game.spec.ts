@@ -43,9 +43,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 15: a bot's Treasure Fleet before your first turn.
+  // Seed 344: a bot's Treasure Fleet before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 15);
+  await start(page, errors, 344);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
@@ -59,6 +59,44 @@ test("an event stops play and says what it did", async ({ page }) => {
   await page.getByTestId("event-continue").click();
   await expect(event).toBeHidden();
   await settle(page);
+  expect(errors).toEqual([]);
+});
+
+test("an event that asks you something is announced first", async ({ page }) => {
+  // Seed 13: a bot plays Debasement of the Coinage before your first turn.
+  const errors: string[] = [];
+  await start(page, errors, 13);
+  await page.getByTestId("begin").click();
+  const announce = page.getByTestId("event-announce");
+  await expect(announce).toBeVisible({ timeout: 30_000 });
+  await expect(announce.locator("h2")).toHaveText("Debasement of the Coinage");
+  await expect(announce).toContainText("Choose what to discard.");
+  // It goes by itself, and the question is waiting behind it.
+  await expect(announce).toBeHidden({ timeout: 6_000 });
+  await expect(page.locator(".prompt")).toContainText("every player discards, all at once");
+  await page.locator(".mine .card.live > button.face").first().click();
+  await page.getByTestId("offer").first().click();
+  // Then the whole event, resolved together.
+  await expect(page.getByTestId("event")).toBeVisible();
+  await expect(page.getByTestId("event").locator(".event-effects li")).toHaveCount(4);
+  expect(errors).toEqual([]);
+});
+
+test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
+  // Seed 28: taking the first move each time, your hand passes 7 on the
+  // sixth decision.
+  const errors: string[] = [];
+  await start(page, errors, 28);
+  for (let i = 0; i < 6; i++) await playFromList(page);
+  await settle(page);
+  await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
+  expect(await page.locator(".mine .card").count()).toBe(8);
+  await playFromList(page);
+  await settle(page);
+  await page.mouse.move(0, 0); // no card preview over the tabs
+  await page.getByRole("tab", { name: "Log" }).click();
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("You discard");
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("to the hand limit");
   expect(errors).toEqual([]);
 });
 

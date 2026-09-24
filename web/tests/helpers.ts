@@ -22,16 +22,24 @@ type Surface = Page | Frame | FrameLocator;
 export async function settle(surface: Surface) {
   const ready = "[data-testid=game-over], .all-moves";
   // A new round opens on your agenda, and an event stops play until it has
-  // been read: begin, or carry on, until the page asks for a decision.
-  const pause = "[data-testid=begin], [data-testid=event-continue]";
+  // been read: begin, or carry on, until the page asks for a decision. An
+  // event that asks you something is announced first; it closes by itself.
+  const buttons = "[data-testid=begin], [data-testid=event-continue]";
+  const announce = surface.locator("[data-testid=event-announce]");
   for (let i = 0; i < 50; i++) {
-    await surface.locator(`${ready}, ${pause}`).first().waitFor({ timeout: 60_000 });
-    const button = surface.locator(pause).first();
-    if (!(await button.isVisible())) {
-      if (await surface.locator(ready).first().isVisible()) return;
+    await surface.locator(`${ready}, ${buttons}, [data-testid=event-announce]`).first().waitFor({ timeout: 60_000 });
+    if (await announce.count()) {
+      // Click it away, unless it is already on its way out.
+      await surface.locator("[data-testid=event-announce]:not(.closing)").click({ timeout: 1_000 }).catch(() => {});
+      await announce.waitFor({ state: "detached", timeout: 15_000 });
       continue;
     }
-    await button.click();
+    const button = surface.locator(buttons).first();
+    if (await button.isVisible()) {
+      await button.click();
+      continue;
+    }
+    if (await surface.locator(ready).first().isVisible()) return;
   }
 }
 

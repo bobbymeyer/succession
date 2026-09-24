@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from succession.actions import DISCARD, MOVE, PLAY, Action, card_actions, legal_actions
+from succession.actions import DISCARD, MOVE, PASS, PLAY, Action, card_actions, legal_actions
 from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
@@ -19,7 +19,9 @@ from succession.engine import (
     apply_action,
     check_winners,
     draw,
+    enforce_hand_limit,
     play_game,
+    resolve_turn,
     setup_game,
     simulate,
 )
@@ -54,6 +56,22 @@ class FixedRng:
 
     def choice(self, seq):
         return seq[0]
+
+
+class Namers(list):
+    """One purge pick per player, by name, remembering what each was offered."""
+
+    def __init__(self, state, *names):
+        super().__init__(self._Namer(self, state, name) for name in names)
+        self.offered = []
+
+    class _Namer:
+        def __init__(self, owner, state, name):
+            self.owner, self.uid = owner, uid(state, name)
+
+        def pick_courtier(self, state, player, candidates):
+            self.owner.offered.append(list(candidates))
+            return self.uid
 
 
 def fresh(**overrides) -> GameState:
@@ -514,9 +532,9 @@ class TestGodlessness(unittest.TestCase):
 class TestEvents(unittest.TestCase):
     """Events hit the whole table, in five minor/major pairs."""
 
-    def play(self, state, name, rolls=(1,), player=0):
+    def play(self, state, name, rolls=(1,), player=0, deciders=None):
         card = give(state, player, name)[0]
-        apply_action(state, player, Action(PLAY, card=card), FixedRng(rolls))
+        apply_action(state, player, Action(PLAY, card=card), FixedRng(rolls), deciders=deciders)
 
     def test_the_ten_events_are_five_pairs(self):
         from succession.cards import EVENT_CARDS
@@ -593,18 +611,49 @@ class TestEvents(unittest.TestCase):
         state = fresh()
         outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb",
               "Crosser of Rivers", "Silver Tongue")
-        self.play(state, "Plague")
+        self.play(state, "Plague", deciders=Namers(state, "Beloved of the Gods", "Hand of the Oracle",
+                                                   "Golden Thumb", "Crosser of Rivers"))
         # Four players, four names, four dead.
-        self.assertEqual(len(state.outer), 1)
+        self.assertEqual([state.name(u) for u in state.outer], ["Silver Tongue"])
         self.assertEqual(state.stats.get("courtiers_killed"), 4)
+
+    def test_a_purge_is_named_all_at_once(self):
+        # Everyone names against the same board, so nobody sees another's
+        # pick -- and a courtier named by two dies once.
+        state = fresh()
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb")
+        namers = Namers(state, "Golden Thumb", "Golden Thumb", "Hand of the Oracle", "Golden Thumb")
+        self.play(state, "Plague", deciders=namers)
+        self.assertEqual([state.name(u) for u in state.outer], ["Beloved of the Gods"])
+        self.assertEqual(state.stats.get("courtiers_killed"), 2)
+        # Every player was offered the whole board as it stood before anyone died.
+        self.assertTrue(all(len(options) == 3 for options in namers.offered))
 
     def test_poisoning_allows_each_target_a_save(self):
         state = fresh()
         outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb",
               "Crosser of Rivers", "Silver Tongue")
-        self.play(state, "Poisoning at the Feast", rolls=(2, 2, 2, 2))  # all even
+        self.play(state, "Poisoning at the Feast", rolls=(2, 2, 2, 2),  # all even
+                  deciders=Namers(state, "Beloved of the Gods", "Hand of the Oracle",
+                                  "Golden Thumb", "Crosser of Rivers"))
         self.assertEqual(len(state.outer), 5)
         self.assertEqual(state.stats.get("saves_made"), 4)
+
+    def test_a_forced_discard_lands_all_at_once(self):
+        state = fresh()
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion")
+        seen = []
+
+        class Watcher:
+            def pick_discard(self, state, player, hand):
+                seen.append(len(state.discard))
+                return hand[0]
+
+        self.play(state, "Debasement of the Coinage", deciders=[Watcher()] * 4)
+        # Nobody's choice was on the pile while the others were choosing.
+        self.assertEqual(seen, [0, 0, 0, 0])
+        self.assertEqual(len(state.discard), 5)  # four discards and the event
 
     def test_a_purge_cannot_reach_a_sealed_inner_circle(self):
         state = fresh()
@@ -891,11 +940,47 @@ class TestDeckAndTurns(unittest.TestCase):
         self.assertEqual(len(state.hands[0]), 1)
         self.assertEqual(state.reshuffles, 1)
 
-    def test_draw_respects_the_hand_limit(self):
+    def test_a_draw_is_never_capped(self):
+        # The limit is checked as a turn ends, not when cards come in.
         state = fresh(hand_limit=3)
         state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
         draw(state, 0, random.Random(0), count=4)
+        self.assertEqual(len(state.hands[0]), 4)
+
+    def test_the_old_rule_caps_the_draw(self):
+        state = fresh(hand_limit=3, hand_limit_at_end_of_turn=False)
+        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
+        draw(state, 0, random.Random(0), count=4)
         self.assertEqual(len(state.hands[0]), 3)
+
+    def test_a_turn_ends_by_discarding_down_to_the_limit(self):
+        state = fresh(hand_limit=3)
+        names = ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker", "Master Mason")
+        state.hands[0] = [uid(state, n) for n in names]
+        state.hands[1] = [uid(state, n) for n in ("Crosser of Rivers", "Buyer of Cities", "Reader of Omens", "Hundred-Kill Rider")]
+
+        class Chooser:
+            def __init__(self):
+                self.asked = []
+
+            def pick_discard(self, state, player, hand):
+                self.asked.append(list(hand))
+                return hand[-1]
+
+        mine = Chooser()
+        # Only the player whose turn is ending discards; the other overfull
+        # hand waits for its own turn.
+        resolve_turn(state, 0, Action(PASS, 0), random.Random(0), [mine, Chooser(), Chooser(), Chooser()])
+        self.assertEqual([state.name(u) for u in state.hands[0]], list(names[:3]))
+        self.assertEqual([state.name(u) for u in state.discard], ["Master Mason", "Horse Breaker"])
+        self.assertEqual(len(mine.asked), 2)
+        self.assertEqual(len(state.hands[1]), 4)
+
+    def test_the_old_rule_never_discards_to_the_limit(self):
+        state = fresh(hand_limit=3, hand_limit_at_end_of_turn=False)
+        state.hands[0] = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
+        enforce_hand_limit(state, 0, None)
+        self.assertEqual(len(state.hands[0]), 4)
 
     def test_exhausted_deck_and_discard_is_not_an_error(self):
         state = fresh()
@@ -1114,9 +1199,10 @@ class TestEventValuation(unittest.TestCase):
         action = Action(PLAY, card=card)
         mine = simulate(state, 0, action, decider=self.bot)
         theirs = simulate(state, 0, action)
-        # Both kill four courtiers; the bot does not have to like the same four.
-        self.assertEqual(len(mine.outer), 1)
-        self.assertEqual(len(theirs.outer), 1)
+        # The stand-in names the first courtier for everyone, and one named
+        # four times dies once; the bot's own pick is its own.
+        self.assertEqual(len(theirs.outer), 4)
+        self.assertIn(len(mine.outer), (3, 4))
         self.assertIsNotNone(self.bot.pick_courtier(state, 0, state.outer))
 
 

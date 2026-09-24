@@ -42,6 +42,10 @@ class Config:
     removed_courtiers_return_to_deck: bool = True
     #: Discard & Draw: a turn spent discarding draws a replacement at once.
     discard_draws: bool = True
+    #: The hand limit is checked as each turn you take ends: draws are never
+    #: capped, and a hand over the limit then discards down to it. False is
+    #: the old rule, where a full hand simply draws nothing.
+    hand_limit_at_end_of_turn: bool = True
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False

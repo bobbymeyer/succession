@@ -578,3 +578,16 @@ a.button:hover { border-color: var(--gold); }
   .intro-lines p { transform: none; }
   .intro-title img, .intro-title h1, .intro-title button { animation: none; }
 }
+
+/* -- an event that asks you something, announced before it asks ----------- */
+.event-modal.announce { cursor: pointer; width: min(94vw, 44rem); }
+.event-modal.announce .event-art { width: min(200px, 34vw); }
+.event-modal.announce.closing { animation: announce-out 260ms ease forwards; }
+.event-modal.announce.closing::backdrop { opacity: 0; transition: opacity 260ms ease; }
+@keyframes announce-out { to { opacity: 0; transform: scale(0.96); } }
+.event-ask { margin: 4px 0 14px; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, var(--seat, var(--gold)) 14%, transparent); border-left: 3px solid var(--seat, var(--gold)); }
+.announce-timer { height: 3px; border-radius: 2px; background: var(--seat, var(--gold)); transform-origin: left; animation: announce-timer linear both; }
+@keyframes announce-timer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .announce-timer { animation: none; }
+}

@@ -33,8 +33,14 @@ move any outer courtier into an empty matching seat.
 ## Turn
 
 **Draw one card, then take exactly one action.** The card drawn at the top of
-the turn can be played that same turn. A hand already at the limit of 7 draws
-nothing. Turn order is clockwise; the first player is chosen at random.
+the turn can be played that same turn. Turn order is clockwise; the first
+player is chosen at random.
+
+**The hand limit is 7, checked as your turn ends.** Nothing ever stops you
+drawing, so an event can leave a hand overfull. That hand is only trimmed at the
+end of its owner's next turn taken: they choose cards to discard until they
+hold 7. A skipped turn is not taken, so it checks nothing.
+(`--hand-limit-on-draw` restores the old rule, where a full hand drew nothing.)
 
 1. **Play a card from hand** — a card from hand only ever reaches the outer
    circle. There is no way to play a card from hand straight into a seat.
@@ -196,9 +202,9 @@ covers any event.
 | Pair | Minor | Major |
 |---|---|---|
 | **Freeze** | **Quarantine** — the inner circle is sealed for a round | **Siege** — the whole board is sealed for a round |
-| **Purge** | **Poisoning at the Feast** — every player names a courtier to kill; each may save on an even d6 | **Plague** — the same, and nobody is spared |
+| **Purge** | **Poisoning at the Feast** — every player names a courtier to kill, all at once; each may save on an even d6 | **Plague** — the same, and nobody is spared |
 | **Windfall** | **Caravan** — every player draws a card | **Treasure Fleet** — every player draws two |
-| **Want** | **Debasement of the Coinage** — every player discards a card | **Famine** — every player discards two |
+| **Want** | **Debasement of the Coinage** — every player discards a card, all at once | **Famine** — every player discards two, all at once |
 | **Upheaval** | **Eclipse** — the discard pile is shuffled back into the deck | **Meteor** — every hand is shuffled in and dealt back out |
 
 ## What a freeze stops
@@ -218,12 +224,16 @@ player takes one turn under it.
 
 ## How a purge runs
 
-Starting with the player who played the card and going clockwise, **every
-player names one courtier in play**, and that courtier dies — to the discard,
-so the epithet may return on somebody new. Each name is taken in turn against
-the board as it then stands, so a courtier already named cannot be named again.
-Under Poisoning the target rolls a d6 and survives on an even; under Plague
-there is no roll. A purge with nobody left to kill cannot be played.
+**Every player names one courtier in play, all at once** -- in secret, against
+the same board, and then revealed together. Every named courtier dies, to the
+discard, so the epithet may return on somebody new. Two players may name the
+same courtier; it dies once. Under Poisoning each named courtier rolls a d6
+(once, however many named it) and survives on an even; under Plague there is no
+roll. A purge with nobody in play to kill cannot be played.
+
+Forced discards work the same way: under Debasement or Famine every player
+chooses from their own hand, and all the cards land on the discard pile
+together.
 
 ## Decisions this needed
 
@@ -233,7 +243,8 @@ The brief gave the effects but not these edges:
 |---|---|
 | How long "a round" lasts | Until just before the caster's next turn — every other player gets one turn under it |
 | Whether the caster is also hit by their own draw, discard or purge | Yes; "every player" includes them |
-| Draw order and hand limit | Clockwise from the caster, and the limit of 7 still applies, so a full hand draws nothing |
+| Draw order and hand limit | Clockwise from the caster, and nobody's draw is capped: an overfull hand discards down to 7 as its owner's next turn ends |
+| Whether event choices are made in turn | No -- every choice an event asks for is made at once, and they resolve together |
 | What Meteor deals back | Each player gets back as many cards as they held, with the contents randomised |
 | Whether Eclipse shuffles itself in | No — it resolves, then goes to the discard |
 | Whether a Defense stops any of it | No, exactly as the brief has it |
