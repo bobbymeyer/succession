@@ -94,6 +94,12 @@ one artifact meant to leave this machine, so the order file inside it points at
 `cards/...` relative to itself rather than at absolute paths — unzip it
 anywhere and it still finds its cards.
 
+Nobody has to build the zip by hand for the download link above:
+`.github/workflows/print-deck.yml` builds it and publishes it as the latest
+GitHub release whenever `main` changes anything printed on a card (the art, the
+card text, the layout or the cards themselves), and it can be run from the
+Actions tab at any time.
+
 Two renditions of the same 92 cards -- the 84-card play deck plus the eight
 agendas. **Print** is full bleed at 600 DPI with the MPC Autofill order file
 beside it; **web** is the trimmed card at 744 px with a self-contained
