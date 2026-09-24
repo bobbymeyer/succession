@@ -21,12 +21,17 @@ type Surface = Page | Frame | FrameLocator;
 /** Wait until the page is asking for a decision, or the game is over. */
 export async function settle(surface: Surface) {
   const ready = "[data-testid=game-over], .all-moves";
-  await surface.locator(`${ready}, [data-testid=begin]`).first().waitFor({ timeout: 60_000 });
-  // A new round opens on your agenda; begin it.
-  const begin = surface.locator("[data-testid=begin]");
-  if (await begin.isVisible()) {
-    await begin.click();
-    await surface.locator(ready).first().waitFor({ timeout: 60_000 });
+  // A new round opens on your agenda, and an event stops play until it has
+  // been read: begin, or carry on, until the page asks for a decision.
+  const pause = "[data-testid=begin], [data-testid=event-continue]";
+  for (let i = 0; i < 50; i++) {
+    await surface.locator(`${ready}, ${pause}`).first().waitFor({ timeout: 60_000 });
+    const button = surface.locator(pause).first();
+    if (!(await button.isVisible())) {
+      if (await surface.locator(ready).first().isVisible()) return;
+      continue;
+    }
+    await button.click();
   }
 }
 

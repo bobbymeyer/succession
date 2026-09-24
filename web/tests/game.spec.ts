@@ -29,6 +29,39 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("a new player's first game is the kind deal, unless they choose a seed", async ({ page }) => {
+  await page.goto("./");
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  await expect(page.getByTestId("first-deal")).toBeVisible();
+  await page.fill("input[placeholder=random]", "7");
+  await expect(page.getByTestId("first-deal")).toBeHidden();
+  await page.fill("input[placeholder=random]", "");
+  await page.getByTestId("deal").click();
+  // You move first, with House Rising: Mitreas.
+  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
+  await expect(page.getByTestId("briefing")).toContainText("You move first.");
+});
+
+test("an event stops play and says what it did", async ({ page }) => {
+  // Seed 15: a bot's Treasure Fleet before your first turn.
+  const errors: string[] = [];
+  await start(page, errors, 15);
+  await page.getByTestId("begin").click();
+  const event = page.getByTestId("event");
+  await expect(event).toBeVisible({ timeout: 30_000 });
+  await expect(event.locator("h2")).toHaveText("Treasure Fleet");
+  await expect(event.locator(".event-effects li")).toHaveCount(4);
+  await expect(event.locator(".event-effects")).toContainText("You draw");
+  // Nothing moves on behind it until it has been read.
+  const turn = await page.locator(".status .turn").innerText();
+  await page.waitForTimeout(800);
+  await expect(page.locator(".status .turn")).toHaveText(turn);
+  await page.getByTestId("event-continue").click();
+  await expect(event).toBeHidden();
+  await settle(page);
+  expect(errors).toEqual([]);
+});
+
 test("a game played from the move list", async ({ page }) => {
   const errors: string[] = [];
   await start(page, errors);

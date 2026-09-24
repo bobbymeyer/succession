@@ -57,6 +57,31 @@ class TableTests(unittest.TestCase):
             self.assertEqual(first["view"]["players"][human]["agenda"]["key"], table.session.state.agendas[human])
             self.assertTrue(first["view"]["hand"])
 
+    def test_events_say_what_they_did(self):
+        from succession.cards import EVENT_CARDS
+
+        seen = {}
+        for seed in range(60):
+            table = Table()
+            updates = json.loads(table.new_game(json.dumps({"seed": seed})))
+            for u in play_out(table, updates, random.Random(seed)):
+                event = u["event"]
+                played = u["action"] and u["action"]["kind"] == "play" and u["action"]["card"]
+                if event is None:
+                    continue
+                self.assertEqual(event["card"]["uid"], played)
+                self.assertEqual(event["player"], u["actor"])
+                self.assertTrue(event["summary"])
+                self.assertTrue(event["effects"])
+                for effect in event["effects"]:
+                    self.assertIn(effect["tone"], {"loss", "gain", "neutral"})
+                # Nobody dies and lives in the same report.
+                self.assertFalse({c["uid"] for c in event["fallen"]} & {c["uid"] for c in event["spared"]})
+                seen[event["card"]["name"]] = event
+        self.assertEqual(set(seen), {c.name for c in EVENT_CARDS})
+        self.assertTrue(seen["Famine"]["discarded"])
+        self.assertTrue(seen["Plague"]["fallen"])
+
     def test_the_default_table_is_you_and_one_of_each_bot(self):
         table = Table()
         table.new_game("{}")

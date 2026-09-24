@@ -34,7 +34,8 @@ export function readableLog(view: View, line: string): string {
       // The engine writes "P2 play ...", "P2 discards ... and draws": third
       // person for everyone. Put the verbs right for the seat that is "You".
       .replace(/^P(\d+) play /, (_, n: string) => (Number(n) === view.you ? `P${n} play ` : `P${n} plays `))
-      .replace(new RegExp(`^${you} (discard|move|skip|name)s\\b`), `${you} $1`)
+      .replace(new RegExp(`^${you} (discard|move|skip|name|draw)s\\b`), `${you} $1`)
+      .replace(new RegExp(`^${you} has\\b`), `${you} have`)
       .replace(new RegExp(`^(${you} discard .*) and draws$`), "$1 and draw")
       .replace(new RegExp(`\\b${you}'s\\b`, "g"), "your")
       .replace(new RegExp(`^(${you} skip) their turn`), "$1 your turn")

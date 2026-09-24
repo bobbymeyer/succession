@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FIRST_GAME_TABLE, dealSeed } from "../firstGame";
 import type { GameRecord, TableOptions } from "../protocol";
 import { tierName } from "../names";
 import { useUi } from "../art";
@@ -14,7 +15,7 @@ interface Props {
   onIntro(): void;
 }
 
-const DEFAULT_BOTS = ["naive", "greedy", "strategic"];
+const DEFAULT_BOTS = FIRST_GAME_TABLE;
 
 export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onIntro }: Props) {
   const bots = options.player_types.filter((t) => t !== "human");
@@ -27,7 +28,7 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
 
   const deal = () => {
     const n = seed.trim() === "" ? undefined : Number(seed);
-    onDeal(["human", ...table], Number.isInteger(n) ? n : undefined);
+    onDeal(["human", ...table], dealSeed(Number.isInteger(n) ? n : undefined, saved, table));
   };
 
   const load = () => {
@@ -97,6 +98,11 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
         </button>
         <FrameControls />
       </div>
+      {seed.trim() === "" && dealSeed(undefined, saved, table) !== undefined && (
+        <p className="hint first-deal" data-testid="first-deal">
+          Your first game is dealt kindly, to learn on. After that every deal is random.
+        </p>
+      )}
 
       <details className="load">
         <summary>Load a saved game</summary>

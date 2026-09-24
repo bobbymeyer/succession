@@ -60,6 +60,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
 | `tools/boardsheet.py` | Lays the seat cards out as a print-at-home PDF |
 | `tools/webbundle.py` | Zips `succession/` for the browser game to run under Pyodide |
+| `tools/friendly_seed.py` | Finds the kind seed a new player's first browser game is dealt from |
 | `web/` | The browser game: React on top of this package running in Pyodide |
 | `web/public/cards/` | The game's card pictures and `manifest.json`, from `mpcfill.py --profile game` |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |

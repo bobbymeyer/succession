@@ -45,7 +45,7 @@ const BEATS: Beat[] = [
   {
     image: "outmaneuver",
     focus: "center 68%",
-    lines: ["The powerful men of the empire…", "like you…", "are scheming for the ear of the young monarch."],
+    lines: ["The powerful men of the empire…", "like you…", "are intriguing for the ear of the young monarch."],
     at: [500, 2300, 3700],
     hold: 8000,
   },

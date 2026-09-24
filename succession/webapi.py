@@ -130,6 +130,8 @@ class Table:
                 if session.last_action is not None
                 else None
             ),
+            #: An event's effects, when this update is one (session.event_report).
+            "event": session.last_event,
             "prompt": None,
             "result": None,
         }
