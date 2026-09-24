@@ -29,6 +29,19 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("a new player's first game is the kind deal, unless they choose a seed", async ({ page }) => {
+  await page.goto("./");
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  await expect(page.getByTestId("first-deal")).toBeVisible();
+  await page.fill("input[placeholder=random]", "7");
+  await expect(page.getByTestId("first-deal")).toBeHidden();
+  await page.fill("input[placeholder=random]", "");
+  await page.getByTestId("deal").click();
+  // You move first, with House Rising: Mitreas.
+  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
+  await expect(page.getByTestId("briefing")).toContainText("You move first.");
+});
+
 test("an event stops play and says what it did", async ({ page }) => {
   // Seed 15: a bot's Treasure Fleet before your first turn.
   const errors: string[] = [];
