@@ -4,7 +4,7 @@ A dependency-free Python simulator for the card-driven succession game: full
 card and board model, a rules engine, three tiers of bot, and a CLI that runs
 N games and logs each one to CSV or SQLite for balance analysis.
 
-**[The deck](docs/CARDS.md)** — all 92 cards as images, with every courtier's
+**[The deck](docs/CARDS.md)** — every card as an image, with every courtier's
 printed attributes and every action card's rules text.
 **[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)**
 — the card images plus the MPC Autofill order file, sized and bled the way
@@ -100,7 +100,7 @@ GitHub release whenever `main` changes anything printed on a card (the art, the
 card text, the layout or the cards themselves), and it can be run from the
 Actions tab at any time.
 
-Two renditions of the same 92 cards -- the 84-card play deck plus the eight
+Two renditions of the same 87 cards -- the 79-card play deck plus the eight
 agendas. **Print** is full bleed at 600 DPI with the MPC Autofill order file
 beside it; **web** is the trimmed card at 744 px with a self-contained
 `index.html` that shows the deck. Each card is composed once and the web one is

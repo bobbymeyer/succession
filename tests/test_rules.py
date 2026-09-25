@@ -74,8 +74,14 @@ class Namers(list):
             return self.uid
 
 
+#: The card tests below exercise every event card, so they deal the whole
+#: ten-event deck with events held in hand, as the game once played. The
+#: current rules (five minor events, played when drawn) have tests of their own.
+ALL_EVENTS_HELD = {"event_tiers": ("minor", "major"), "events_on_draw": False}
+
+
 def fresh(**overrides) -> GameState:
-    state = GameState.new(Config(**overrides))
+    state = GameState.new(Config(**{**ALL_EVENTS_HELD, **overrides}))
     state.deck = []
     state.agendas = ["balance", "barbarian_conquest", "house_amonides", "faith_old_gods"][
         : state.config.num_players
@@ -639,6 +645,44 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(len(state.outer), 5)
         self.assertEqual(state.stats.get("saves_made"), 4)
 
+    # --- the caster-edge variant -------------------------------------------
+    def test_caster_edge_caravan_gives_the_caster_two(self):
+        state = fresh(caster_edge=True)
+        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones",
+                                              "Horse Breaker", "Master Mason", "Crosser of Rivers")]
+        self.play(state, "Caravan", player=1)
+        self.assertEqual([len(h) for h in state.hands], [1, 2, 1, 1])
+
+    def test_caster_edge_treasure_fleet_gives_the_caster_three(self):
+        state = fresh(caster_edge=True)
+        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones",
+                                              "Horse Breaker", "Master Mason", "Crosser of Rivers")]
+        self.play(state, "Treasure Fleet")
+        self.assertEqual([len(h) for h in state.hands], [3, 1, 1, 1])
+
+    def test_caster_edge_famine_spares_the_caster(self):
+        state = fresh(caster_edge=True)
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion", "Demotion")
+        self.play(state, "Famine")
+        self.assertEqual([len(h) for h in state.hands], [3, 1, 1, 1])
+
+    def test_caster_edge_siege_does_not_hold_its_caster(self):
+        state = fresh(caster_edge=True)
+        state.current = 2
+        self.play(state, "Siege", player=2)
+        self.assertFalse(state.board_frozen)  # the caster's own turn
+        state.current = 3
+        self.assertTrue(state.board_frozen)
+
+    def test_caster_edge_plague_lets_the_caster_name_two(self):
+        state = fresh(caster_edge=True)
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb")
+        # The stand-in names the first courtier for everyone; the caster's
+        # second pick is the next one.
+        self.play(state, "Plague")
+        self.assertEqual([state.name(u) for u in state.outer], ["Golden Thumb"])
+
     def test_a_forced_discard_lands_all_at_once(self):
         state = fresh()
         for p in range(4):
@@ -768,7 +812,7 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
                 return next(a for a in actions if a.kind == DISCARD)
 
         result = play_game(
-            Config(max_turns=80),
+            Config(max_turns=80, **ALL_EVENTS_HELD),
             seed=4,
             bot_factory=lambda tier, seat, rng: Staller(seat, rng),
             keep_state=True,
@@ -982,6 +1026,54 @@ class TestDeckAndTurns(unittest.TestCase):
         enforce_hand_limit(state, 0, None)
         self.assertEqual(len(state.hands[0]), 4)
 
+    def test_events_on_draw_play_at_once_and_are_replaced(self):
+        # Variant: a drawn event resolves for whoever drew it, goes to the
+        # discard, and the drawer draws again.
+        state = fresh(events_on_draw=True)
+        state.deck = [uid(state, "Golden Thumb"), uid(state, "Siege")]  # Siege on top
+        draw(state, 0, random.Random(0))
+        self.assertEqual([state.name(u) for u in state.hands[0]], ["Golden Thumb"])
+        self.assertEqual([state.name(u) for u in state.discard], ["Siege"])
+        self.assertTrue(state.board_frozen)
+
+    def test_minor_events_on_draw_leaves_the_majors_in_hand(self):
+        state = fresh(events_on_draw=True, events_on_draw_minor_only=True)
+        state.deck = [uid(state, n) for n in ("Golden Thumb", "Siege", "Quarantine")]  # Quarantine on top
+        draw(state, 0, random.Random(0), count=2)
+        self.assertEqual([state.name(u) for u in state.hands[0]], ["Siege", "Golden Thumb"])
+        self.assertEqual([state.name(u) for u in state.discard], ["Quarantine"])
+        self.assertTrue(state.inner_frozen)
+
+    def test_the_deck_holds_the_five_minor_events_played_when_drawn(self):
+        from succession.cards import EVENT_CARDS
+
+        config = Config()
+        self.assertTrue(config.events_on_draw)
+        state = GameState.new(config)
+        events = sorted(c.name for c in state.cards if c.kind.value == "Event")
+        self.assertEqual(events, sorted(c.name for c in EVENT_CARDS if c.tier == "minor"))
+        self.assertEqual(len(state.cards), 79)
+
+    def test_either_half_of_the_events_can_be_left_out(self):
+        from succession.cards import EVENT_CARDS
+
+        for tier in ("minor", "major"):
+            state = GameState.new(Config(event_tiers=(tier,)))
+            names = {c.name for c in state.cards}
+            self.assertEqual(len(state.cards), 79)
+            for c in EVENT_CARDS:
+                self.assertEqual(c.name in names, c.tier == tier)
+
+    def test_events_on_draw_never_deals_an_event_into_a_starting_hand(self):
+        from succession.enums import CardKind
+
+        for seed in range(20):
+            state = setup_game(Config(events_on_draw=True), random.Random(seed))
+            for hand in state.hands:
+                self.assertEqual(len(hand), state.config.starting_hand)
+                self.assertFalse(any(state.card(u).kind is CardKind.EVENT for u in hand))
+            self.assertEqual(state.discard, [])
+
     def test_exhausted_deck_and_discard_is_not_an_error(self):
         state = fresh()
         state.deck = []
@@ -1029,7 +1121,7 @@ class TestDeckAndTurns(unittest.TestCase):
                 return next(a for a in actions if a.kind == DISCARD)
 
         # Without Discard & Draw, so the discards do not refill the hand.
-        config = Config(max_turns=8, discard_draws=False)
+        config = Config(max_turns=8, discard_draws=False, **ALL_EVENTS_HELD)
         play_game(config, seed=1, bot_factory=lambda t, s, r: Watcher(s, r))
         # Dealt five, drew a sixth before being asked to act.
         self.assertEqual(seen[0], config.starting_hand + 1)
@@ -1047,7 +1139,7 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=10, discard_draws=False)
+        config = Config(max_turns=10, discard_draws=False, **ALL_EVENTS_HELD)
         result = play_game(
             config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True
         )
@@ -1080,7 +1172,7 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=4)
+        config = Config(max_turns=4, **ALL_EVENTS_HELD)
         result = play_game(config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True)
         dealt = config.starting_hand * config.num_players
         # One at the top of each turn, one to replace each discard.

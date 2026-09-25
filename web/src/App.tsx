@@ -134,8 +134,8 @@ export function App() {
   // A new deal stops at the table as dealt until you have read your agenda.
   const hold = useRef(false);
   const [briefing, setBriefing] = useState(false);
-  // An event stops play until it has been read.
-  const [event, setEvent] = useState<Update | null>(null);
+  // Each event stops play until it has been read, one after another.
+  const [events, setEvents] = useState<{ update: Update; left: number } | null>(null);
   // An event that stops to ask you something is announced first, once.
   const [announce, setAnnounce] = useState<Update | null>(null);
   const announced = useRef("");
@@ -168,8 +168,8 @@ export function App() {
         setAnnounce(next);
       }
     }
-    if (next.event) {
-      setEvent(next);
+    if (next.events.length) {
+      setEvents({ update: next, left: next.events.length });
       return; // play goes on from Continue
     }
     if (queue.current.length) {
@@ -216,7 +216,7 @@ export function App() {
           fresh.current = true;
           hold.current = request.type === "new";
           setBriefing(false);
-          setEvent(null);
+          setEvents(null);
           setAnnounce(null);
           setLog([]);
         }
@@ -263,13 +263,18 @@ export function App() {
   }, [pump]);
 
   const carryOn = useCallback(() => {
-    setEvent(null);
+    // The next event in this update, or back to play.
+    if (events && events.left > 1) {
+      setEvents({ ...events, left: events.left - 1 });
+      return;
+    }
+    setEvents(null);
     if (timer.current === null && queue.current.length) timer.current = window.setTimeout(pump, 250);
-  }, [pump]);
+  }, [pump, events]);
 
   const toSetup = () => {
     setBriefing(false);
-    setEvent(null);
+    setEvents(null);
     setAnnounce(null);
     setShown(null);
   };
@@ -313,7 +318,8 @@ export function App() {
   }
 
   const { view, prompt } = shown;
-  const waiting = pending > 0 || busy;
+  // An event on screen holds any question behind it until it has been read.
+  const waiting = pending > 0 || busy || events !== null;
   const cards = visibleCards(view);
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
   const pickPrompt = !waiting && prompt && prompt.kind !== "turn" ? prompt : null;
@@ -588,7 +594,17 @@ export function App() {
             onDone={() => setAnnounce(null)}
           />
         )}
-        {event?.event && <EventModal key={event.event.card.uid + ":" + event.view.turn} report={event.event} view={event.view} onContinue={carryOn} />}
+        {events && (() => {
+          const report = events.update.events[events.update.events.length - events.left];
+          return (
+            <EventModal
+              key={`${report.card.uid}:${events.update.view.turn}:${events.left}`}
+              report={report}
+              view={events.update.view}
+              onContinue={carryOn}
+            />
+          );
+        })()}
       </main>
     </UiContext.Provider>
   );

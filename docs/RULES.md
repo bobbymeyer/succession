@@ -42,6 +42,36 @@ end of its owner's next turn taken: they choose cards to discard until they
 hold 7. A skipped turn is not taken, so it checks nothing.
 (`--hand-limit-on-draw` restores the old rule, where a full hand drew nothing.)
 
+**Events play the moment they are drawn.** An event is never held: whoever
+draws one -- at the top of their turn, from Discard & Draw, or from a Caravan --
+plays it at once, as if they had cast it, and it goes to the discard. Then they
+draw again, and carry on: the turn begins once that draw is a card they keep.
+An event dealt into a starting hand goes back into the deck. Only the five
+minor events are in the deck (see **Deck**).
+
+Earlier rules held all ten events and played them from hand
+(`--events all --events-held`). Other combinations tested:
+
+| Deck, and how events play | Events a game | Median game | Courtiers killed | Balance | Strategic bot |
+|---|---|---|---|---|---|
+| All ten, held (the old rules) | 2.6 | 45 | 3.3 | 21.0% | 57.6% |
+| **Five minors, played when drawn (these rules)** | **6.8** | **43** | **4.3** | **21.2%** | **60.7%** |
+| All ten, all played when drawn | 29.7 | 61 | 13.0 | 11.1% | 66.3% |
+| All ten, minors when drawn, majors held (`--minor-events-on-draw`) | 8.8 | 46 | 5.1 | 19.9% | 63.8% |
+| Five majors only, played when drawn | 10.1 | 51 | 7.5 | 14.6% | 64.6% |
+
+(5,000 games each, `naive, greedy, strategic, naive`, seats shuffled, seed 1.)
+
+Another, also off by default: with `--caster-edge` every event favours whoever
+plays it. Quarantine gives the caster one free move before the seal; Siege
+does not hold its caster; Poisoning's victim named by the caster gets no roll;
+the caster names two in a Plague; Caravan and Treasure Fleet give everyone one
+card and the caster two or three; Debasement and Famine spare the caster;
+Eclipse lets the caster keep one card from the pile before the shuffle; and
+Meteor deals the caster one card more than they held. In 5,000 games it
+lifted events from 2.6 to 3.9 plays a game with the agendas barely moved, and
+widened the strategic bot's lead from 58% to 61%.
+
 1. **Play a card from hand** — a card from hand only ever reaches the outer
    circle. There is no way to play a card from hand straight into a seat.
 2. **Move** — free, no card: take an outer courtier and install them in an
@@ -164,9 +194,14 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-84 cards: 40 courtiers + 10 events + 5 promotions + 5 demotions + 6 removals +
+79 cards: 40 courtiers + 5 events + 5 promotions + 5 demotions + 6 removals +
 5 defenses + 2 strips + 9 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
+
+The five events are the minor halves of the pairs below -- Quarantine,
+Poisoning at the Feast, Caravan, Debasement of the Coinage and Eclipse -- and
+each plays the moment it is drawn. The majors (Siege, Plague, Treasure Fleet,
+Famine, Meteor) are out of the deck; `--events all` puts them back.
 
 ---
 

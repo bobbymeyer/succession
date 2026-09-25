@@ -93,6 +93,10 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
         discard_draws=not args.discard_no_draw,
         hand_limit_at_end_of_turn=not args.hand_limit_on_draw,
+        events_on_draw=not args.events_held,
+        events_on_draw_minor_only=args.minor_events_on_draw,
+        event_tiers=("minor", "major") if args.events == "all" else (args.events,),
+        caster_edge=args.caster_edge,
         defense_requires_matching_target=args.defense_matches_target,
         house_rising_requires_preferred_seat=not args.house_any_three,
         house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
@@ -204,6 +208,10 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")
     parser.add_argument("--discard-no-draw", action="store_true", help="a turn spent discarding does not draw a replacement (default: Discard & Draw)")
     parser.add_argument("--hand-limit-on-draw", action="store_true", help="a full hand draws nothing (default: draw freely, discard down to the limit as your turn ends)")
+    parser.add_argument("--caster-edge", action="store_true", help="variant: every event favours whoever plays it")
+    parser.add_argument("--events", choices=("minor", "major", "all"), default="minor", help="which events are in the deck (default: the five minor ones)")
+    parser.add_argument("--events-held", action="store_true", help="events are held and played from hand (default: an event plays the moment it is drawn, and the drawer draws again)")
+    parser.add_argument("--minor-events-on-draw", action="store_true", help="with --events all: only the minor events play when drawn; the majors are held")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
     parser.add_argument("--balance-seats", type=int, default=6, help="seats that must be filled for Balance to count (default 6 of 7)")

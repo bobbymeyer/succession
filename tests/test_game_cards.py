@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 from succession.agendas import AGENDAS
 from succession.cards import build_cards
 from succession.enums import SEATS
+from succession.state import Config
 
 CARDS = ROOT / "web" / "public" / "cards"
 
@@ -27,7 +28,9 @@ class GameCards(unittest.TestCase):
         self.manifest = json.loads((CARDS / "manifest.json").read_text())
 
     def test_every_card_agenda_and_seat_has_a_picture(self):
-        self.assertEqual(set(self.manifest["cards"]), {c.name for c in build_cards()})
+        # The deck the game deals: the major events are out.
+        deck = build_cards(event_tiers=Config().event_tiers)
+        self.assertEqual(set(self.manifest["cards"]), {c.name for c in deck})
         self.assertEqual(set(self.manifest["agendas"]), {a.name for a in AGENDAS})
         self.assertEqual(set(self.manifest["seats"]), {s.value for s in SEATS})
 

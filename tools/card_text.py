@@ -228,7 +228,7 @@ RULES: dict[str, str] = {
 
 #: A one-line reminder printed under the rules text, per kind.
 REMINDERS: dict[CardKind, str] = {
-    CardKind.EVENT: "Hits every player. No Defense stops an Event.",
+    CardKind.EVENT: "Plays the moment it is drawn; then draw again. Hits every player.",
     CardKind.MUTATION: "Each attribute may be mutated once per courtier.",
     CardKind.STRIP: "A strip does not spend a mutation.",
     CardKind.DEFENSE: "Attaches to an inner-circle courtier only.",

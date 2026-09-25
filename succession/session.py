@@ -65,7 +65,9 @@ OVER = "over"            # nothing left to decide
 #: 2: Discard & Draw. A version-1 record was played before it, without the draw.
 #: 3: the hand limit is checked at the end of the turn; earlier records capped
 #: draws instead.
-RECORD_VERSION = 3
+#: 4: events play when drawn, and the five majors are out of the deck; earlier
+#: records held and played all ten.
+RECORD_VERSION = 4
 
 
 class NeedChoice(Exception):
@@ -150,7 +152,7 @@ class GameSession:
         if config.shuffle_seats:
             self.rng.shuffle(self.tiers)
         self.state = setup_game(config, self.rng, trace=trace)
-        self.seats = seat_controllers(self.tiers, self.rng, bot_factory)
+        self.seats = _Seats(seat_controllers(self.tiers, self.rng, bot_factory), self)
         self.humans = [s.seat for s in self.seats if isinstance(s, HumanSeat)]
 
         #: Every human answer so far, in order: an index into the legal actions
@@ -163,13 +165,19 @@ class GameSession:
         #: (None for a skipped turn), for a front end to animate.
         self.last_actor = -1
         self.last_action: Optional[Action] = None
-        #: What the last action did to the table, if it was an event (see
-        #: `event_report`); None otherwise.
-        self.last_event: Optional[dict] = None
+        #: What each event in the last update did to the table, in the order
+        #: they began (see `event_report`): drawn at the start of a turn, or
+        #: during it.
+        self.last_events: list[dict] = []
+        # Tables as they stood when each event still being resolved began.
+        self._event_stack: list[tuple[int, "_Table"]] = []
+        # The player whose turn has been opened (its draw done) but not taken.
+        self._started: Optional[int] = None
 
-        # The action being resolved when a human was asked mid-card, the game
-        # as it stood just before it, and the answers collected for it so far.
-        self._resolving: Optional[tuple[int, Action]] = None
+        # The action being resolved when a human was asked mid-card (None for
+        # the draw that opens a turn), the game as it stood just before it,
+        # and the answers collected for it so far.
+        self._resolving: Optional[tuple[int, Optional[Action]]] = None
         self._snapshot: Optional[tuple[GameState, object, list]] = None
         self._answers: dict[int, list[int]] = {}
 
@@ -188,16 +196,20 @@ class GameSession:
             return self._finish()
 
         state = self.state
-        if state.turn >= self.config.max_turns:
-            self.timeout = True
-            return self._finish()
-
         player = state.current
-        if not start_turn(state, self.rng):
-            self.last_actor = player
-            self.last_action = None
-            self.last_event = None
-            return None
+        if self._started is None:
+            if state.turn >= self.config.max_turns:
+                self.timeout = True
+                return self._finish()
+            prompt = self._start(player)
+            if prompt is not None:
+                return prompt
+            # A skipped turn is over; one that opened with events shows them
+            # before anything is played.
+            if self._started is None or self.last_events:
+                return None
+
+        self._started = None
         actions = legal_actions(state, player)
         seat = self.seats[player]
         if isinstance(seat, HumanSeat):
@@ -246,22 +258,68 @@ class GameSession:
             self._restore_memories(memories)
             self.rng.setstate(rng_state)
             player, action = self._resolving
-            result = self._resolve(player, action, snapshot=False)
+            if action is None:
+                result = self._start(player, snapshot=False)
+            else:
+                result = self._resolve(player, action, snapshot=False)
 
         if result is not None or not advance:
             return result
         return self.advance()
 
-    def _resolve(self, player: int, action: Action, *, snapshot: bool = True) -> Optional[Prompt]:
+    def _begin(self, player: int, action: Optional[Action], snapshot: bool) -> None:
         if snapshot and self.humans:
             self._snapshot = copy.deepcopy((self.state, self.rng.getstate(), self._memories()))
             self._answers = {}
         self._resolving = (player, action)
         self.last_actor = player
         self.last_action = action
-        self.last_event = None
+        self.last_events = []
+        self._event_stack = []
         for seat in self.humans:
             self.seats[seat].answers = list(self._answers.get(seat, ()))
+
+    def _settled(self) -> None:
+        self._resolving = None
+        self._snapshot = None
+        self._answers = {}
+
+    def _asked(self, need: NeedChoice, card: int) -> Prompt:
+        # Leave the half-played board up so the human sees what they are
+        # choosing against; `answer()` rewinds to the snapshot.
+        if self.state.resolving_event >= 0:
+            card = self.state.resolving_event
+        card = -1 if need.limit else card
+        self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
+        # Only events that have finished are reported; the one asking is
+        # reported once the answer lets it finish.
+        self.last_events = [e for e in self.last_events if e]
+        return self.prompt
+
+    def _start(self, player: int, *, snapshot: bool = True) -> Optional[Prompt]:
+        """Open a turn: its draw, and any event that draw sets off."""
+
+        self._begin(player, None, snapshot)
+        try:
+            started = start_turn(self.state, self.rng, self.seats)
+        except NeedChoice as need:
+            return self._asked(need, -1)
+        self._settled()
+        self._started = player if started else None
+        return None
+
+    def _on_event(self, phase: str, state: GameState, player: int, uid: int) -> None:
+        """The engine's report of an event drawn and played (`on_event`)."""
+
+        if phase == "before":
+            self.last_events.append({})
+            self._event_stack.append((len(self.last_events) - 1, _Table(state, player, uid, in_hand=False)))
+        else:
+            slot, before = self._event_stack.pop()
+            self.last_events[slot] = event_report(before, state, drawn=True)
+
+    def _resolve(self, player: int, action: Action, *, snapshot: bool = True) -> Optional[Prompt]:
+        self._begin(player, action, snapshot)
         event = (
             action.kind == PLAY and self.state.card(action.card).kind is CardKind.EVENT
         )
@@ -270,17 +328,13 @@ class GameSession:
         try:
             over = resolve_turn(self.state, player, action, self.rng, self.seats)
         except NeedChoice as need:
-            # Leave the half-played board up so the human sees what they are
-            # choosing against; `answer()` rewinds to the snapshot.
-            card = -1 if need.limit else action.card
-            self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
-            return self.prompt
+            return self._asked(need, action.card)
 
-        self._resolving = None
-        self._snapshot = None
-        self._answers = {}
+        self._settled()
         if before is not None:
-            self.last_event = event_report(before, self.state)
+            # An event played from hand: the old rules, before events played
+            # when drawn.
+            self.last_events.insert(0, event_report(before, self.state))
         if over:
             self.over = True
             return self._finish()
@@ -328,13 +382,16 @@ class GameSession:
         """Rebuild a game from `record()`, stopped where the record ends."""
 
         version = record.get("version")
-        if version not in (1, 2, RECORD_VERSION):
+        if version not in (1, 2, 3, RECORD_VERSION):
             raise ValueError(f"unsupported record version {version!r}")
         config = dict(record["config"])
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):
             config.setdefault("hand_limit_at_end_of_turn", False)
+        if version in (1, 2, 3):
+            config.setdefault("events_on_draw", False)
+            config.setdefault("event_tiers", ["minor", "major"])
         session = cls(
             config_from_json(config),
             record["seed"],
@@ -397,15 +454,27 @@ EVENT_SUMMARY = {
 }
 
 
+class _Seats(list):
+    """The seat controllers, as the engine's `deciders`, plus an ear for events."""
+
+    def __init__(self, seats, session: "GameSession") -> None:
+        super().__init__(seats)
+        self._session = session
+
+    def on_event(self, phase: str, state: GameState, player: int, uid: int) -> None:
+        self._session._on_event(phase, state, player, uid)
+
+
 class _Table:
     """The parts of the table an event can change, just before it resolves."""
 
-    def __init__(self, state: GameState, player: int, card: int) -> None:
+    def __init__(self, state: GameState, player: int, card: int, *, in_hand: bool = True) -> None:
         self.player = player
         self.card = card
         self.card_json = card_json(state, card)
-        # The event leaves its player's hand as it is played; count it gone.
-        self.hands = [len(h) - (p == player) for p, h in enumerate(state.hands)]
+        # A played event leaves its player's hand as it is played; count it
+        # gone. A drawn one was never in it.
+        self.hands = [len(h) - (p == player and in_hand) for p, h in enumerate(state.hands)]
         self.in_play = {uid: card_json(state, uid) for uid in _in_play(state)}
         self.deck = len(state.deck)
         self.discard = len(state.discard)
@@ -416,7 +485,7 @@ def _in_play(state: GameState) -> list[int]:
     return [uid for uid in state.seats.values() if uid is not None] + list(state.outer)
 
 
-def event_report(before: _Table, state: GameState) -> dict:
+def event_report(before: _Table, state: GameState, *, drawn: bool = False) -> dict:
     """What an event just did to the table, for a front end to announce.
 
     `effects` are lines in the log's own voice ("P2 draws 2"), each with a
@@ -494,6 +563,8 @@ def event_report(before: _Table, state: GameState) -> dict:
     return {
         "card": before.card_json,
         "player": before.player,
+        #: Played the moment it was drawn, rather than from a hand.
+        "drawn": drawn,
         "summary": EVENT_SUMMARY.get(card.name, ""),
         "effects": effects,
         "fallen": fallen,

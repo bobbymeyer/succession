@@ -46,6 +46,23 @@ class Config:
     #: capped, and a hand over the limit then discards down to it. False is
     #: the old rule, where a full hand simply draws nothing.
     hand_limit_at_end_of_turn: bool = True
+    #: A variant: an event is never held. Drawn, it plays at once for the
+    #: player who drew it, who then draws a replacement. Events dealt into a
+    #: starting hand go back into the deck.
+    #: An event is never held: drawn, it plays at once for whoever drew it,
+    #: who then draws again and takes their turn. Events dealt into a starting
+    #: hand go back into the deck.
+    events_on_draw: bool = True
+    #: With `events_on_draw`, only the minor events play when drawn; the
+    #: major ones are held and played as usual.
+    events_on_draw_minor_only: bool = False
+    #: Which halves of the event pairs are in the deck. The five majors
+    #: (Siege, Plague, Treasure Fleet, Famine, Meteor) are out.
+    event_tiers: tuple[str, ...] = ("minor",)
+    #: A variant: every event favours whoever plays it (see engine
+    #: `_resolve_event`): the caster draws more, discards nothing, names two in
+    #: a Plague, is not held by their own Siege, and so on.
+    caster_edge: bool = False
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
@@ -123,6 +140,11 @@ class GameState:
     #: Last turn number on which a freeze still holds (-1 when none does).
     frozen_inner_until: int = -1
     frozen_board_until: int = -1
+    #: `caster_edge`: the Siege's caster, whom it does not hold.
+    frozen_board_exempt: int = -1
+    #: The event being resolved right now, drawn or played (-1: none), so a
+    #: question it asks can say which card is asking.
+    resolving_event: int = -1
     current: int = 0
     turn: int = 0
     reshuffles: int = 0
@@ -136,7 +158,7 @@ class GameState:
     # -- construction -------------------------------------------------------
     @classmethod
     def new(cls, config: Config) -> "GameState":
-        cards = build_cards(config.outmaneuver_copies)
+        cards = build_cards(config.outmaneuver_copies, config.event_tiers)
         state = cls(config=config, cards=cards)
         state.seats = {s: None for s in SEATS}
         state.hands = [[] for _ in range(config.num_players)]
@@ -169,6 +191,7 @@ class GameState:
             skip_next=list(self.skip_next),
             frozen_inner_until=self.frozen_inner_until,
             frozen_board_until=self.frozen_board_until,
+            frozen_board_exempt=self.frozen_board_exempt,
             current=self.current,
             turn=self.turn,
             reshuffles=self.reshuffles,
@@ -222,20 +245,21 @@ class GameState:
     def inner_frozen(self) -> bool:
         """Quarantine and Siege both seal the inner circle."""
 
-        return self.turn <= max(self.frozen_inner_until, self.frozen_board_until)
+        return self.turn <= self.frozen_inner_until or self.board_frozen
 
     @property
     def board_frozen(self) -> bool:
         """Siege seals the outer circle too: no courtier moves at all."""
 
-        return self.turn <= self.frozen_board_until
+        return self.turn <= self.frozen_board_until and self.current != self.frozen_board_exempt
 
-    def freeze(self, *, board: bool) -> None:
+    def freeze(self, *, board: bool, exempt: int = -1) -> None:
         """Hold the board still until just before this player's next turn."""
 
         until = self.turn + self.config.num_players - 1
         if board:
             self.frozen_board_until = max(self.frozen_board_until, until)
+            self.frozen_board_exempt = exempt
         else:
             self.frozen_inner_until = max(self.frozen_inner_until, until)
 

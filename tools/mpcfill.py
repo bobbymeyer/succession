@@ -8,7 +8,7 @@ that MPC Autofill's desktop tool feeds to MakePlayingCards.
     python tools/mpcfill.py                       # both renditions into build/
     python tools/mpcfill.py --profile web         # just the browsable one
     python tools/mpcfill.py --profile game        # the browser game's cards
-    python tools/mpcfill.py --no-agendas          # 84 cards instead of 92
+    python tools/mpcfill.py --no-agendas          # 79 cards instead of 87
     python tools/mpcfill.py --only 26,41          # re-render two cards while tweaking
 
 What comes out of `build/mpc/`:
@@ -43,6 +43,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
 from succession.cards import CardDef, build_cards  # noqa: E402
+from succession.state import Config  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import SEAT_ESTATE, Family, Seat  # noqa: E402
 from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
@@ -1001,7 +1002,7 @@ def main(argv: list[str] | None = None) -> int:
         "--no-agendas",
         dest="include_agendas",
         action="store_false",
-        help="leave out the 8 agenda cards, for an 84-card order in a smaller bracket",
+        help="leave out the 8 agenda cards, for a 79-card order",
     )
     parser.add_argument(
         "--board-dpi", type=int, default=300, help="resolution of the printable board PDF"
@@ -1062,7 +1063,8 @@ def main(argv: list[str] | None = None) -> int:
     if fonts.regular is None:
         print("warning: no serif TrueType font found; text will fall back to a bitmap face")
 
-    cards = build_cards(args.outmaneuver_copies)
+    # The deck the game deals: the major events are out.
+    cards = build_cards(args.outmaneuver_copies, Config().event_tiers)
     by_index = scan(args.assets)
     if 0 not in by_index:
         raise SystemExit(f"No card back found at {args.assets / '00_cardback.png'}")
@@ -1195,9 +1197,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.include_seats:
         # The board. Seven chairs, laid out on the table for courtiers to fill,
-        # printed with the deck because the order is paid for by bracket: 92
-        # cards and 99 both sit in the same one, so these cost nothing.
-        for i, seat in enumerate(SEAT_ESTATE, start=len(slots) + 1):
+        # printed with the deck because the order is paid for by bracket: 87
+        # cards and 94 both sit in the same one, so these cost nothing.
+        # Numbered after the agendas (85-92), as the art is, whatever the
+        # deck leaves out.
+        for i, seat in enumerate(SEAT_ESTATE, start=85 + len(card_text.AGENDA_TEXT)):
             stem = f"{i:02d} Seat -- {seat.value}"
             slug = f"{i:02d}-seat-{cardlist.slugify(seat.value)}"
             wanted = only is None or i in only
