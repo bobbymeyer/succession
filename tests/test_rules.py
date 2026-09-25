@@ -74,8 +74,14 @@ class Namers(list):
             return self.uid
 
 
+#: The card tests below exercise every event card, so they deal the whole
+#: ten-event deck with events held in hand, as the game once played. The
+#: current rules (five minor events, played when drawn) have tests of their own.
+ALL_EVENTS_HELD = {"event_tiers": ("minor", "major"), "events_on_draw": False}
+
+
 def fresh(**overrides) -> GameState:
-    state = GameState.new(Config(**overrides))
+    state = GameState.new(Config(**{**ALL_EVENTS_HELD, **overrides}))
     state.deck = []
     state.agendas = ["balance", "barbarian_conquest", "house_amonides", "faith_old_gods"][
         : state.config.num_players
@@ -806,7 +812,7 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
                 return next(a for a in actions if a.kind == DISCARD)
 
         result = play_game(
-            Config(max_turns=80),
+            Config(max_turns=80, **ALL_EVENTS_HELD),
             seed=4,
             bot_factory=lambda tier, seat, rng: Staller(seat, rng),
             keep_state=True,
@@ -1038,6 +1044,16 @@ class TestDeckAndTurns(unittest.TestCase):
         self.assertEqual([state.name(u) for u in state.discard], ["Quarantine"])
         self.assertTrue(state.inner_frozen)
 
+    def test_the_deck_holds_the_five_minor_events_played_when_drawn(self):
+        from succession.cards import EVENT_CARDS
+
+        config = Config()
+        self.assertTrue(config.events_on_draw)
+        state = GameState.new(config)
+        events = sorted(c.name for c in state.cards if c.kind.value == "Event")
+        self.assertEqual(events, sorted(c.name for c in EVENT_CARDS if c.tier == "minor"))
+        self.assertEqual(len(state.cards), 79)
+
     def test_either_half_of_the_events_can_be_left_out(self):
         from succession.cards import EVENT_CARDS
 
@@ -1105,7 +1121,7 @@ class TestDeckAndTurns(unittest.TestCase):
                 return next(a for a in actions if a.kind == DISCARD)
 
         # Without Discard & Draw, so the discards do not refill the hand.
-        config = Config(max_turns=8, discard_draws=False)
+        config = Config(max_turns=8, discard_draws=False, **ALL_EVENTS_HELD)
         play_game(config, seed=1, bot_factory=lambda t, s, r: Watcher(s, r))
         # Dealt five, drew a sixth before being asked to act.
         self.assertEqual(seen[0], config.starting_hand + 1)
@@ -1123,7 +1139,7 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=10, discard_draws=False)
+        config = Config(max_turns=10, discard_draws=False, **ALL_EVENTS_HELD)
         result = play_game(
             config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True
         )
@@ -1156,7 +1172,7 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=4)
+        config = Config(max_turns=4, **ALL_EVENTS_HELD)
         result = play_game(config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True)
         dealt = config.starting_hand * config.num_players
         # One at the top of each turn, one to replace each discard.

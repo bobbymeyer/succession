@@ -49,12 +49,16 @@ class Config:
     #: A variant: an event is never held. Drawn, it plays at once for the
     #: player who drew it, who then draws a replacement. Events dealt into a
     #: starting hand go back into the deck.
-    events_on_draw: bool = False
-    #: With `events_on_draw`, only the five minor events play when drawn; the
+    #: An event is never held: drawn, it plays at once for whoever drew it,
+    #: who then draws again and takes their turn. Events dealt into a starting
+    #: hand go back into the deck.
+    events_on_draw: bool = True
+    #: With `events_on_draw`, only the minor events play when drawn; the
     #: major ones are held and played as usual.
     events_on_draw_minor_only: bool = False
-    #: A variant: which halves of the event pairs are in the deck at all.
-    event_tiers: tuple[str, ...] = ("minor", "major")
+    #: Which halves of the event pairs are in the deck. The five majors
+    #: (Siege, Plague, Treasure Fleet, Famine, Meteor) are out.
+    event_tiers: tuple[str, ...] = ("minor",)
     #: A variant: every event favours whoever plays it (see engine
     #: `_resolve_event`): the caster draws more, discards nothing, names two in
     #: a Plague, is not held by their own Siege, and so on.
@@ -138,6 +142,9 @@ class GameState:
     frozen_board_until: int = -1
     #: `caster_edge`: the Siege's caster, whom it does not hold.
     frozen_board_exempt: int = -1
+    #: The event being resolved right now, drawn or played (-1: none), so a
+    #: question it asks can say which card is asking.
+    resolving_event: int = -1
     current: int = 0
     turn: int = 0
     reshuffles: int = 0

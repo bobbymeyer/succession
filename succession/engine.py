@@ -192,8 +192,17 @@ def _play_drawn_event(state: GameState, player: int, uid: int, rng, deciders) ->
     state.bump("events_on_draw")
     state.bump("played_event")
     state.note(f"P{player} draws {card.name}, and it plays at once")
+    # A front end can listen in on the seats list (`on_event`) to report it.
+    listen = getattr(deciders, "on_event", None)
+    if listen:
+        listen("before", state, player, uid)
+    outer = state.resolving_event
+    state.resolving_event = uid
     _resolve_event(state, card, player, rng, deciders)
+    state.resolving_event = outer
     state.discard.append(uid)
+    if listen:
+        listen("after", state, player, uid)
 
 
 # --- resolution -------------------------------------------------------------

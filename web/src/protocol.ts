@@ -103,6 +103,7 @@ export interface Result {
 export interface EventReport {
   card: Card;
   player: number;
+  drawn: boolean; // played the moment it was drawn, not from a hand
   summary: string;
   effects: { text: string; tone: "loss" | "gain" | "neutral" }[];
   fallen: Card[]; // courtiers named who died, as they were
@@ -116,7 +117,7 @@ export interface Update {
   log: string[];
   actor: number; // whose move this update shows; -1 before anyone's
   action: Action | null; // that move, all of it face up on the table
-  event: EventReport | null; // what that move did, when it was an event
+  events: EventReport[]; // every event this update saw go off, in order
   prompt: Prompt | null;
   result: Result | null;
 }

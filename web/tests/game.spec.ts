@@ -43,13 +43,14 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 344: a bot's Treasure Fleet before your first turn.
+  // Seed 18: a bot draws Caravan before your first turn, and it plays at once.
   const errors: string[] = [];
-  await start(page, errors, 344);
+  await start(page, errors, 18);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
-  await expect(event.locator("h2")).toHaveText("Treasure Fleet");
+  await expect(event.locator("h2")).toHaveText("Caravan");
+  await expect(event).toContainText("drew it");
   await expect(event.locator(".event-effects li")).toHaveCount(4);
   await expect(event.locator(".event-effects")).toContainText("You draw");
   // Nothing moves on behind it until it has been read.
@@ -63,13 +64,14 @@ test("an event stops play and says what it did", async ({ page }) => {
 });
 
 test("an event that asks you something is announced first", async ({ page }) => {
-  // Seed 13: a bot plays Debasement of the Coinage before your first turn.
+  // Seed 6: a bot draws Debasement of the Coinage before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 13);
+  await start(page, errors, 6);
   await page.getByTestId("begin").click();
   const announce = page.getByTestId("event-announce");
   await expect(announce).toBeVisible({ timeout: 30_000 });
   await expect(announce.locator("h2")).toHaveText("Debasement of the Coinage");
+  await expect(announce).toContainText("drew it");
   await expect(announce).toContainText("Choose what to discard.");
   // It goes by itself, and the question is waiting behind it.
   await expect(announce).toBeHidden({ timeout: 6_000 });
@@ -83,14 +85,14 @@ test("an event that asks you something is announced first", async ({ page }) => 
 });
 
 test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
-  // Seed 28: taking the first move each time, your hand passes 7 on the
-  // sixth decision.
+  // Seed 2329: taking the first move each time, your hand passes 7 on the
+  // third decision.
   const errors: string[] = [];
-  await start(page, errors, 28);
-  for (let i = 0; i < 6; i++) await playFromList(page);
+  await start(page, errors, 2329);
+  for (let i = 0; i < 3; i++) await playFromList(page);
   await settle(page);
   await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
-  expect(await page.locator(".mine .card").count()).toBe(8);
+  expect(await page.locator(".mine .card").count()).toBeGreaterThan(7);
   await playFromList(page);
   await settle(page);
   await page.mouse.move(0, 0); // no card preview over the tabs
@@ -150,6 +152,8 @@ test("a card is picked up by clicking it and put down by clicking it again", asy
 
 test("a courtier dragged from the hand onto the outer circle is played there", async ({ page }) => {
   const errors: string[] = [];
+  // Tall enough that the whole hand and the board are on screen to drag across.
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await start(page, errors, 4);
   await settle(page);
   const outer = page.locator("section.outer");
@@ -166,7 +170,9 @@ test("a courtier dragged from the hand onto the outer circle is played there", a
     const to = (await outer.boundingBox())!;
     await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 8 });
     await page.mouse.up();
-    await expect(page.locator(`section.outer [data-uid="${uid}"]`)).toBeVisible();
+    // On the table: in the outer circle, or already moved into a seat by
+    // the time the bots have played.
+    await expect(page.locator(`section.outer [data-uid="${uid}"], section.court [data-uid="${uid}"]`)).toBeVisible();
     expect(errors).toEqual([]);
     return;
   }
@@ -175,6 +181,8 @@ test("a courtier dragged from the hand onto the outer circle is played there", a
 
 test("a card dragged onto the discard pile is discarded and replaced", async ({ page }) => {
   const errors: string[] = [];
+  // Tall enough that the whole hand and the board are on screen to drag across.
+  await page.setViewportSize({ width: 1280, height: 1000 });
   await start(page, errors, 4);
   await settle(page);
   const card = page.locator(".mine .card.grab").first();

@@ -65,22 +65,21 @@ class TableTests(unittest.TestCase):
             table = Table()
             updates = json.loads(table.new_game(json.dumps({"seed": seed})))
             for u in play_out(table, updates, random.Random(seed)):
-                event = u["event"]
-                played = u["action"] and u["action"]["kind"] == "play" and u["action"]["card"]
-                if event is None:
-                    continue
-                self.assertEqual(event["card"]["uid"], played)
-                self.assertEqual(event["player"], u["actor"])
-                self.assertTrue(event["summary"])
-                self.assertTrue(event["effects"])
-                for effect in event["effects"]:
-                    self.assertIn(effect["tone"], {"loss", "gain", "neutral"})
-                # Nobody dies and lives in the same report.
-                self.assertFalse({c["uid"] for c in event["fallen"]} & {c["uid"] for c in event["spared"]})
-                seen[event["card"]["name"]] = event
-        self.assertEqual(set(seen), {c.name for c in EVENT_CARDS})
-        self.assertTrue(seen["Famine"]["discarded"])
-        self.assertTrue(seen["Plague"]["fallen"])
+                for event in u["events"]:
+                    # Every event now plays the moment it is drawn.
+                    self.assertTrue(event["drawn"])
+                    self.assertIn(event["player"], range(len(table.session.tiers)))
+                    self.assertTrue(event["summary"])
+                    self.assertTrue(event["effects"])
+                    for effect in event["effects"]:
+                        self.assertIn(effect["tone"], {"loss", "gain", "neutral"})
+                    # Nobody dies and lives in the same report.
+                    self.assertFalse({c["uid"] for c in event["fallen"]} & {c["uid"] for c in event["spared"]})
+                    seen[event["card"]["name"]] = event
+        # The five minor events; the majors are out of the deck.
+        self.assertEqual(set(seen), {c.name for c in EVENT_CARDS if c.tier == "minor"})
+        self.assertTrue(seen["Debasement of the Coinage"]["discarded"])
+        self.assertTrue(seen["Poisoning at the Feast"]["effects"])
 
     def test_the_default_table_is_you_and_one_of_each_bot(self):
         table = Table()
@@ -123,14 +122,19 @@ class TableTests(unittest.TestCase):
         n = len(table.session.tiers)
         for u in updates:
             self.assertIn(u["actor"], range(-1, n))
-        # Bot turns before the human's first move each name a bot.
+        # Bot moves before the human's first move each name a bot; the human
+        # is named only as their own turn opens, with nothing played yet.
         human = table.session.humans[0]
-        self.assertTrue(all(u["actor"] != human for u in updates))
+        self.assertTrue(all(u["actor"] != human or not u["action"] for u in updates))
 
     def test_updates_say_what_was_played(self):
-        table = Table()
-        updates = json.loads(table.new_game(json.dumps({"seed": 5})))
-        moved = [u for u in updates if u["action"]]
+        # A deal where bots move before the human does.
+        for seed in range(5, 50):
+            table = Table()
+            updates = json.loads(table.new_game(json.dumps({"seed": seed})))
+            moved = [u for u in updates if u["action"]]
+            if moved:
+                break
         self.assertTrue(moved)
         for u in moved:
             self.assertIn(u["action"]["kind"], {"play", "move", "discard", "pass"})

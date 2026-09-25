@@ -193,6 +193,33 @@ class Answers(unittest.TestCase):
             session.answer(0)
 
 
+class DrawnEvents(unittest.TestCase):
+    def test_a_drawn_event_can_stop_to_ask_as_a_turn_opens(self):
+        # Poisoning or Debasement drawn at the top of someone's turn asks the
+        # human; the report of it arrives with the answer.
+        for seed in range(200):
+            session = GameSession(Config(players=(HUMAN, "naive", "greedy")), seed)
+            rng = random.Random(seed)
+            prompt = session.advance()
+            for _ in range(200):
+                if prompt.kind == OVER:
+                    break
+                opening = session._resolving is not None and session._resolving[1] is None
+                if prompt.kind != TURN and opening:
+                    card = session.state.card(prompt.card)
+                    self.assertEqual(card.kind.value, "Event")
+                    self.assertIsNone(session.answer(rng.choice(prompt.options), advance=False))
+                    names = [e["card"]["name"] for e in session.last_events]
+                    self.assertIn(card.name, names)
+                    self.assertTrue(all(e["drawn"] for e in session.last_events))
+                    return
+                if prompt.kind == TURN:
+                    prompt = session.answer(rng.randrange(len(prompt.options)))
+                else:
+                    prompt = session.answer(rng.choice(prompt.options))
+        self.fail("no drawn event asked anything in 200 games")
+
+
 class Views(unittest.TestCase):
     def test_a_view_shows_only_what_the_seat_could_see(self):
         session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), 9)

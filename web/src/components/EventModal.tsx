@@ -15,7 +15,14 @@ export function EventModal({ report, view, onContinue }: { report: EventReport; 
   }, []);
 
   const src = art.card(report.card.name);
-  const who = report.player === view.you ? "You play" : `${playerName(view, report.player)} plays`;
+  const mine = report.player === view.you;
+  const who = report.drawn
+    ? mine
+      ? "You drew it"
+      : `${playerName(view, report.player)} drew it`
+    : mine
+      ? "You play"
+      : `${playerName(view, report.player)} plays`;
 
   const row = (label: string, cards: Card[], tone: string) =>
     cards.length > 0 && (
@@ -105,7 +112,8 @@ export function EventAnnouncement({
 
   const card = prompt.card!;
   const src = art.card(card.name);
-  const who = actor === view.you ? "You play" : actor >= 0 ? `${playerName(view, actor)} plays` : "An event";
+  // Events play the moment they are drawn: whoever drew it set it off.
+  const who = actor === view.you ? "You drew it" : actor >= 0 ? `${playerName(view, actor)} drew it` : "An event";
   const ask = prompt.kind === "courtier" ? "Name a courtier to die." : "Choose what to discard.";
 
   return (
