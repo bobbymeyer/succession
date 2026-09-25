@@ -53,6 +53,8 @@ class Config:
     #: With `events_on_draw`, only the five minor events play when drawn; the
     #: major ones are held and played as usual.
     events_on_draw_minor_only: bool = False
+    #: A variant: which halves of the event pairs are in the deck at all.
+    event_tiers: tuple[str, ...] = ("minor", "major")
     #: A variant: every event favours whoever plays it (see engine
     #: `_resolve_event`): the caster draws more, discards nothing, names two in
     #: a Plague, is not held by their own Siege, and so on.
@@ -149,7 +151,7 @@ class GameState:
     # -- construction -------------------------------------------------------
     @classmethod
     def new(cls, config: Config) -> "GameState":
-        cards = build_cards(config.outmaneuver_copies)
+        cards = build_cards(config.outmaneuver_copies, config.event_tiers)
         state = cls(config=config, cards=cards)
         state.seats = {s: None for s in SEATS}
         state.hands = [[] for _ in range(config.num_players)]

@@ -95,6 +95,7 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         hand_limit_at_end_of_turn=not args.hand_limit_on_draw,
         events_on_draw=args.events_on_draw or args.minor_events_on_draw,
         events_on_draw_minor_only=args.minor_events_on_draw,
+        event_tiers=tuple(t for t in ("minor", "major") if t != args.drop_events),
         caster_edge=args.caster_edge,
         defense_requires_matching_target=args.defense_matches_target,
         house_rising_requires_preferred_seat=not args.house_any_three,
@@ -208,6 +209,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--discard-no-draw", action="store_true", help="a turn spent discarding does not draw a replacement (default: Discard & Draw)")
     parser.add_argument("--hand-limit-on-draw", action="store_true", help="a full hand draws nothing (default: draw freely, discard down to the limit as your turn ends)")
     parser.add_argument("--caster-edge", action="store_true", help="variant: every event favours whoever plays it")
+    parser.add_argument("--drop-events", choices=("minor", "major"), help="variant: take the minor or the major events out of the deck")
     parser.add_argument("--minor-events-on-draw", action="store_true", help="variant: only the five minor events play at once when drawn")
     parser.add_argument("--events-on-draw", action="store_true", help="variant: an event plays at once when drawn, and the drawer draws again")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")

@@ -1038,6 +1038,16 @@ class TestDeckAndTurns(unittest.TestCase):
         self.assertEqual([state.name(u) for u in state.discard], ["Quarantine"])
         self.assertTrue(state.inner_frozen)
 
+    def test_either_half_of_the_events_can_be_left_out(self):
+        from succession.cards import EVENT_CARDS
+
+        for tier in ("minor", "major"):
+            state = GameState.new(Config(event_tiers=(tier,)))
+            names = {c.name for c in state.cards}
+            self.assertEqual(len(state.cards), 79)
+            for c in EVENT_CARDS:
+                self.assertEqual(c.name in names, c.tier == tier)
+
     def test_events_on_draw_never_deals_an_event_into_a_starting_hand(self):
         from succession.enums import CardKind
 

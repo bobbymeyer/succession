@@ -49,7 +49,9 @@ draw again; an event dealt into a starting hand goes back into the deck. In a
 stretched the median game from 45 to 61 turns, and dropped Balance to 11%. `--minor-events-on-draw` does the same for the five
 minor events only, and leaves the majors to be held and played: events rose
 to 8.8 a game, the median game to 46 turns, courtiers killed from 3.3 to 5.1,
-and the strategic bot's win rate from 58% to 64%.
+and the strategic bot's win rate from 58% to 64%. `--drop-events minor` or `--drop-events major` takes
+one half of the event pairs out of the deck altogether, to test either half on
+its own.
 
 Another, also off by default: with `--caster-edge` every event favours whoever
 plays it. Quarantine gives the caster one free move before the seal; Siege

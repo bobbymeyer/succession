@@ -151,12 +151,16 @@ PIVOT_CARDS: tuple[CardDef, ...] = (
 OUTMANEUVER_CARD = CardDef("Outmaneuver", CardKind.OUTMANEUVER)
 
 
-def build_cards(outmaneuver_copies: int = 1) -> tuple[CardDef, ...]:
-    """Return every card in the play deck, indexed by position (its uid)."""
+def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("minor", "major")) -> tuple[CardDef, ...]:
+    """Return every card in the play deck, indexed by position (its uid).
+
+    `event_tiers` leaves out the minor or major half of the events -- a
+    variant for testing, not a way the game is dealt.
+    """
 
     cards: list[CardDef] = []
     cards.extend(_courtier_cards())
-    cards.extend(EVENT_CARDS)
+    cards.extend(c for c in EVENT_CARDS if c.tier in event_tiers)
     cards.extend(PROMOTION_CARDS)
     cards.extend(DEMOTION_CARDS)
     cards.extend(REMOVAL_CARDS)
