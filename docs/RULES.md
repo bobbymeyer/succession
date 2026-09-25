@@ -42,6 +42,12 @@ end of its owner's next turn taken: they choose cards to discard until they
 hold 7. A skipped turn is not taken, so it checks nothing.
 (`--hand-limit-on-draw` restores the old rule, where a full hand drew nothing.)
 
+A variant, off by default: with `--events-on-draw` an event is never held. The
+moment it is drawn it plays for whoever drew it, goes to the discard, and they
+draw again; an event dealt into a starting hand goes back into the deck. In a
+5,000-game test it made events fire about 30 times a game instead of 2.6,
+stretched the median game from 45 to 61 turns, and dropped Balance to 11%.
+
 1. **Play a card from hand** — a card from hand only ever reaches the outer
    circle. There is no way to play a card from hand straight into a seat.
 2. **Move** — free, no card: take an outer courtier and install them in an

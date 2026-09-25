@@ -146,11 +146,13 @@ def save_roll(state: GameState, rng) -> bool:
 
 
 # --- drawing ----------------------------------------------------------------
-def draw(state: GameState, player: int, rng, count: int = 1) -> None:
+def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, dealing: bool = False) -> None:
     capped = not state.config.hand_limit_at_end_of_turn
-    for _ in range(count):
+    set_aside: list[int] = []
+    left = count
+    while left > 0:
         if capped and len(state.hands[player]) >= state.config.hand_limit:
-            return
+            break
         if not state.deck:
             if not state.discard:
                 return
@@ -159,7 +161,29 @@ def draw(state: GameState, player: int, rng, count: int = 1) -> None:
             rng.shuffle(state.deck)
             state.reshuffles += 1
             state.bump("reshuffles")
-        state.hands[player].append(state.deck.pop())
+        uid = state.deck.pop()
+        if state.config.events_on_draw and state.card(uid).kind is CardKind.EVENT:
+            if dealing:
+                set_aside.append(uid)  # no event in a starting hand
+            else:
+                _play_drawn_event(state, player, uid, rng, deciders)
+            continue  # and draw again in its place
+        state.hands[player].append(uid)
+        left -= 1
+    if set_aside:
+        state.deck.extend(set_aside)
+        rng.shuffle(state.deck)
+
+
+def _play_drawn_event(state: GameState, player: int, uid: int, rng, deciders) -> None:
+    """`events_on_draw`: the event plays for whoever drew it, then is discarded."""
+
+    card = state.card(uid)
+    state.bump("events_on_draw")
+    state.bump("played_event")
+    state.note(f"P{player} draws {card.name}, and it plays at once")
+    _resolve_event(state, card, player, rng, deciders)
+    state.discard.append(uid)
 
 
 # --- resolution -------------------------------------------------------------
@@ -194,7 +218,7 @@ def apply_action(state: GameState, player: int, action: Action, rng, deciders=No
         drew = False
         if state.config.discard_draws and not getattr(rng, "lookahead", False):
             before = len(hand)
-            draw(state, player, rng)
+            draw(state, player, rng, deciders=deciders)
             drew = len(hand) > before
         state.note(f"P{player} discards {state.name(action.card)}{' and draws' if drew else ''}")
         return
@@ -365,7 +389,7 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
 
     elif effect == EFFECT_DRAW_ALL:
         for who in _players_from(state, player):
-            draw(state, who, rng, count=card.amount)
+            draw(state, who, rng, count=card.amount, deciders=deciders)
         state.bump("cards_given", card.amount * state.config.num_players)
 
     elif effect == EFFECT_DISCARD_ALL:
@@ -398,7 +422,7 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
             hand.clear()
         rng.shuffle(state.deck)
         for who, size in enumerate(sizes):
-            draw(state, who, rng, count=size)
+            draw(state, who, rng, count=size, deciders=deciders)
         state.bump("redeals")
         state.note("every hand is shuffled in and dealt back out")
 
@@ -481,12 +505,12 @@ def setup_game(config: Config, rng: random.Random, *, trace: bool = False) -> Ga
     rng.shuffle(state.deck)
     for _ in range(config.starting_hand):
         for p in range(config.num_players):
-            draw(state, p, rng)
+            draw(state, p, rng, dealing=True)
     state.current = rng.randrange(config.num_players)
     return state
 
 
-def start_turn(state: GameState, rng) -> bool:
+def start_turn(state: GameState, rng, deciders=None) -> bool:
     """Open the current player's turn: draw, or spend it if they must skip.
 
     Returns False when the turn was skipped -- it is over, and play has already
@@ -505,7 +529,7 @@ def start_turn(state: GameState, rng) -> bool:
     state.turn += 1
     # Draw at the top of the turn: the card you pick up is one you may
     # play this turn. A skipped turn draws nothing, since it never starts.
-    draw(state, player, rng)
+    draw(state, player, rng, deciders=deciders)
     return True
 
 
@@ -611,7 +635,7 @@ def play_game(
             timeout = True
             break
         player = state.current
-        if not start_turn(state, rng):
+        if not start_turn(state, rng, bots):
             continue
         actions = legal_actions(state, player)
         action = bots[player].choose(state, player, actions)

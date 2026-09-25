@@ -982,6 +982,26 @@ class TestDeckAndTurns(unittest.TestCase):
         enforce_hand_limit(state, 0, None)
         self.assertEqual(len(state.hands[0]), 4)
 
+    def test_events_on_draw_play_at_once_and_are_replaced(self):
+        # Variant: a drawn event resolves for whoever drew it, goes to the
+        # discard, and the drawer draws again.
+        state = fresh(events_on_draw=True)
+        state.deck = [uid(state, "Golden Thumb"), uid(state, "Siege")]  # Siege on top
+        draw(state, 0, random.Random(0))
+        self.assertEqual([state.name(u) for u in state.hands[0]], ["Golden Thumb"])
+        self.assertEqual([state.name(u) for u in state.discard], ["Siege"])
+        self.assertTrue(state.board_frozen)
+
+    def test_events_on_draw_never_deals_an_event_into_a_starting_hand(self):
+        from succession.enums import CardKind
+
+        for seed in range(20):
+            state = setup_game(Config(events_on_draw=True), random.Random(seed))
+            for hand in state.hands:
+                self.assertEqual(len(hand), state.config.starting_hand)
+                self.assertFalse(any(state.card(u).kind is CardKind.EVENT for u in hand))
+            self.assertEqual(state.discard, [])
+
     def test_exhausted_deck_and_discard_is_not_an_error(self):
         state = fresh()
         state.deck = []

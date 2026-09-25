@@ -46,6 +46,10 @@ class Config:
     #: capped, and a hand over the limit then discards down to it. False is
     #: the old rule, where a full hand simply draws nothing.
     hand_limit_at_end_of_turn: bool = True
+    #: A variant: an event is never held. Drawn, it plays at once for the
+    #: player who drew it, who then draws a replacement. Events dealt into a
+    #: starting hand go back into the deck.
+    events_on_draw: bool = False
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
