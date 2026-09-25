@@ -52,8 +52,10 @@ docs/
     CARDS.md                                    ...and the deck as Markdown
 ```
 
-92 cards: the 84-card play deck plus the eight agendas. `--no-agendas` drops
-them back to 84.
+87 cards: the 79-card play deck plus the eight agendas, and the seven seat
+cards of the board beside them. `--no-agendas` drops the agendas. The five
+major events are out of the deck, so the numbering has gaps at 42, 44, 46, 48
+and 50: every card keeps the number its art was drawn under.
 
 The print cards are 2.72 x 3.70 in with bleed at 600 DPI. The web cards are the
 trimmed 2.48 x 3.46 in card at 744 px wide -- no bleed, because the bleed is
@@ -123,10 +125,11 @@ means the file is only good on the machine that generated it -- regenerate it
 rather than copying it to another box.
 
 The tool reads the available bracket sizes off the MPC page and picks the
-smallest one the order fits. You pay by bracket, not by card, so the eight
-agendas are not free: 84 cards fit MPC's 90 bracket and 92 push into the next
-one up. If that matters more than having the agendas printed, `--no-agendas`
-takes them out and writes the eight conditions on index cards instead.
+smallest one the order fits. You pay by bracket, not by card: the 79 play
+cards and the eight agendas, 87 in all, fit MPC's 90 bracket, and the seven
+seat cards push the order to 94, into the next one up. If that matters more
+than having the seats printed, `--no-seats` leaves them out and the board can
+be printed at home instead (`tools/boardsheet.py`).
 
 When it finishes, it leaves you in the MPC cart with the project saved. **Check
 the preview before paying** -- that is the last point at which a cropping
@@ -187,7 +190,7 @@ crisp, since the source art is only just above 300 DPI on its own.
 | `--web-dpi 220` | Smaller web cards (546 px wide); `--web-quality` tunes the JPEG. |
 | `--stock "(M31) Linen"` | Cardstock. Also `(S27) Smooth`, `(S30) Standard Smooth`, `(S33) Superior Smooth`, `(P10) Plastic`. |
 | `--foil` | Foil fronts. Not available on plastic stock. |
-| `--no-agendas` | Leave out the 8 agenda cards: 84 cards, one bracket cheaper. |
+| `--no-agendas` | Leave out the 8 agenda cards: 79 play cards. |
 | `--panel-alpha 220` | Make the text plates more opaque (255) or more transparent (0). |
 | `--outmaneuver-copies 3` | Match a deck built with `--outmaneuver-copies 3`. |
 | `--only 26,44` | Re-render just those asset numbers, for iterating on layout. |

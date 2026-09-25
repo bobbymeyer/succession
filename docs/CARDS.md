@@ -1,6 +1,6 @@
 # The deck
 
-All 99 cards, in the order `succession/cards.py` builds them: the 84-card play deck followed by the eight agendas. Every card here is the real print file, trimmed the way the cutter leaves it.
+All 94 cards, in the order `succession/cards.py` builds them: the 79-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the five events taken out of the deck leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
 
 **[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)** -- the card images plus the MPC Autofill order file, ready to order. [docs/PRINTING.md](PRINTING.md) has the steps.
 
@@ -9,7 +9,7 @@ Rebuild any of this with `python tools/mpcfill.py` -- see [docs/PRINTING.md](PRI
 ## Contents
 
 - [Courtier](#courtier) (40)
-- [Event](#event) (10)
+- [Event](#event) (5)
 - [Promotion](#promotion) (5)
 - [Demotion](#demotion) (5)
 - [Removal](#removal) (6)
@@ -71,20 +71,15 @@ Forty courtiers. These four printed attributes are the whole of what an agenda r
 
 ## Event
 
-Ten events in five minor/major pairs. An event hits the whole table rather than one courtier, and no Defense covers one.
+Five events. Nobody holds one: an event plays the moment it is drawn, for whoever drew it, who then draws again. It hits the whole table rather than one courtier, and no Defense covers one.
 
 | | Card | Type | What it does |
 |---|---|---|---|
 | <img src="cards/41-quarantine.jpg" alt="Quarantine" width="132"> | **Quarantine**<br><sub>Card 41</sub> | Event · Minor | The seats are sealed until just before your next turn. No promotion, no demotion, no move into an empty seat, and no Defense attached. A seated courtier cannot be removed, stripped or mutated. The outer circle plays on. |
-| <img src="cards/42-siege.jpg" alt="Siege" width="132"> | **Siege**<br><sub>Card 42</sub> | Event · Major | The board is sealed until just before your next turn. Nothing enters it, leaves it or changes on it. Discarding, Outmaneuver, Schismatic Event and the non-purge events still work. |
 | <img src="cards/43-poisoning-at-the-feast.jpg" alt="Poisoning at the Feast" width="132"> | **Poisoning at the Feast**<br><sub>Card 43</sub> | Event · Minor | Every player secretly names one courtier in play, and all are revealed at once. Each named courtier rolls a d6: it survives on an even, and dies on an odd. One named twice rolls once. |
-| <img src="cards/44-plague.jpg" alt="Plague" width="132"> | **Plague**<br><sub>Card 44</sub> | Event · Major | Every player secretly names one courtier in play, and all are revealed at once. Every named courtier dies. Nobody is spared. |
 | <img src="cards/45-caravan.jpg" alt="Caravan" width="132"> | **Caravan**<br><sub>Card 45</sub> | Event · Minor | Every player draws a card, starting with you and going clockwise. |
-| <img src="cards/46-treasure-fleet.jpg" alt="Treasure Fleet" width="132"> | **Treasure Fleet**<br><sub>Card 46</sub> | Event · Major | Every player draws two cards, starting with you and going clockwise. |
 | <img src="cards/47-debasement-of-the-coinage.jpg" alt="Debasement of the Coinage" width="132"> | **Debasement of the Coinage**<br><sub>Card 47</sub> | Event · Minor | Every player chooses a card from their hand, and all of them are discarded at once. |
-| <img src="cards/48-famine.jpg" alt="Famine" width="132"> | **Famine**<br><sub>Card 48</sub> | Event · Major | Every player chooses two cards from their hand, and all of them are discarded at once. |
 | <img src="cards/49-eclipse.jpg" alt="Eclipse" width="132"> | **Eclipse**<br><sub>Card 49</sub> | Event · Minor | Shuffle the discard pile back into the deck. This card resolves first and then goes to the new discard. |
-| <img src="cards/50-meteor.jpg" alt="Meteor" width="132"> | **Meteor**<br><sub>Card 50</sub> | Event · Major | Every hand is shuffled into the deck and dealt back out. Each player receives as many cards as they were holding. |
 
 ## Promotion
 

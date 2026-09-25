@@ -73,14 +73,23 @@ def scan(assets_dir: Path) -> dict[int, list[Asset]]:
 
 
 def map_to_deck(cards: tuple[CardDef, ...], by_index: dict[int, list[Asset]]) -> list[Asset]:
-    """One asset per deck slot, lowest variant where the art has alternates."""
+    """One asset per deck slot, lowest variant where the art has alternates.
 
+    Art is numbered for the full deck as it was first drawn. A card is matched
+    to its art by name, so a deck with cards left out (the major events) still
+    finds each card's picture, under its original number.
+    """
+
+    by_slug: dict[str, list[Asset]] = {}
+    for index, assets in by_index.items():
+        if index:
+            by_slug.setdefault(assets[0].slug, assets)
     chosen: list[Asset] = []
     problems: list[str] = []
     for slot, card in enumerate(cards):
-        variants = by_index.get(slot + 1)
+        variants = by_slug.get(slugify(card.name)) or by_index.get(slot + 1)
         if not variants:
-            problems.append(f"slot {slot} ({card.name}): no asset numbered {slot + 1:02d}")
+            problems.append(f"slot {slot} ({card.name}): no asset for {slugify(card.name)!r}")
             continue
         asset = variants[0]
         expected_kind = card.kind.value.lower()

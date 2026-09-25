@@ -48,7 +48,8 @@ GROUP_NOTES: dict[str, str] = {
         "values again -- never the mutations the dead one had collected."
     ),
     "Event": (
-        "Ten events in five minor/major pairs. An event hits the whole table "
+        "Five events. Nobody holds one: an event plays the moment it is drawn, "
+        "for whoever drew it, who then draws again. It hits the whole table "
         "rather than one courtier, and no Defense covers one."
     ),
     "Promotion": (
@@ -114,8 +115,10 @@ def render(rows: list[Row], back: Row | None, zip_link: str | None = None) -> st
         "# The deck",
         "",
         f"All {total} cards, in the order `succession/cards.py` builds them: the "
-        "84-card play deck followed by the eight agendas. Every card here is "
-        "the real print file, trimmed the way the cutter leaves it.",
+        "79-card play deck, the eight agendas and the seven seats. A card keeps "
+        "the number its art was drawn under, so the five events taken out of "
+        "the deck leave gaps. Every card here is the real print file, trimmed "
+        "the way the cutter leaves it.",
         "",
     ]
     if zip_link:

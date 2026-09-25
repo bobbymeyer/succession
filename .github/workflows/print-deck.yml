@@ -57,7 +57,7 @@ jobs:
           short=$(git rev-parse --short HEAD)
           day=$(date -u +%Y-%m-%d)
           tag="print-deck-${day}-${short}"
-          notes="The print-and-play deck as of ${short}: 100 cards at 600 DPI with bleed, plus the MPC Autofill order (succession.xml). See HOW TO PRINT.txt inside, and docs/CARDS.md for the card list."
+          notes="The print-and-play deck as of ${short}: every card at 600 DPI with bleed, plus the MPC Autofill order (succession.xml). See HOW TO PRINT.txt inside, and docs/CARDS.md for the card list."
           gh release create "$tag" build/succession-print-deck.zip \
             --target "$GITHUB_SHA" \
             --title "Print deck ${day} (${short})" \
