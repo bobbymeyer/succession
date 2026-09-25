@@ -184,7 +184,7 @@ Four are dealt face down and four stay in the fog for a Schismatic Event to draw
 | <img src="cards/89-faith-ascendant-mystery-cults.jpg" alt="Faith Ascendant: Mystery Cults" width="132"> | **Faith Ascendant: Mystery Cults**<br><sub>Card 89</sub> | The Mystery Cults | Four or more of the seven inner seats are held by courtiers of the Mystery Cults. |
 | <img src="cards/90-faith-ascendant-the-one-god.jpg" alt="Faith Ascendant: The One God" width="132"> | **Faith Ascendant: The One God**<br><sub>Card 90</sub> | The One God | Four or more of the seven inner seats are held by courtiers of The One God. |
 | <img src="cards/91-barbarian-conquest.jpg" alt="Barbarian Conquest" width="132"> | **Barbarian Conquest**<br><sub>Card 91</sub> | The Frontier | Three courtiers of Barbarian origin hold inner seats, in any estates. |
-| <img src="cards/92-balance.jpg" alt="Balance" width="132"> | **Balance**<br><sub>Card 92</sub> | The Settlement | Six of the seven seats are filled, and the inner circle shows all three families, all three faiths, and two barbarians at once. |
+| <img src="cards/92-balance.jpg" alt="Balance" width="132"> | **Balance**<br><sub>Card 92</sub> | The Settlement | Six of the seven seats are filled, and the inner circle shows all three families, all three faiths, and a barbarian at once. |
 
 ## Seat
 

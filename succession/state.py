@@ -72,8 +72,8 @@ class Config:
     faith_seats: int = 4
     #: Seats that must be filled before Balance counts.
     balance_seats: int = 6
-    #: Barbarians Balance wants seated, not just one.
-    balance_barbarians: int = 2
+    #: Barbarians Balance wants seated.
+    balance_barbarians: int = 1
     #: Agenda keys left out of the pool entirely -- neither dealt nor available
     #: to a Schismatic Event. For asking what the game looks like without one.
     excluded_agendas: tuple[str, ...] = ()
