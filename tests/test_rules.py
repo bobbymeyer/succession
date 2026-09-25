@@ -639,6 +639,44 @@ class TestEvents(unittest.TestCase):
         self.assertEqual(len(state.outer), 5)
         self.assertEqual(state.stats.get("saves_made"), 4)
 
+    # --- the caster-edge variant -------------------------------------------
+    def test_caster_edge_caravan_gives_the_caster_two(self):
+        state = fresh(caster_edge=True)
+        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones",
+                                              "Horse Breaker", "Master Mason", "Crosser of Rivers")]
+        self.play(state, "Caravan", player=1)
+        self.assertEqual([len(h) for h in state.hands], [1, 2, 1, 1])
+
+    def test_caster_edge_treasure_fleet_gives_the_caster_three(self):
+        state = fresh(caster_edge=True)
+        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones",
+                                              "Horse Breaker", "Master Mason", "Crosser of Rivers")]
+        self.play(state, "Treasure Fleet")
+        self.assertEqual([len(h) for h in state.hands], [3, 1, 1, 1])
+
+    def test_caster_edge_famine_spares_the_caster(self):
+        state = fresh(caster_edge=True)
+        for p in range(4):
+            give(state, p, "Assassination", "Promotion", "Demotion")
+        self.play(state, "Famine")
+        self.assertEqual([len(h) for h in state.hands], [3, 1, 1, 1])
+
+    def test_caster_edge_siege_does_not_hold_its_caster(self):
+        state = fresh(caster_edge=True)
+        state.current = 2
+        self.play(state, "Siege", player=2)
+        self.assertFalse(state.board_frozen)  # the caster's own turn
+        state.current = 3
+        self.assertTrue(state.board_frozen)
+
+    def test_caster_edge_plague_lets_the_caster_name_two(self):
+        state = fresh(caster_edge=True)
+        outer(state, "Beloved of the Gods", "Hand of the Oracle", "Golden Thumb")
+        # The stand-in names the first courtier for everyone; the caster's
+        # second pick is the next one.
+        self.play(state, "Plague")
+        self.assertEqual([state.name(u) for u in state.outer], ["Golden Thumb"])
+
     def test_a_forced_discard_lands_all_at_once(self):
         state = fresh()
         for p in range(4):

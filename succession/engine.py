@@ -6,7 +6,7 @@ import random
 from dataclasses import dataclass
 from typing import Callable, Optional
 
-from .actions import DISCARD, MOVE, PASS, Action, legal_actions, purge_targets
+from .actions import DISCARD, MOVE, PASS, Action, free_moves, legal_actions, purge_targets
 from .agendas import (
     AGENDAS,
     AGENDAS_BY_KEY,
@@ -358,14 +358,17 @@ def _players_from(state: GameState, first: int):
 
 def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
     effect = card.effect
+    edge = state.config.caster_edge
 
     if effect == EFFECT_FREEZE_INNER:
+        if edge:
+            _caster_free_move(state, player, deciders)
         state.freeze(board=False)
         state.bump("freezes_inner")
         state.note(f"the inner circle is sealed until P{player}'s next turn")
 
     elif effect == EFFECT_FREEZE_BOARD:
-        state.freeze(board=True)
+        state.freeze(board=True, exempt=player if edge else -1)
         state.bump("freezes_board")
         state.note(f"the whole board is sealed until P{player}'s next turn")
 
@@ -374,14 +377,21 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
         # A courtier named twice dies (or rolls to survive) once.
         candidates = purge_targets(state)
         if candidates:
-            named = [
-                (who, _chooser(deciders, who).pick_courtier(state, who, candidates))
-                for who in _players_from(state, player)
-            ]
+            named = []
+            for who in _players_from(state, player):
+                chooser = _chooser(deciders, who)
+                named.append((who, chooser.pick_courtier(state, who, candidates)))
+                if edge and who == player and not card.save:
+                    # Plague: the caster names a second.
+                    rest = [c for c in candidates if c != named[-1][1]]
+                    if rest:
+                        named.append((who, chooser.pick_courtier(state, who, rest)))
             for who, victim in named:
                 state.note(f"P{who} names {state.name(victim)}")
+            by_caster = {victim for who, victim in named if who == player} if edge else set()
             for victim in dict.fromkeys(victim for _, victim in named):
-                if card.save and save_roll(state, rng):
+                # Poisoning: whoever the caster names gets no roll.
+                if card.save and victim not in by_caster and save_roll(state, rng):
                     state.bump("saves_made")
                     state.note(f"{state.name(victim)} survives")
                     continue
@@ -389,14 +399,19 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
 
     elif effect == EFFECT_DRAW_ALL:
         for who in _players_from(state, player):
-            draw(state, who, rng, count=card.amount, deciders=deciders)
-        state.bump("cards_given", card.amount * state.config.num_players)
+            # With the edge: everyone draws one, and the caster one more than
+            # the card's amount.
+            count = (card.amount + 1 if who == player else 1) if edge else card.amount
+            draw(state, who, rng, count=count, deciders=deciders)
+            state.bump("cards_given", count)
 
     elif effect == EFFECT_DISCARD_ALL:
         # Everyone chooses from their own hand, then the cards all go face up
         # on the pile together.
         thrown = []
         for who in _players_from(state, player):
+            if edge and who == player:
+                continue  # everyone but the caster
             for _ in range(card.amount):
                 hand = state.hands[who]
                 if not hand:
@@ -408,6 +423,14 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
         state.discard.extend(thrown)
 
     elif effect == EFFECT_RESHUFFLE:
+        if edge and state.discard:
+            # The caster keeps one card of their choice from the pile first.
+            chooser = _chooser(deciders, player)
+            pick = getattr(chooser, "pick_from_discard", None)
+            kept = pick(state, player, list(state.discard)) if pick else state.discard[-1]
+            state.discard.remove(kept)
+            state.hands[player].append(kept)
+            state.note(f"P{player} takes {state.name(kept)} from the discard pile")
         state.deck.extend(state.discard)
         state.discard = []
         rng.shuffle(state.deck)
@@ -422,12 +445,27 @@ def _resolve_event(state: GameState, card, player: int, rng, deciders) -> None:
             hand.clear()
         rng.shuffle(state.deck)
         for who, size in enumerate(sizes):
-            draw(state, who, rng, count=size, deciders=deciders)
+            extra = 1 if edge and who == player else 0  # the caster gets one more
+            draw(state, who, rng, count=size + extra, deciders=deciders)
         state.bump("redeals")
         state.note("every hand is shuffled in and dealt back out")
 
     else:  # pragma: no cover
         raise ValueError(f"unknown event effect: {effect}")
+
+
+def _caster_free_move(state: GameState, player: int, deciders) -> None:
+    """Quarantine with the edge: one free move for the caster before the seal."""
+
+    moves = free_moves(state)
+    if not moves:
+        return
+    chooser = _chooser(deciders, player)
+    choose = getattr(chooser, "choose", None)
+    pick = choose(state, player, moves + [Action(PASS)]) if choose else moves[0]
+    if pick.kind == MOVE:
+        install(state, pick.courtier, pick.seat)
+        state.note(f"P{player} moves {state.name(pick.courtier)} into {pick.seat.value} before the seal")
 
 
 def simulate(state: GameState, player: int, action: Action, decider=None) -> GameState:

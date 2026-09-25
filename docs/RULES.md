@@ -48,6 +48,16 @@ draw again; an event dealt into a starting hand goes back into the deck. In a
 5,000-game test it made events fire about 30 times a game instead of 2.6,
 stretched the median game from 45 to 61 turns, and dropped Balance to 11%.
 
+Another, also off by default: with `--caster-edge` every event favours whoever
+plays it. Quarantine gives the caster one free move before the seal; Siege
+does not hold its caster; Poisoning's victim named by the caster gets no roll;
+the caster names two in a Plague; Caravan and Treasure Fleet give everyone one
+card and the caster two or three; Debasement and Famine spare the caster;
+Eclipse lets the caster keep one card from the pile before the shuffle; and
+Meteor deals the caster one card more than they held. In 5,000 games it
+lifted events from 2.6 to 3.9 plays a game with the agendas barely moved, and
+widened the strategic bot's lead from 58% to 61%.
+
 1. **Play a card from hand** — a card from hand only ever reaches the outer
    circle. There is no way to play a card from hand straight into a seat.
 2. **Move** — free, no card: take an outer courtier and install them in an

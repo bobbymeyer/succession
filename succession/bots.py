@@ -105,6 +105,11 @@ class Bot:
 
         return self.rng.choice(list(hand))
 
+    def pick_from_discard(self, state: GameState, player: int, pile: Sequence[int]) -> int:
+        """Choose a card to keep from the discard pile (`caster_edge` Eclipse)."""
+
+        return self.rng.choice(list(pile))
+
 
 class NaiveBot(Bot):
     """Tier 1: any legal move, chosen at random."""
@@ -282,6 +287,17 @@ class ThinkingBot(Bot):
             return 1.5 if card_actions(state, player, uid) else 0.0
 
         return min(hand, key=lambda uid: (value(uid), self.rng.random()))
+
+    def pick_from_discard(self, state: GameState, player: int, pile: Sequence[int]) -> int:
+        """Keep the card we most want: a courtier for our agenda, else anything playable."""
+
+        def value(uid: int) -> float:
+            card = state.card(uid)
+            if card.is_courtier:
+                return 2.0 if self.is_useful_courtier(state, player, uid) else 1.0
+            return 1.5 if card_actions(state, player, uid) else 0.0
+
+        return max(pile, key=lambda uid: (value(uid), self.rng.random()))
 
     def rival_progress(self, state: GameState, player: int) -> float:
         """How close anyone else is. A bot that ignores rivals reports none."""
