@@ -50,6 +50,9 @@ class Config:
     #: player who drew it, who then draws a replacement. Events dealt into a
     #: starting hand go back into the deck.
     events_on_draw: bool = False
+    #: With `events_on_draw`, only the five minor events play when drawn; the
+    #: major ones are held and played as usual.
+    events_on_draw_minor_only: bool = False
     #: A variant: every event favours whoever plays it (see engine
     #: `_resolve_event`): the caster draws more, discards nothing, names two in
     #: a Plague, is not held by their own Siege, and so on.

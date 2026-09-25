@@ -46,7 +46,10 @@ A variant, off by default: with `--events-on-draw` an event is never held. The
 moment it is drawn it plays for whoever drew it, goes to the discard, and they
 draw again; an event dealt into a starting hand goes back into the deck. In a
 5,000-game test it made events fire about 30 times a game instead of 2.6,
-stretched the median game from 45 to 61 turns, and dropped Balance to 11%.
+stretched the median game from 45 to 61 turns, and dropped Balance to 11%. `--minor-events-on-draw` does the same for the five
+minor events only, and leaves the majors to be held and played: events rose
+to 8.8 a game, the median game to 46 turns, courtiers killed from 3.3 to 5.1,
+and the strategic bot's win rate from 58% to 64%.
 
 Another, also off by default: with `--caster-edge` every event favours whoever
 plays it. Quarantine gives the caster one free move before the seal; Siege

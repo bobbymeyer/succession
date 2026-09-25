@@ -162,7 +162,7 @@ def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, d
             state.reshuffles += 1
             state.bump("reshuffles")
         uid = state.deck.pop()
-        if state.config.events_on_draw and state.card(uid).kind is CardKind.EVENT:
+        if _plays_when_drawn(state, uid):
             if dealing:
                 set_aside.append(uid)  # no event in a starting hand
             else:
@@ -173,6 +173,16 @@ def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, d
     if set_aside:
         state.deck.extend(set_aside)
         rng.shuffle(state.deck)
+
+
+def _plays_when_drawn(state: GameState, uid: int) -> bool:
+    config = state.config
+    if not config.events_on_draw:
+        return False
+    card = state.card(uid)
+    if card.kind is not CardKind.EVENT:
+        return False
+    return card.tier == "minor" or not config.events_on_draw_minor_only
 
 
 def _play_drawn_event(state: GameState, player: int, uid: int, rng, deciders) -> None:

@@ -1030,6 +1030,14 @@ class TestDeckAndTurns(unittest.TestCase):
         self.assertEqual([state.name(u) for u in state.discard], ["Siege"])
         self.assertTrue(state.board_frozen)
 
+    def test_minor_events_on_draw_leaves_the_majors_in_hand(self):
+        state = fresh(events_on_draw=True, events_on_draw_minor_only=True)
+        state.deck = [uid(state, n) for n in ("Golden Thumb", "Siege", "Quarantine")]  # Quarantine on top
+        draw(state, 0, random.Random(0), count=2)
+        self.assertEqual([state.name(u) for u in state.hands[0]], ["Siege", "Golden Thumb"])
+        self.assertEqual([state.name(u) for u in state.discard], ["Quarantine"])
+        self.assertTrue(state.inner_frozen)
+
     def test_events_on_draw_never_deals_an_event_into_a_starting_hand(self):
         from succession.enums import CardKind
 
