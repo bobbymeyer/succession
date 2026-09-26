@@ -81,8 +81,8 @@ class AgendaRules:
     balance_barbarians: int = BALANCE_BARBARIANS
     #: Barbarians Barbarian Conquest wants seated.
     conquest_barbarians: int = CONQUEST_BARBARIANS
-    #: A variant: one of them must hold a Military seat.
-    conquest_military_seat: bool = False
+    #: A variant: how many of them must hold Military seats (0-2).
+    conquest_military_seats: int = 0
     #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
@@ -106,7 +106,7 @@ def rules_for(state: "GameState") -> AgendaRules:
         balance_seats=config.balance_seats,
         balance_barbarians=config.balance_barbarians,
         conquest_barbarians=config.conquest_barbarians,
-        conquest_military_seat=config.conquest_military_seat,
+        conquest_military_seats=config.conquest_military_seats,
     )
 
 
@@ -203,7 +203,7 @@ def satisfied_counts(
     if kind == CONQUEST:
         if counts.inner_barbarians < rules.conquest_barbarians:
             return False
-        return counts.inner_barbarians_military >= 1 if rules.conquest_military_seat else True
+        return counts.inner_barbarians_military >= rules.conquest_military_seats
     if kind == BALANCE:
         return (
             counts.inner_filled >= rules.balance_seats
@@ -240,8 +240,9 @@ def progress_counts(
         bench = min(counts.outer_faith.get(agenda.param, 0), needed) / needed
     elif kind == CONQUEST:
         core = min(counts.inner_barbarians, rules.conquest_barbarians) / rules.conquest_barbarians
-        if rules.conquest_military_seat:
-            core = 0.75 * core + 0.25 * min(counts.inner_barbarians_military, 1)
+        if rules.conquest_military_seats:
+            held = min(counts.inner_barbarians_military, rules.conquest_military_seats)
+            core = 0.75 * core + 0.25 * held / rules.conquest_military_seats
         # Barbarians waiting outside are the raw material the bloc needs.
         bench = min(counts.barbarians_in_play - counts.inner_barbarians, 3) / 3
     elif kind == BALANCE:
@@ -324,8 +325,16 @@ def conditions(
                 counts.barbarians_in_play - counts.inner_barbarians,
             )
         ] + (
-            [Condition("One of them in a Military seat", counts.inner_barbarians_military, 1)]
-            if rules.conquest_military_seat
+            [
+                Condition(
+                    "One of them in a Military seat"
+                    if rules.conquest_military_seats == 1
+                    else "Both Military seats held by them",
+                    counts.inner_barbarians_military,
+                    rules.conquest_military_seats,
+                )
+            ]
+            if rules.conquest_military_seats
             else []
         )
     if kind == BALANCE:
