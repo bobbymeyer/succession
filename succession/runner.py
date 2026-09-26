@@ -103,6 +103,9 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         faith_seats=args.faith_seats,
         balance_seats=args.balance_seats,
         balance_barbarians=args.balance_barbarians,
+        conquest_barbarians=args.conquest_barbarians,
+        conquest_military_seats=args.conquest_military_seats,
+        conquest_outer_barbarians=args.conquest_outer_barbarians,
         excluded_agendas=parse_dropped_agendas(args.drop_agendas),
     )
 
@@ -215,6 +218,9 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")
     parser.add_argument("--balance-seats", type=int, default=7, help="seats that must be filled for Balance to count (default all 7)")
+    parser.add_argument("--conquest-barbarians", type=int, default=3, help="barbarians Barbarian Conquest wants seated (default 3)")
+    parser.add_argument("--conquest-outer-barbarians", type=int, default=1, help="barbarians Barbarian Conquest also wants waiting in the outer circle (default 1)")
+    parser.add_argument("--conquest-military-seats", type=int, default=0, choices=(0, 1, 2), help="variant: how many Military seats Barbarian Conquest's barbarians must hold (default 0)")
     parser.add_argument("--balance-barbarians", type=int, default=1, help="barbarians Balance wants seated (default 1)")
     parser.add_argument("--drop-agendas", default="", metavar="KEYS", help="leave agendas out of the pool entirely, e.g. balance")
     parser.add_argument("--faith-seats", type=int, default=4, help="inner seats a faith must hold to win (default 4 of 7)")

@@ -163,12 +163,13 @@ state, **both** players win and the game is logged as a double win.
 |---|---|---|
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
 | Faith Ascendant | 3 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
-| Barbarian Conquest | 1 | **3 barbarians seated in the inner circle** |
+| Barbarian Conquest | 1 | **3 barbarians seated in the inner circle**, and **a fourth waiting in the outer circle** (`--conquest-barbarians`, `--conquest-outer-barbarians`) |
 | Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and **a barbarian** (`--balance-seats`, `--balance-barbarians`) |
 
-Barbarian Conquest is one clause: three barbarians holding inner seats, in any
-estates. There is no shortcut for taking both Military seats -- two barbarian
-generals are simply two of the three.
+Barbarian Conquest is two clauses: three barbarians holding inner seats, in
+any estates, and a fourth waiting in the outer circle -- the bloc in the
+palace and the host at the gates. There is no shortcut for taking both
+Military seats -- two barbarian generals are simply two of the three.
 
 Each house also fields one commoner -- its charioteer -- which is the only way
 a house can ever hold the Voice of the People's seat.
@@ -213,7 +214,7 @@ first; the flag flips it.
 | # | Decision | Default | Flag |
 |---|---|---|---|
 | 1 | **Killed courtiers go to the discard** and may reshuffle back as a *new* person with printed attributes (this is what "a killed courtier can reshuffle back in as a 'new' person, never a resurrection" implies). | return to discard | `--removed-out-of-game` takes them out for good |
-| 2 | **Balance wants one barbarian, Conquest three.** Balance wanted two until events played when drawn and the hand limit moved to the end of the turn; with two it fell to 21%, the weakest agenda by four points. | 1 / 3 | `--balance-barbarians` |
+| 2 | **Balance wants one barbarian; Conquest three seated and a fourth in the outer circle.** Balance wanted two until events played when drawn and the hand limit moved to the end of the turn; with two it fell to 21%, the weakest agenda by four points. Conquest with three seated and nothing more won 35%; a fourth seated, 15%; both Military seats among the three, 20%; two more in the outer circle, 17%; one more there, 24.8%, with all eight agendas inside 24.8-28.7%. | 1 / 3 + 1 | `--balance-barbarians`, `--conquest-barbarians`, `--conquest-outer-barbarians` |
 | 2b | **A house's own estate is its affiliation from the source document** (Amonides/Church, Mitreas/Merchant, Argaian/Military). | that table | `--house-preferred-estates` overrides a family; `--house-any-three` drops the requirement |
 | 2f | **All eight agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all eight | `--drop-agendas` |
 | 2d | **Balance asks for all three faiths**, but not for a godless courtier, since godlessness has no agenda. | three faiths | -- |
