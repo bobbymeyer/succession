@@ -913,13 +913,16 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Rider of the Long Road", Seat.CAPTAIN_OF_THE_GUARD)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_barbarian_conquest_wins_on_three_seated_barbarians(self):
+    def test_barbarian_conquest_wins_on_three_seated_and_a_fourth_outside(self):
         state = fresh()
         agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         seat(state, "Priest of the Two-Horned God", Seat.ARCHPRIEST)
         seat(state, "Caravan-Lord of the Salt Road", Seat.KEEPER_OF_THE_TREASURY)
         self.assertFalse(satisfied(state, agenda))
         seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
+        self.assertFalse(satisfied(state, agenda))  # three seated, none waiting
+        self.assertTrue(satisfied(judged_as(state, conquest_outer_barbarians=0), agenda))
+        outer(state, "Warlord of the Iron Grove")
         self.assertTrue(satisfied(state, agenda))
         # A variant asks for four.
         self.assertFalse(satisfied(judged_as(state, conquest_barbarians=4), agenda))
@@ -932,6 +935,7 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Priest of the Two-Horned God", Seat.ARCHPRIEST)
         seat(state, "Caravan-Lord of the Salt Road", Seat.KEEPER_OF_THE_TREASURY)
         seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
+        outer(state, "Warlord of the Iron Grove")
         variant = judged_as(state, conquest_military_seats=1)
         self.assertFalse(satisfied(variant, agenda))  # three, none a soldier
         seat(state, "Hundred-Kill Rider", Seat.LORD_GENERAL)
@@ -961,6 +965,7 @@ class TestWinConditions(unittest.TestCase):
         agenda = AGENDAS_BY_KEY["barbarian_conquest"]
         seat(state, "Cataphract of the Iron Bridge", Seat.LORD_GENERAL)
         seat(state, "Hundred-Kill Rider", Seat.CAPTAIN_OF_THE_GUARD)
+        outer(state, "Warlord of the Iron Grove")
         self.assertFalse(satisfied(state, agenda))
         seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
         self.assertTrue(satisfied(state, agenda))

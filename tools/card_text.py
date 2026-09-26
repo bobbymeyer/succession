@@ -280,7 +280,8 @@ AGENDA_TEXT: tuple[tuple[str, str, str], ...] = (
     (
         "Barbarian Conquest",
         "The Frontier",
-        "Three courtiers of Barbarian origin hold inner seats, in any estates.",
+        "Three courtiers of Barbarian origin hold inner seats, in any estates, "
+        "and a fourth waits in the outer circle.",
     ),
     (
         "Balance",

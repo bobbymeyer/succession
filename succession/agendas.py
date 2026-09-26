@@ -60,8 +60,12 @@ FAITH_SEATS = 4
 #: barbarians; asking for one barbarian made Balance too easy, and asking for
 #: every seat as well brings it back to an even share.
 BALANCE_SEATS = 7
-#: Barbarian Conquest: this many barbarians seated in the inner circle.
+#: Barbarian Conquest: this many barbarians seated in the inner circle...
 CONQUEST_BARBARIANS = 3
+#: ...and this many more waiting in the outer circle. With three seated and
+#: none outside, Conquest won 35% of games, ten points clear of the rest; one
+#: waiting outside brings it to an even share.
+CONQUEST_OUTER_BARBARIANS = 1
 #: Balance wants this many barbarians seated. It was two; with events played
 #: when drawn and the hand limit checked at the end of the turn, two left
 #: Balance the weakest agenda by four points.
@@ -83,8 +87,8 @@ class AgendaRules:
     conquest_barbarians: int = CONQUEST_BARBARIANS
     #: A variant: how many of them must hold Military seats (0-2).
     conquest_military_seats: int = 0
-    #: A variant: barbarians also wanted in the outer circle.
-    conquest_outer_barbarians: int = 0
+    #: Barbarians also wanted in the outer circle.
+    conquest_outer_barbarians: int = CONQUEST_OUTER_BARBARIANS
     #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
