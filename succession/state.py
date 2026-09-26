@@ -76,6 +76,8 @@ class Config:
     balance_barbarians: int = 1
     #: Barbarians Barbarian Conquest wants seated.
     conquest_barbarians: int = 3
+    #: A variant: one of Conquest's barbarians must hold a Military seat.
+    conquest_military_seat: bool = False
     #: Agenda keys left out of the pool entirely -- neither dealt nor available
     #: to a Schismatic Event. For asking what the game looks like without one.
     excluded_agendas: tuple[str, ...] = ()

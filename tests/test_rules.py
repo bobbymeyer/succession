@@ -926,6 +926,17 @@ class TestWinConditions(unittest.TestCase):
         seat(state, "Hundred-Kill Rider", Seat.LORD_GENERAL)
         self.assertTrue(satisfied(judged_as(state, conquest_barbarians=4), agenda))
 
+    def test_barbarian_conquest_can_want_a_military_seat(self):
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["barbarian_conquest"]
+        seat(state, "Priest of the Two-Horned God", Seat.ARCHPRIEST)
+        seat(state, "Caravan-Lord of the Salt Road", Seat.KEEPER_OF_THE_TREASURY)
+        seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
+        variant = judged_as(state, conquest_military_seat=True)
+        self.assertFalse(satisfied(variant, agenda))  # three, none a soldier
+        seat(state, "Hundred-Kill Rider", Seat.LORD_GENERAL)
+        self.assertTrue(satisfied(judged_as(state, conquest_military_seat=True), agenda))
+
     def test_barbarian_conquest_has_no_generals_shortcut(self):
         """Holding both Military seats with barbarians is only two of the three."""
 
