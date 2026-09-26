@@ -79,6 +79,8 @@ class AgendaRules:
     balance_seats: int = BALANCE_SEATS
     #: Barbarians Balance wants seated.
     balance_barbarians: int = BALANCE_BARBARIANS
+    #: Barbarians Barbarian Conquest wants seated.
+    conquest_barbarians: int = CONQUEST_BARBARIANS
     #: Overrides layered on FAMILY_PREFERRED_ESTATE, as (family, estate) pairs.
     house_preferred_estate: tuple[tuple[str, str], ...] = ()
 
@@ -101,6 +103,7 @@ def rules_for(state: "GameState") -> AgendaRules:
         faith_seats=config.faith_seats,
         balance_seats=config.balance_seats,
         balance_barbarians=config.balance_barbarians,
+        conquest_barbarians=config.conquest_barbarians,
     )
 
 
@@ -189,7 +192,7 @@ def satisfied_counts(
     if kind == FAITH_ASCENDANT:
         return counts.inner_faith.get(agenda.param, 0) >= rules.faith_seats
     if kind == CONQUEST:
-        return counts.inner_barbarians >= CONQUEST_BARBARIANS
+        return counts.inner_barbarians >= rules.conquest_barbarians
     if kind == BALANCE:
         return (
             counts.inner_filled >= rules.balance_seats
@@ -225,7 +228,7 @@ def progress_counts(
         core = counts.inner_faith.get(agenda.param, 0) / needed
         bench = min(counts.outer_faith.get(agenda.param, 0), needed) / needed
     elif kind == CONQUEST:
-        core = min(counts.inner_barbarians, CONQUEST_BARBARIANS) / CONQUEST_BARBARIANS
+        core = min(counts.inner_barbarians, rules.conquest_barbarians) / rules.conquest_barbarians
         # Barbarians waiting outside are the raw material the bloc needs.
         bench = min(counts.barbarians_in_play - counts.inner_barbarians, 3) / 3
     elif kind == BALANCE:
@@ -302,9 +305,9 @@ def conditions(
     if kind == CONQUEST:
         return [
             Condition(
-                f"{CONQUEST_BARBARIANS} barbarians seated",
+                f"{rules.conquest_barbarians} barbarians seated",
                 counts.inner_barbarians,
-                CONQUEST_BARBARIANS,
+                rules.conquest_barbarians,
                 counts.barbarians_in_play - counts.inner_barbarians,
             )
         ]

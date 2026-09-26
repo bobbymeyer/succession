@@ -921,6 +921,10 @@ class TestWinConditions(unittest.TestCase):
         self.assertFalse(satisfied(state, agenda))
         seat(state, "Master Mason", Seat.VOICE_OF_THE_PEOPLE)
         self.assertTrue(satisfied(state, agenda))
+        # A variant asks for four.
+        self.assertFalse(satisfied(judged_as(state, conquest_barbarians=4), agenda))
+        seat(state, "Hundred-Kill Rider", Seat.LORD_GENERAL)
+        self.assertTrue(satisfied(judged_as(state, conquest_barbarians=4), agenda))
 
     def test_barbarian_conquest_has_no_generals_shortcut(self):
         """Holding both Military seats with barbarians is only two of the three."""

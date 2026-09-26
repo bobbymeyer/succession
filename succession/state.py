@@ -74,6 +74,8 @@ class Config:
     balance_seats: int = 7
     #: Barbarians Balance wants seated.
     balance_barbarians: int = 1
+    #: Barbarians Barbarian Conquest wants seated.
+    conquest_barbarians: int = 3
     #: Agenda keys left out of the pool entirely -- neither dealt nor available
     #: to a Schismatic Event. For asking what the game looks like without one.
     excluded_agendas: tuple[str, ...] = ()
