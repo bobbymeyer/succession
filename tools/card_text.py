@@ -285,8 +285,8 @@ AGENDA_TEXT: tuple[tuple[str, str, str], ...] = (
     (
         "Balance",
         "The Settlement",
-        "Six of the seven seats are filled, and the inner circle shows all "
-        "three families, all three faiths, and two barbarians at once.",
+        "All seven seats are filled, and the inner circle shows all three "
+        "families, all three faiths, and a barbarian at once.",
     ),
 )
 
