@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from succession.actions import legal_actions
 from succession.bots import GreedyBot, make_bot
 from succession.engine import play_game
 from succession.runner import main
@@ -218,6 +219,41 @@ class DrawnEvents(unittest.TestCase):
                 else:
                     prompt = session.answer(rng.choice(prompt.options))
         self.fail("no drawn event asked anything in 200 games")
+
+
+class Tutorial(unittest.TestCase):
+    def test_the_tutorial_plays_its_lesson_and_you_win(self):
+        from succession import tutorial
+
+        session = GameSession(tutorial.config(), 0, scenario=tutorial.NAME)
+        titles = [session.coach()["title"]]
+        prompt = session.advance()
+        # The first draw is the Caravan, played at once.
+        self.assertIn("draws Caravan", session.state.log[0])
+        for _ in range(3):
+            self.assertEqual(prompt.kind, TURN)
+            titles.append(session.coach()["title"])
+            prompt = session.answer(0)
+        self.assertEqual(prompt.kind, OVER)
+        self.assertEqual(session.state.winners, [0])
+        titles.append(session.coach()["title"])
+        self.assertEqual(len(set(titles)), len(titles))  # a new note at every step
+        # And it replays from its record.
+        again = GameSession.replay(json.loads(json.dumps(session.record())))
+        self.assertEqual(again.state.winners, [0])
+
+    def test_the_rival_really_is_one_move_from_winning(self):
+        from succession import tutorial
+
+        session = GameSession(tutorial.config(), 0, scenario=tutorial.NAME)
+        state = session.advance() and session.state
+        # Without the thwart -- here, as if the lesson allowed a discard -- the
+        # rival seats their fourth Old Gods courtier and wins.
+        discard = next(a for a in legal_actions(state, 0) if a.kind == "discard")
+        session.prompt = None
+        session._resolve(0, discard)
+        session.advance()
+        self.assertEqual(session.state.winners, [1])
 
 
 class Views(unittest.TestCase):

@@ -5,6 +5,7 @@ const TIER_NAMES: Record<string, string> = {
   naive: "Naive bot",
   greedy: "Greedy bot",
   strategic: "Strategic bot",
+  tutor: "Rival",
 };
 
 export function tierName(tier: string): string {

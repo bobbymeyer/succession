@@ -52,6 +52,7 @@ from .cards import (
 )
 from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
 from .enums import SEAT_ESTATE, SEATS, CardKind
+from . import tutorial
 from .state import Config, GameState
 
 HUMAN = "human"
@@ -142,17 +143,28 @@ class GameSession:
         *,
         bot_factory: Callable = make_bot,
         trace: bool = True,
+        scenario: Optional[str] = None,
     ) -> None:
         self.config = config
         self.seed = seed
+        #: A set game rather than a deal ("tutorial"), or None.
+        self.scenario = scenario
         # The same setup as play_game, draw for draw, so the same seed deals
         # the same game.
         self.rng = random.Random(seed)
         self.tiers = list(config.players)
-        if config.shuffle_seats:
-            self.rng.shuffle(self.tiers)
-        self.state = setup_game(config, self.rng, trace=trace)
+        if scenario == tutorial.NAME:
+            self.state = tutorial.setup(config, self.rng, trace=trace)
+            bot_factory = tutorial.make_seat
+        elif scenario is not None:
+            raise ValueError(f"unknown scenario {scenario!r}")
+        else:
+            if config.shuffle_seats:
+                self.rng.shuffle(self.tiers)
+            self.state = setup_game(config, self.rng, trace=trace)
         self.seats = _Seats(seat_controllers(self.tiers, self.rng, bot_factory), self)
+        #: How many of the humans' turns have begun (the tutorial's lessons).
+        self.human_turns = 0
         self.humans = [s.seat for s in self.seats if isinstance(s, HumanSeat)]
 
         #: Every human answer so far, in order: an index into the legal actions
@@ -171,6 +183,7 @@ class GameSession:
         self.last_events: list[dict] = []
         # Tables as they stood when each event still being resolved began.
         self._event_stack: list[tuple[int, "_Table"]] = []
+        self._events_sent = 0
         # The player whose turn has been opened (its draw done) but not taken.
         self._started: Optional[int] = None
 
@@ -210,9 +223,14 @@ class GameSession:
                 return None
 
         self._started = None
+        # The events that opened this turn went out with their own update.
+        self.last_events = []
         actions = legal_actions(state, player)
         seat = self.seats[player]
         if isinstance(seat, HumanSeat):
+            self.human_turns += 1
+            if self.scenario == tutorial.NAME:
+                actions = tutorial.allowed(state, self.human_turns, actions)
             self.prompt = Prompt(TURN, player, actions)
             return self.prompt
         return self._resolve(player, seat.choose(state, player, actions))
@@ -268,6 +286,10 @@ class GameSession:
         return self.advance()
 
     def _begin(self, player: int, action: Optional[Action], snapshot: bool) -> None:
+        if snapshot:
+            # Events already reported for this action, before a question
+            # stopped it; its replays find them again and must not resend.
+            self._events_sent = 0
         if snapshot and self.humans:
             self._snapshot = copy.deepcopy((self.state, self.rng.getstate(), self._memories()))
             self._answers = {}
@@ -280,6 +302,8 @@ class GameSession:
             self.seats[seat].answers = list(self._answers.get(seat, ()))
 
     def _settled(self) -> None:
+        self.last_events = self.last_events[self._events_sent:]
+        self._events_sent = 0
         self._resolving = None
         self._snapshot = None
         self._answers = {}
@@ -291,9 +315,11 @@ class GameSession:
             card = self.state.resolving_event
         card = -1 if need.limit else card
         self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
-        # Only events that have finished are reported; the one asking is
-        # reported once the answer lets it finish.
-        self.last_events = [e for e in self.last_events if e]
+        # Only events that have finished are reported, and each once; the one
+        # asking is reported when the answer lets it finish.
+        finished = [e for e in self.last_events if e]
+        self.last_events = finished[self._events_sent:]
+        self._events_sent = len(finished)
         return self.prompt
 
     def _start(self, player: int, *, snapshot: bool = True) -> Optional[Prompt]:
@@ -370,12 +396,23 @@ class GameSession:
     def record(self) -> dict:
         """Everything needed to play this game again, decision for decision."""
 
-        return {
+        record = {
             "version": RECORD_VERSION,
             "seed": self.seed,
             "config": asdict(self.config),
             "decisions": list(self.decisions),
         }
+        if self.scenario:
+            record["scenario"] = self.scenario
+        return record
+
+    def coach(self) -> Optional[dict]:
+        """The tutorial's note for this moment, or None outside it."""
+
+        if self.scenario != tutorial.NAME:
+            return None
+        won = bool(self.humans) and self.humans[0] in self.state.winners
+        return tutorial.coach(self.state, self.human_turns, self.over, won)
 
     @classmethod
     def replay(cls, record: dict, *, bot_factory: Callable = make_bot, trace: bool = True) -> "GameSession":
@@ -397,6 +434,7 @@ class GameSession:
             record["seed"],
             bot_factory=bot_factory,
             trace=trace,
+            scenario=record.get("scenario"),
         )
         session.advance()
         for choice in record["decisions"]:

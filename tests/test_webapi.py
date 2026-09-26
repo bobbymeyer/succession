@@ -81,6 +81,17 @@ class TableTests(unittest.TestCase):
         self.assertTrue(seen["Debasement of the Coinage"]["discarded"])
         self.assertTrue(seen["Poisoning at the Feast"]["effects"])
 
+    def test_an_event_is_reported_once(self):
+        # A turn that opens with an event sends it once, not again with the
+        # question that follows.
+        for seed in range(40):
+            table = Table()
+            updates = json.loads(table.new_game(json.dumps({"seed": seed})))
+            seen = play_out(table, updates, random.Random(seed))
+            for before, after in zip(seen, seen[1:]):
+                if before["events"]:
+                    self.assertNotEqual(before["events"], after["events"], seed)
+
     def test_the_default_table_is_you_and_one_of_each_bot(self):
         table = Table()
         table.new_game("{}")
@@ -175,6 +186,23 @@ class TableTests(unittest.TestCase):
         data = json.loads(options())
         self.assertIn("human", data["player_types"])
         self.assertEqual(data["max_players"], 8)
+
+    def test_options_carry_the_rules_the_game_plays(self):
+        # The page's rules come from the engine, so they follow any change.
+        from succession.cards import EVENT_CARDS
+        from succession.state import Config
+
+        rules = json.loads(options())["rules"]
+        config = Config()
+        self.assertEqual(rules["hand_limit"], config.hand_limit)
+        self.assertEqual(len(rules["agendas"]), 8)
+        conquest = next(a for a in rules["agendas"] if a["name"] == "Barbarian Conquest")
+        self.assertEqual(conquest["clauses"], ["3 barbarians seated", "1 more waiting in the outer circle"])
+        self.assertEqual(
+            [e["name"] for e in rules["events"]],
+            [c.name for c in EVENT_CARDS if c.tier in config.event_tiers],
+        )
+        self.assertTrue(all(e["summary"] for e in rules["events"]))
 
 
 if __name__ == "__main__":

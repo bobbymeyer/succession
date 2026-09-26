@@ -243,6 +243,61 @@ test("the end of a game: the reveal, export, play again", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("the rules open from the setup screen and from the table", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("./");
+  await page.getByTestId("show-rules").click({ timeout: 90_000 });
+  const rules = page.getByTestId("rules");
+  await expect(rules).toBeVisible();
+  // The agendas and events are the engine's own.
+  await expect(rules).toContainText("1 more waiting in the outer circle");
+  await expect(rules).toContainText("7 of 7 seats filled");
+  await expect(rules).toContainText("Poisoning at the Feast");
+  await expect(rules).not.toContainText("Plague");
+  await page.keyboard.press("Escape");
+  await expect(rules).toBeHidden();
+
+  await page.getByTestId("deal").click();
+  await settle(page);
+  await page.getByTestId("show-rules").click();
+  await expect(rules).toBeVisible();
+  await rules.getByRole("button", { name: "Close the rules" }).click();
+  await expect(rules).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test("the tutorial teaches a short game and ends in a win", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("tutorial").click({ timeout: 90_000 });
+  await page.getByTestId("begin").click();
+  // The first draw is a Caravan, and it plays at once.
+  await expect(page.getByTestId("event").locator("h2")).toHaveText("Caravan");
+  await page.getByTestId("event-continue").click();
+  const coach = page.getByTestId("coach");
+  await expect(coach).toContainText("An event, and a threat");
+  // Only the lesson's moves are on offer: Apostasy on a seated Old Gods courtier.
+  await page.locator(".all-moves summary").click();
+  await expect(page.getByTestId("move-option")).toHaveCount(3);
+  await expect(page.getByTestId("move-option").first()).toContainText("Apostasy");
+  await page.getByTestId("move-option").first().click();
+  await settle(page);
+  await expect(coach).toContainText("Thwarted");
+  await playFromList(page);
+  await settle(page);
+  await expect(coach).toContainText("Take the seat");
+  await playFromList(page);
+  await expect(page.getByTestId("game-over")).toContainText("You win");
+  await expect(coach).toContainText("The court is yours");
+  // Not kept among your finished games.
+  await page.getByRole("button", { name: "New game" }).click();
+  await expect(page.getByText(/Your games/)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("every screen credits bobbymeyer.com", async ({ page }) => {
   await page.goto("./");
   const credit = page.getByRole("link", { name: "designed by bobbymeyer." });

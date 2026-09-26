@@ -572,7 +572,8 @@ a.button:hover { border-color: var(--gold); }
 .intro-dots { position: absolute; bottom: 22px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; pointer-events: none; }
 .intro-dots span { width: 7px; height: 7px; border-radius: 50%; background: rgba(243, 234, 214, 0.3); transition: background 400ms; }
 .intro-dots span.on { background: var(--gold-bright); }
-.watch-intro { margin-top: 4px; font-size: 0.9rem; }
+.title-links { display: flex; gap: 16px; margin-top: 4px; }
+.title-links .link { font-size: 0.9rem; }
 @media (prefers-reduced-motion: reduce) {
   .intro-art, .intro-art.on { transform: none; transition: opacity 600ms ease; }
   .intro-lines p { transform: none; }
@@ -591,3 +592,46 @@ a.button:hover { border-color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .announce-timer { animation: none; }
 }
+
+/* -- the rules ------------------------------------------------------------- */
+.rules {
+  width: min(94vw, 46rem); max-height: 88vh; padding: 0;
+  background: var(--rail); color: var(--ink);
+  border: 1px solid var(--gold); border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.rules[open] { display: flex; flex-direction: column; animation: rise 280ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.rules::backdrop { background: rgba(5, 8, 14, 0.62); backdrop-filter: blur(2px); }
+.rules header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px 10px; border-bottom: 1px solid var(--line); }
+.rules header h2 { margin: 0; font-family: var(--serif); font-size: 1.6rem; text-transform: none; letter-spacing: 0; color: var(--gold-bright); }
+.rules .close { background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 999px; width: 2rem; height: 2rem; font-size: 1.2rem; line-height: 1; cursor: pointer; }
+.rules .close:hover { border-color: var(--gold-bright); }
+.rules-body { overflow: auto; padding: 6px 22px 22px; line-height: 1.5; }
+.rules-body section { margin-top: 14px; }
+.rules-body h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.14em; color: var(--gold-bright); font-family: inherit; margin: 0 0 6px; }
+.rules-body p { margin: 0 0 8px; }
+.rules-body ol, .rules-body ul { margin: 0 0 8px; padding-left: 1.3rem; }
+.rules-body li { margin: 3px 0; }
+.rules-seats { list-style: none; padding: 0 !important; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 4px 18px; }
+.rules-seats li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px dotted var(--line); }
+.rules-seats small { color: var(--muted); }
+.rules-cards, .rules-agendas { margin: 0; display: grid; gap: 6px; }
+.rules-cards > div, .rules-agendas > div { display: grid; grid-template-columns: 11rem 1fr; gap: 10px; }
+.rules-cards dt, .rules-agendas dt { font-weight: 700; font-family: var(--serif); }
+.rules-cards dd, .rules-agendas dd { margin: 0; color: var(--ink); }
+.rules-agendas dd ul { margin: 0; padding-left: 1.1rem; }
+@media (max-width: 560px) {
+  .rules-cards > div, .rules-agendas > div { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* -- the tutorial coach ------------------------------------------------------ */
+.coach {
+  padding: 12px 14px; border-radius: 12px;
+  background: color-mix(in srgb, var(--gold-bright) 10%, var(--rail));
+  border: 1px solid var(--gold-bright);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.3), 0 0 22px rgba(240, 200, 101, 0.18);
+  animation: rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.coach .kicker { color: var(--gold-bright); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
+.coach h2 { margin: 2px 0 6px; font-family: var(--serif); font-size: 1.15rem; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.coach p { margin: 0; font-size: 0.92rem; line-height: 1.45; }

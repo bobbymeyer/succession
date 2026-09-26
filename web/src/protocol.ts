@@ -90,6 +90,7 @@ export interface GameRecord {
   seed: number;
   config: Record<string, unknown>;
   decisions: number[];
+  scenario?: string; // "tutorial": a set game, not a deal
 }
 
 export interface Result {
@@ -97,6 +98,13 @@ export interface Result {
   timeout: boolean;
   turns: number;
   record: GameRecord;
+}
+
+/** The tutorial coach's note: which step, and what to do. */
+export interface Coach {
+  step: number;
+  title: string;
+  text: string;
 }
 
 /** What an event did to the table (succession/session.py `event_report`). */
@@ -118,6 +126,7 @@ export interface Update {
   actor: number; // whose move this update shows; -1 before anyone's
   action: Action | null; // that move, all of it face up on the table
   events: EventReport[]; // every event this update saw go off, in order
+  coach: Coach | null; // the tutorial's note for this moment
   prompt: Prompt | null;
   result: Result | null;
 }
@@ -126,11 +135,20 @@ export interface TableOptions {
   player_types: string[];
   min_players: number;
   max_players: number;
+  /** The rules the page explains, from the engine itself. */
+  rules: {
+    starting_hand: number;
+    hand_limit: number;
+    max_turns: number;
+    agendas: { name: string; clauses: string[] }[];
+    events: { name: string; summary: string }[];
+  };
 }
 
 // -- worker messages --------------------------------------------------------
 export type Request =
   | { type: "new"; players: string[]; seed?: number }
+  | { type: "tutorial" }
   | { type: "answer"; choice: number }
   | { type: "load"; record: GameRecord }
   | { type: "export"; records: GameRecord[] };
