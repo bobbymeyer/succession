@@ -164,7 +164,7 @@ state, **both** players win and the game is logged as a double win.
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |
 | Faith Ascendant | 3 (one per faith) | That faith holds 4+ of the 7 inner seats (`--faith-seats` to change) |
 | Barbarian Conquest | 1 | **3 barbarians seated in the inner circle** |
-| Balance | 1 | **Six of the seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and **a barbarian** (`--balance-seats`, `--balance-barbarians`) |
+| Balance | 1 | **All seven seats filled**, and the inner circle simultaneously shows all three families, all three faiths, and **a barbarian** (`--balance-seats`, `--balance-barbarians`) |
 
 Barbarian Conquest is one clause: three barbarians holding inner seats, in any
 estates. There is no shortcut for taking both Military seats -- two barbarian
@@ -218,7 +218,7 @@ first; the flag flips it.
 | 2f | **All eight agendas are in the pool.** `--drop-agendas balance` takes one out entirely -- neither dealt nor reachable by a Schismatic Event. | all eight | `--drop-agendas` |
 | 2d | **Balance asks for all three faiths**, but not for a godless courtier, since godlessness has no agenda. | three faiths | -- |
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
-| 2g | **Balance needs six of the seven seats filled.** One empty chair is allowed, a second is not. Seven was tried and proved too fragile once the bots used purges and freezes properly -- it fell five points clear of everything else at the bottom. | 6 | `--balance-seats` |
+| 2g | **Balance needs all seven seats filled.** It asked for six while it also wanted two barbarians. With one barbarian and six seats it won 34% of the time, the strongest agenda; with one barbarian and all seven seats it wins 24.5%, an even share. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |

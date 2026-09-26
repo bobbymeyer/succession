@@ -951,19 +951,19 @@ class TestWinConditions(unittest.TestCase):
         fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))
 
-    def test_balance_wants_a_nearly_full_court(self):
-        """A diverse but half-empty court is not a balanced one."""
+    def test_balance_wants_a_full_court(self):
+        """A diverse court with an empty chair is not a balanced one."""
 
         state = fresh()
         agenda = AGENDAS_BY_KEY["balance"]
         fill_the_court(state)
         self.assertTrue(satisfied(state, agenda))
-        # One empty chair is allowed; a second is not.
+        # Every seat is wanted; the old rule allowed one empty chair.
         state.seats[Seat.MASTER_OF_THE_MARKET] = None
-        self.assertTrue(satisfied(state, agenda))
-        self.assertFalse(satisfied(judged_as(state, balance_seats=7), agenda))
-        state.seats[Seat.ORACLE] = None
         self.assertFalse(satisfied(state, agenda))
+        self.assertTrue(satisfied(judged_as(state, balance_seats=6), agenda))
+        state.seats[Seat.ORACLE] = None
+        self.assertFalse(satisfied(judged_as(state, balance_seats=6), agenda))
 
     def test_simultaneous_agendas_both_win(self):
         state = fresh()
