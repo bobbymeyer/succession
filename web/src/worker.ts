@@ -7,6 +7,7 @@ import type { Request, WorkerMessage } from "./protocol";
 
 type PyTable = {
   new_game(request: string): string;
+  tutorial(): string;
   answer(choice: number): string;
   load(record: string): string;
   export(records: string): string;
@@ -61,6 +62,7 @@ self.onmessage = async (event: MessageEvent) => {
     }
     let json: string;
     if (data.type === "new") json = table.new_game(JSON.stringify({ players: data.players, seed: data.seed }));
+    else if (data.type === "tutorial") json = table.tutorial();
     else if (data.type === "answer") json = table.answer(data.choice);
     else json = table.load(JSON.stringify(data.record));
     post({ type: "updates", id: data.id, updates: JSON.parse(json) });

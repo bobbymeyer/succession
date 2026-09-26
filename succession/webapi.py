@@ -24,10 +24,13 @@ import json
 import random
 from typing import Optional
 
-from .agendas import AGENDAS
+from .agendas import AGENDAS, BoardCounts, conditions, rules_for_config
+from .cards import build_cards
+from .enums import CardKind
 from .bots import BOT_TIERS
 from .logsink import csv_text, row
-from .session import HUMAN, OVER, GameSession, Prompt, action_json
+from . import tutorial
+from .session import EVENT_SUMMARY, HUMAN, OVER, GameSession, Prompt, action_json
 from .state import Config
 
 PLAYER_TYPES = (HUMAN, *BOT_TIERS)
@@ -59,6 +62,13 @@ class Table:
         self._sent = 0
         # The table as dealt comes first, before anyone has moved: the page
         # shows each person their agenda there and waits for them to begin.
+        return self._play_on([self._update(None)], None)
+
+    def tutorial(self, request: str = "{}") -> str:
+        """Deal the tutorial: a set game against one scripted rival."""
+
+        self.session = GameSession(tutorial.config(), 0, scenario=tutorial.NAME)
+        self._sent = 0
         return self._play_on([self._update(None)], None)
 
     def answer(self, choice: int) -> str:
@@ -133,6 +143,8 @@ class Table:
             #: The events this update saw, drawn or played, each with its
             #: effects (session.event_report).
             "events": session.last_events,
+            #: The tutorial's note for this moment (session.coach), or None.
+            "coach": session.coach(),
             "prompt": None,
             "result": None,
         }
@@ -150,10 +162,33 @@ class Table:
 
 
 def options() -> str:
-    """What the table setup screen may offer."""
+    """What the table setup screen may offer, and the rules the page explains.
 
+    The agendas and events come from the engine itself -- each agenda's
+    clauses are the labels its tracker uses, read off an empty board -- so the
+    rules the page shows cannot drift from the rules it plays.
+    """
+
+    config = Config()
+    empty = BoardCounts({}, {}, {}, {}, {}, 0, 0, 0)
+    rules = rules_for_config(config)
+    deck = build_cards(config.outmaneuver_copies, config.event_tiers)
     return json.dumps({
         "player_types": list(PLAYER_TYPES),
         "min_players": MIN_PLAYERS,
         "max_players": MAX_PLAYERS,
+        "rules": {
+            "starting_hand": config.starting_hand,
+            "hand_limit": config.hand_limit,
+            "max_turns": config.max_turns,
+            "agendas": [
+                {"name": a.name, "clauses": [c.label for c in conditions(empty, a, rules)]}
+                for a in AGENDAS
+            ],
+            "events": [
+                {"name": c.name, "summary": EVENT_SUMMARY.get(c.name, "")}
+                for c in deck
+                if c.kind is CardKind.EVENT
+            ],
+        },
     })

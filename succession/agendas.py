@@ -104,7 +104,10 @@ DEFAULT_RULES = AgendaRules()
 
 
 def rules_for(state: "GameState") -> AgendaRules:
-    config = state.config
+    return rules_for_config(state.config)
+
+
+def rules_for_config(config) -> AgendaRules:
     return AgendaRules(
         house_preferred_seat=config.house_rising_requires_preferred_seat,
         house_preferred_estate=config.house_preferred_estates,
@@ -292,6 +295,10 @@ class Condition:
         return self.have >= self.need
 
 
+def _barbarians(n: int) -> str:
+    return "barbarian" if n == 1 else "barbarians"
+
+
 def conditions(
     counts: BoardCounts, agenda: Agenda, rules: AgendaRules = DEFAULT_RULES
 ) -> list[Condition]:
@@ -333,7 +340,7 @@ def conditions(
     if kind == CONQUEST:
         return [
             Condition(
-                f"{rules.conquest_barbarians} barbarians seated",
+                f"{rules.conquest_barbarians} {_barbarians(rules.conquest_barbarians)} seated",
                 counts.inner_barbarians,
                 rules.conquest_barbarians,
                 counts.barbarians_in_play - counts.inner_barbarians,
@@ -373,7 +380,7 @@ def conditions(
         ]
         out.append(
             Condition(
-                f"{rules.balance_barbarians} barbarians seated",
+                f"{rules.balance_barbarians} {_barbarians(rules.balance_barbarians)} seated",
                 counts.inner_barbarians,
                 rules.balance_barbarians,
                 counts.barbarians_in_play - counts.inner_barbarians,

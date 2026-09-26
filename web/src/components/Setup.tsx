@@ -13,11 +13,13 @@ interface Props {
   onExport(): void;
   onClear(): void;
   onIntro(): void;
+  onRules(): void;
+  onTutorial(): void;
 }
 
 const DEFAULT_BOTS = FIRST_GAME_TABLE;
 
-export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onIntro }: Props) {
+export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onIntro, onRules, onTutorial }: Props) {
   const bots = options.player_types.filter((t) => t !== "human");
   const [table, setTable] = useState<string[]>(DEFAULT_BOTS);
   const [seed, setSeed] = useState("");
@@ -46,9 +48,14 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
         <div>
           <h1>Court of Succession</h1>
           <p className="lede">A playtest table: you against the simulator's bots. Seats are drawn at random.</p>
-          <button type="button" className="link watch-intro" data-testid="watch-intro" onClick={onIntro}>
-            Watch introduction
-          </button>
+          <div className="title-links">
+            <button type="button" className="link" data-testid="show-rules" onClick={onRules}>
+              How to play
+            </button>
+            <button type="button" className="link watch-intro" data-testid="watch-intro" onClick={onIntro}>
+              Watch introduction
+            </button>
+          </div>
         </div>
       </header>
 
@@ -95,6 +102,9 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
       <div className="buttons">
         <button type="button" className="primary" data-testid="deal" onClick={deal}>
           Deal
+        </button>
+        <button type="button" data-testid="tutorial" onClick={onTutorial}>
+          Play the tutorial
         </button>
         <FrameControls />
       </div>

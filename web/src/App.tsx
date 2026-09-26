@@ -15,6 +15,9 @@ import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
 import { EventAnnouncement, EventModal } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
+import { Rules } from "./components/Rules";
+import { CoachPanel } from "./components/Coach";
+import { FIRST_GAME_TABLE } from "./firstGame";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
 import { DiscardPile, StatusPanel } from "./components/Status";
@@ -82,6 +85,7 @@ export function App() {
   const [options, setOptions] = useState<TableOptions | null>(null);
   // The story plays on a first visit, over the engine's boot.
   const [intro, setIntro] = useState(() => !introSeen());
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [fatal, setFatal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -199,6 +203,7 @@ export function App() {
   const result = shown?.result ?? null;
   useEffect(() => {
     if (!result || pending > 0) return;
+    if (result.record.scenario) return; // the tutorial is not a game to keep
     setSaved(saveGame(result.record) ? savedGames().length : null);
   }, [result, pending]);
 
@@ -214,7 +219,7 @@ export function App() {
           timer.current = null;
           queue.current = [];
           fresh.current = true;
-          hold.current = request.type === "new";
+          hold.current = request.type === "new" || request.type === "tutorial";
           setBriefing(false);
           setEvents(null);
           setAnnounce(null);
@@ -302,6 +307,7 @@ export function App() {
             options={options}
             saved={saved}
             onDeal={(players, seed) => send({ type: "new", players, seed }, true)}
+            onTutorial={() => send({ type: "tutorial" }, true)}
             onLoad={(record: GameRecord) => send({ type: "load", record }, true)}
             onExport={exportCsv}
             onClear={() => {
@@ -309,7 +315,9 @@ export function App() {
               setSaved(savedGames().length);
             }}
             onIntro={() => setIntro(true)}
+            onRules={() => setRulesOpen(true)}
           />
+          {rulesOpen && <Rules options={options} onClose={() => setRulesOpen(false)} />}
           {error && <p className="error">{error}</p>}
           <Credit />
         </main>
@@ -475,7 +483,9 @@ export function App() {
   // The same table again, freshly dealt.
   const playAgain = () => {
     if (!result) return;
-    send({ type: "new", players: result.record.config.players as string[] }, true);
+    // After the tutorial, a real game at the default table.
+    const players = result.record.scenario ? ["human", ...FIRST_GAME_TABLE] : (result.record.config.players as string[]);
+    send({ type: "new", players }, true);
   };
 
   // Your agenda and the log share one slot under the question, a tab each.
@@ -542,6 +552,9 @@ export function App() {
                   ))}
                 </select>
               </label>
+              <button type="button" data-testid="show-rules" onClick={() => setRulesOpen(true)}>
+                Rules
+              </button>
               <button type="button" onClick={toSetup}>
                 New game
               </button>
@@ -550,6 +563,7 @@ export function App() {
               <FrameControls />
             </div>
 
+            {shown.coach && <CoachPanel coach={shown.coach} />}
             {result && !waiting ? (
               <GameOver
                 view={view}
@@ -584,6 +598,7 @@ export function App() {
         </div>
         <Credit />
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+        {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
         {briefing && <Briefing view={view} onBegin={begin} />}
         {announce?.prompt && announce.prompt.kind !== "turn" && (
           <EventAnnouncement
