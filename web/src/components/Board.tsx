@@ -108,21 +108,9 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
 // lands, it is still that bot's turn as far as anyone watching can tell.
 // `won` is the court that won the game, each courtier with its winner's
 // colour; they light up and bounce once the game is over.
-export function Board({
-  view,
-  act,
-  playing = null,
-  won,
-}: {
-  view: View;
-  act: Interaction;
-  playing?: number | null;
-  won?: Map<number, string>;
-}) {
-  const turn = playing ?? (view.over ? null : view.current);
-  const { art } = useUi();
-  // Board courtiers are places to drop an action on; hand cards are not.
-  const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => (
+// Board courtiers are places to drop an action on; hand cards are not.
+function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = true) {
+  return (
     <CardView
       key={c.uid}
       card={c}
@@ -138,6 +126,39 @@ export function Board({
       popover={act.popover(c.uid)}
     />
   );
+}
+
+/** Your hand. On a phone it sits in the dock, under your thumb. */
+export function Hand({ view, act }: { view: View; act: Interaction }) {
+  // --n: how many cards the dock's row shares its width between.
+  const style = { "--n": Math.max(view.hand.length, 5) } as React.CSSProperties;
+  return (
+    <section className="mine" aria-label="Your hand" style={style}>
+      <h2>Your hand</h2>
+      <div className="row">
+        {view.hand.length ? view.hand.map((c) => cardFor(act, c, "lg", false)) : <p className="muted">No cards.</p>}
+      </div>
+    </section>
+  );
+}
+
+export function Board({
+  view,
+  act,
+  playing = null,
+  won,
+  hand = true,
+}: {
+  view: View;
+  act: Interaction;
+  playing?: number | null;
+  won?: Map<number, string>;
+  /** False when the hand is drawn elsewhere (a phone's dock). */
+  hand?: boolean;
+}) {
+  const turn = playing ?? (view.over ? null : view.current);
+  const { art } = useUi();
+  const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => cardFor(act, c, size, onBoard);
   const opponents = view.players.filter((p) => p.seat !== view.you);
   const me = view.you >= 0 ? view.players[view.you] : null;
 
@@ -224,12 +245,7 @@ export function Board({
         </div>
       </section>
 
-      {me && (
-        <section className="mine" aria-label="Your hand">
-          <h2>Your hand</h2>
-          <div className="row">{view.hand.length ? view.hand.map((c) => card(c, "lg", false)) : <p className="muted">No cards.</p>}</div>
-        </section>
-      )}
+      {me && hand && <Hand view={view} act={act} />}
     </div>
   );
 }

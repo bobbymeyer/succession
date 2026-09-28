@@ -9,7 +9,8 @@ import { drops, settled, stage, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
-import { Board, NO_INTERACTION, type Interaction } from "./components/Board";
+import { Board, Hand, NO_INTERACTION, type Interaction } from "./components/Board";
+import { usePhone } from "./usePhone";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
@@ -43,6 +44,15 @@ function savedSpeed(): Speed {
 function glide(speed: Speed): number {
   return Math.min(900, SPEEDS[speed] * 0.7);
 }
+
+/** The instruction for a finger rather than a mouse. */
+const tapped = (hint: string) =>
+  hint
+    .replace(/,? or drag [^,.]*/g, "")
+    .replace(/\bClick\b/g, "Tap")
+    .replace(/\bclick\b/g, "tap");
+
+type Sheet = "agenda" | "log" | "discard" | null;
 
 /** A card being dragged, from pointer-down until it is dropped. */
 interface Drag {
@@ -87,6 +97,10 @@ export function App() {
   // The story plays on a first visit, over the engine's boot.
   const [intro, setIntro] = useState(() => !introSeen());
   const [rulesOpen, setRulesOpen] = useState(false);
+  // On a phone: the menu, and the sheet pulled up from the dock.
+  const phone = usePhone();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(null);
   // The game whose fall into chaos has been watched.
   const [chaosSeen, setChaosSeen] = useState<Update["result"]>(null);
   const [fatal, setFatal] = useState<string | null>(null);
@@ -494,6 +508,16 @@ export function App() {
   // Your agenda and the log share one slot under the question, a tab each.
   const myAgenda = view.you >= 0 ? view.players[view.you].agenda : null;
   const showing = myAgenda ? tab : "log";
+  const logList = (
+    <ol className="log" reversed aria-label="Game log">
+      {log
+        .slice()
+        .reverse()
+        .map((line, i) => (
+          <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
+        ))}
+    </ol>
+  );
   const tabs = (
     <section className="tabbed" aria-label="Agenda and log">
       <div className="tabs" role="tablist">
@@ -527,18 +551,169 @@ export function App() {
         {showing === "agenda" && myAgenda ? (
           <AgendaTracker agenda={myAgenda} />
         ) : (
-          <ol className="log" reversed aria-label="Game log">
-            {log
-              .slice()
-              .reverse()
-              .map((line, i) => (
-                <li key={log.length - i}>{readableLog(line.view, line.text)}</li>
-              ))}
-          </ol>
+          logList
         )}
       </div>
     </section>
   );
+
+  const speedControl = (
+    <label>
+      Bot speed{" "}
+      <select aria-label="Bot speed" value={speed} onChange={(e) => changeSpeed(e.target.value as Speed)}>
+        {Object.keys(SPEEDS).map((s) => (
+          <option key={s}>{s}</option>
+        ))}
+      </select>
+    </label>
+  );
+  const question = (
+    <>
+      {result && !waiting ? (
+        <GameOver
+          view={view}
+          result={result}
+          saved={saved}
+          copied={copied}
+          onPlayAgain={playAgain}
+          onNewTable={toSetup}
+          onCopy={copyRecord}
+          onDownloadRecord={() =>
+            download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
+          }
+          onExport={exportCsv}
+        />
+      ) : turnPrompt || pickPrompt ? (
+        <StatusPanel hint={phone ? tapped(hint) : hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
+      ) : (
+        <div className="prompt" aria-live="polite">
+          {latest && <p className="latest">{latest}</p>}
+          <p className="thinking">{playerName(view, view.current)} to play…</p>
+        </div>
+      )}
+    </>
+  );
+  const overlays = (
+    <>
+      {result?.timeout && !waiting && chaosSeen !== result && (
+        <Chaos rounds={Math.ceil(result.turns / view.players.length)} onDone={() => setChaosSeen(result)} />
+      )}
+      <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+      {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
+      {briefing && <Briefing view={view} onBegin={begin} />}
+      {announce?.prompt && announce.prompt.kind !== "turn" && (
+        <EventAnnouncement
+          key={announced.current}
+          prompt={announce.prompt}
+          actor={announce.actor}
+          view={announce.view}
+          onDone={() => setAnnounce(null)}
+        />
+      )}
+      {events && (() => {
+        const report = events.update.events[events.update.events.length - events.left];
+        return (
+          <EventModal
+            key={`${report.card.uid}:${events.update.view.turn}:${events.left}`}
+            report={report}
+            view={events.update.view}
+            onContinue={carryOn}
+          />
+        );
+      })()}
+    </>
+  );
+
+  // On a phone the table fits one screen: the board, with a menu in its
+  // corner, over a dock that holds the question, your hand, and tabs that pull
+  // up your agenda, the log and the discard pile.
+  if (phone) {
+    const met = myAgenda ? myAgenda.status.filter((c) => c.met).length : 0;
+    const sheetTab = (key: Sheet, label: React.ReactNode) => (
+      <button
+        type="button"
+        aria-expanded={sheet === key}
+        data-testid={`dock-${key}`}
+        onClick={() => setSheet(sheet === key ? null : key)}
+      >
+        {label}
+      </button>
+    );
+    return (
+      <UiContext.Provider value={ui}>
+        <main className="app game phone">
+          <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} hand={false} />
+          {(menuOpen || sheet) && (
+            <div
+              className="scrim"
+              aria-hidden="true"
+              onClick={() => {
+                setMenuOpen(false);
+                setSheet(null);
+              }}
+            />
+          )}
+          <div className="menu">
+            <button
+              type="button"
+              className="menu-button"
+              aria-label="Menu"
+              aria-expanded={menuOpen}
+              data-testid="menu"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <div className="menu-panel" onClick={(e) => e.target instanceof HTMLButtonElement && setMenuOpen(false)}>
+                {speedControl}
+                <button type="button" data-testid="show-rules" onClick={() => setRulesOpen(true)}>
+                  Rules
+                </button>
+                <button type="button" onClick={toSetup}>
+                  New game
+                </button>
+                <FrameControls />
+                <Credit />
+              </div>
+            )}
+          </div>
+          <div className="dock">
+            {sheet && (
+              <div className="sheet" data-testid="sheet">
+                {sheet === "agenda" && myAgenda && <AgendaTracker agenda={myAgenda} />}
+                {sheet === "log" && logList}
+                {sheet === "discard" && <DiscardPile view={view} dropLive={false} />}
+              </div>
+            )}
+            {shown.coach && <CoachPanel coach={shown.coach} foldable />}
+            <div className="dock-question">{question}</div>
+            {error && <p className="error">{error}</p>}
+            {view.you >= 0 && <Hand view={view} act={act} />}
+            <nav className="dock-tabs" aria-label="Agenda, log and discard pile">
+              {myAgenda &&
+                sheetTab(
+                  "agenda",
+                  <>
+                    Agenda <small className={myAgenda.met ? "met" : ""}>{met}/{myAgenda.status.length}</small>
+                  </>,
+                )}
+              {sheetTab("log", "Log")}
+              {sheetTab(
+                "discard",
+                <>
+                  Discard <small>{view.discard}</small>
+                </>,
+              )}
+            </nav>
+          </div>
+          {overlays}
+        </main>
+      </UiContext.Provider>
+    );
+  }
 
   return (
     <UiContext.Provider value={ui}>
@@ -547,14 +722,7 @@ export function App() {
         <div className="rail">
           <aside className="side">
             <div className="controls">
-              <label>
-                Bot speed{" "}
-                <select aria-label="Bot speed" value={speed} onChange={(e) => changeSpeed(e.target.value as Speed)}>
-                  {Object.keys(SPEEDS).map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-              </label>
+              {speedControl}
               <button type="button" data-testid="show-rules" onClick={() => setRulesOpen(true)}>
                 Rules
               </button>
@@ -567,28 +735,7 @@ export function App() {
             </div>
 
             {shown.coach && <CoachPanel coach={shown.coach} />}
-            {result && !waiting ? (
-              <GameOver
-                view={view}
-                result={result}
-                saved={saved}
-                copied={copied}
-                onPlayAgain={playAgain}
-                onNewTable={toSetup}
-                onCopy={copyRecord}
-                onDownloadRecord={() =>
-                  download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
-                }
-                onExport={exportCsv}
-              />
-            ) : turnPrompt || pickPrompt ? (
-              <StatusPanel hint={hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
-            ) : (
-              <div className="prompt" aria-live="polite">
-                {latest && <p className="latest">{latest}</p>}
-                <p className="thinking">{playerName(view, view.current)} to play…</p>
-              </div>
-            )}
+            {question}
             <DiscardPile view={view} dropLive={dropping.has("discard")} />
             {error && <p className="error">{error}</p>}
             {hovered && (
@@ -600,32 +747,7 @@ export function App() {
           {tabs}
         </div>
         <Credit />
-        {result?.timeout && !waiting && chaosSeen !== result && (
-          <Chaos rounds={Math.ceil(result.turns / view.players.length)} onDone={() => setChaosSeen(result)} />
-        )}
-        <Inspect card={inspecting} onClose={() => setInspecting(null)} />
-        {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
-        {briefing && <Briefing view={view} onBegin={begin} />}
-        {announce?.prompt && announce.prompt.kind !== "turn" && (
-          <EventAnnouncement
-            key={announced.current}
-            prompt={announce.prompt}
-            actor={announce.actor}
-            view={announce.view}
-            onDone={() => setAnnounce(null)}
-          />
-        )}
-        {events && (() => {
-          const report = events.update.events[events.update.events.length - events.left];
-          return (
-            <EventModal
-              key={`${report.card.uid}:${events.update.view.turn}:${events.left}`}
-              report={report}
-              view={events.update.view}
-              onContinue={carryOn}
-            />
-          );
-        })()}
+        {overlays}
       </main>
     </UiContext.Provider>
   );
