@@ -144,7 +144,8 @@ export function App() {
   const [art, setArt] = useState<Art>(NO_ART);
   const [inspecting, setInspecting] = useState<Card | null>(null);
   const [hovered, setHovered] = useState<Card | null>(null);
-  const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered }), [art]);
+  const looking = inspecting?.uid ?? null;
+  const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered, looking }), [art, looking]);
 
   // Once the engine and the art are in, the offline cache takes the rest.
   useEffect(() => {
@@ -637,7 +638,7 @@ export function App() {
       {result?.timeout && !waiting && chaosSeen !== result && (
         <Chaos rounds={Math.ceil(result.turns / view.players.length)} onDone={() => setChaosSeen(result)} />
       )}
-      <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+      <Inspect card={inspecting} hand={view.hand} onPick={setInspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
       {announce?.prompt && announce.prompt.kind !== "turn" && (

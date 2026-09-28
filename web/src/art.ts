@@ -84,7 +84,9 @@ export interface Ui {
   inspect(card: Card): void;
   /** The card under the pointer, for the side preview. */
   hover(card: Card | null): void;
+  /** The uid of the card open in the inspector, outlined where it lies. */
+  looking: number | null;
 }
 
-export const UiContext = createContext<Ui>({ art: NO_ART, inspect: () => {}, hover: () => {} });
+export const UiContext = createContext<Ui>({ art: NO_ART, inspect: () => {}, hover: () => {}, looking: null });
 export const useUi = () => useContext(UiContext);

@@ -30,6 +30,33 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   expect(errors).toEqual([]);
 });
 
+test("the magnifier pages through your hand, round and round", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 3);
+  await page.getByTestId("begin").click();
+  await settle(page);
+  const hand = page.locator(".mine .card");
+  const n = await hand.count();
+  expect(n).toBeGreaterThan(1);
+  const name = (i: number) => hand.nth(i).locator(".face").getAttribute("aria-label").then((l) => l!.replace(/^(Choose|Look at) /, ""));
+  const first = await name(0);
+  await hand.nth(0).locator(".look").click();
+  const dialog = page.locator("dialog.inspect.carousel");
+  await expect(dialog).toHaveAttribute("aria-label", first);
+  await expect(hand.nth(0)).toHaveClass(/looking/);
+  await dialog.getByLabel("Next card in your hand").click();
+  await expect(dialog).toHaveAttribute("aria-label", await name(1));
+  await expect(hand.nth(1)).toHaveClass(/looking/);
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  await expect(dialog).toHaveAttribute("aria-label", await name(n - 1));
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog).toHaveAttribute("aria-label", first);
+  await dialog.getByRole("button", { name: "Close" }).click();
+  await expect(page.locator(".card.looking")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
 test("a new player's first game is the kind deal, unless they choose a seed", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });

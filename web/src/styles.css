@@ -194,6 +194,58 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 .inspect::backdrop { background: rgba(5, 8, 14, 0.75); }
 .inspect .detail-image { width: min(100%, 420px); max-height: 70vh; object-fit: contain; border-radius: 12px; margin: 0 auto; }
 .inspect .close { display: block; margin: 12px auto 0; }
+
+/* Paging through your hand: the card on its own panel, its neighbours tucked
+   behind either side, smaller and dimmer, sliding in as you go. */
+.inspect.carousel { background: none; border: none; padding: 0; max-width: 96vw; width: min(96vw, 62rem); overflow: visible; }
+.inspect.carousel::backdrop { background: rgba(5, 8, 14, 0.6); }
+.inspect.carousel .stage { position: relative; display: flex; align-items: center; justify-content: center; padding: 0 56px; }
+.inspect.carousel .panel {
+  position: relative; z-index: 2; width: min(100%, 30rem);
+  background: var(--rail); border: 1px solid var(--gold); border-radius: 14px; padding: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(240, 200, 101, 0.08);
+}
+.inspect.carousel .detail-image { max-height: 62vh; }
+.inspect.carousel .count { margin: 10px 0 0; text-align: center; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.inspect.carousel .close { background: rgba(13, 20, 34, 0.85); }
+.peek {
+  flex: none; width: min(24vw, 250px); aspect-ratio: 496 / 692; padding: 0; margin: 0 -70px;
+  border: none; border-radius: 12px; overflow: hidden; background: var(--parchment);
+  transform: scale(0.82); filter: brightness(0.5) saturate(0.8);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  transition: filter 160ms ease, transform 160ms ease;
+  animation: peek-in 360ms ease both;
+}
+.peek img { width: 100%; height: 100%; object-fit: cover; }
+.peek:hover:not(:disabled) { filter: brightness(0.7) saturate(0.9); transform: scale(0.85); }
+.peek.prev { transform-origin: left center; }
+.peek.next { transform-origin: right center; }
+.inspect .nav {
+  position: absolute; top: 50%; z-index: 3; translate: 0 -50%;
+  display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  background: rgba(13, 20, 34, 0.9); border-color: var(--gold); color: var(--gold-bright);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  transition: background-color 140ms ease, scale 140ms ease;
+}
+.inspect .nav:hover { background: var(--gold); color: var(--cloth-deep); scale: 1.08; }
+.inspect .nav:active { scale: 0.96; }
+.inspect .nav svg { width: 20px; height: 20px; }
+.inspect .nav.prev { left: 0; }
+.inspect .nav.next { right: 0; }
+.panel.from-right { animation: from-right 360ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+.panel.from-left { animation: from-left 360ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes from-right { from { transform: translateX(40%) scale(0.82); opacity: 0.4; filter: brightness(0.5); } }
+@keyframes from-left { from { transform: translateX(-40%) scale(0.82); opacity: 0.4; filter: brightness(0.5); } }
+@keyframes peek-in { from { opacity: 0; } }
+@media (max-width: 700px) {
+  .peek { display: none; }
+  .inspect.carousel .stage { padding: 0 48px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel.from-right, .panel.from-left, .peek { animation: none; }
+}
+/* The card being looked at, where it lies on the table under the dialog. */
+.card.looking .face { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--gold-bright), 0 0 28px rgba(240, 200, 101, 0.7); transform: translateY(-8px); }
 .live-attrs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin: 12px 0 0; }
 .live-attrs dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
 .live-attrs dd { margin: 0; font-family: var(--serif); font-size: 1.05rem; }
