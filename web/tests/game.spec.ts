@@ -70,6 +70,11 @@ test("a card can be discarded from the magnified view", async ({ page }) => {
   await expect(moves).toHaveCount(0);
   await page.keyboard.press("Enter");
   await expect(moves.first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(moves.nth(1)).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(moves.last()).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(moves).toHaveCount(0);
   await expect(dialog).toBeVisible();

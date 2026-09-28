@@ -117,6 +117,11 @@ export function Inspect({
         // Enter on a move plays it; anywhere else it brings the moves up.
         else if (e.key === "Enter" && offers.length && !(e.target as HTMLElement).closest(".moves")) toggle();
         else if (e.key === "Escape" && asking) setAskedOn(null);
+        else if ((e.key === "ArrowDown" || e.key === "ArrowUp") && asking) {
+          const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>(".moves button")];
+          const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+          buttons[(i + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
+        }
         else return;
         e.preventDefault();
       }}
