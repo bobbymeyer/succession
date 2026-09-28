@@ -688,7 +688,7 @@ def play_game(
 
     timeout = False
     while True:
-        if state.turn >= config.max_turns:
+        if state.turn >= config.turn_limit:
             timeout = True
             break
         player = state.current

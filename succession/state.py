@@ -30,7 +30,12 @@ class Config:
     players: tuple[str, ...] = ("naive", "greedy", "strategic", "naive")
     starting_hand: int = 5
     hand_limit: int = 7
+    #: A hard cap on player turns, for simulations.
     max_turns: int = 600
+    #: The game's own limit: after this many rounds (every player one turn)
+    #: with no agenda met, chaos takes the empire and everyone loses. None for
+    #: no limit but `max_turns`.
+    max_rounds: Optional[int] = 50
     #: Randomise which tier sits where, so seat order does not bias results.
     shuffle_seats: bool = True
     outmaneuver_copies: int = 1
@@ -91,6 +96,14 @@ class Config:
     @property
     def num_players(self) -> int:
         return len(self.players)
+
+    @property
+    def turn_limit(self) -> int:
+        """Player turns played before the game ends with no winner."""
+
+        if self.max_rounds is None:
+            return self.max_turns
+        return min(self.max_turns, self.max_rounds * self.num_players)
 
 
 @dataclass(frozen=True, slots=True)

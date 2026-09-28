@@ -308,3 +308,30 @@ test("every screen credits bobbymeyer.com", async ({ page }) => {
   await settle(page);
   await expect(page.getByRole("link", { name: "designed by bobbymeyer." })).toBeVisible();
 });
+
+test("when the rounds run out, the kingdom falls into chaos and everyone loses", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  // A game played to a one-round limit: you pass, the bot fails to win.
+  const record = { version: 4, seed: 0, config: { players: ["human", "naive"], max_rounds: 1 }, decisions: [0] };
+  await page.getByText("Load a saved game").click();
+  await page.getByLabel("Game record").fill(JSON.stringify(record));
+  await page.getByRole("button", { name: "Load", exact: true }).click();
+
+  const chaos = page.getByTestId("chaos");
+  await expect(chaos).toBeVisible({ timeout: 30_000 });
+  await expect(chaos).toContainText("the young king grows indulgent and tyrannical");
+  await chaos.click(); // hurry the beats along
+  await chaos.click();
+  await expect(chaos).toContainText("slips into chaos");
+  await chaos.click();
+  await chaos.click();
+  await expect(chaos.locator("h1")).toHaveText("Everyone loses");
+  await page.getByTestId("chaos-done").click();
+  await expect(chaos).toBeHidden();
+  await expect(page.getByTestId("game-over")).toContainText("Everyone loses.");
+  expect(errors).toEqual([]);
+});

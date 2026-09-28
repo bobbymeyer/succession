@@ -139,7 +139,8 @@ export interface TableOptions {
   rules: {
     starting_hand: number;
     hand_limit: number;
-    max_turns: number;
+    /** Rounds before chaos takes the empire; null for no limit. */
+    max_rounds: number | null;
     agendas: { name: string; clauses: string[] }[];
     events: { name: string; summary: string }[];
   };

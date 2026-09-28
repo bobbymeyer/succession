@@ -159,6 +159,13 @@ Checked after every action resolves, on any player's turn. A player whose
 agenda the board satisfies wins. If two agendas are satisfied by the same board
 state, **both** players win and the game is logged as a double win.
 
+**Fifty rounds, then chaos.** If no agenda is met after 50 rounds -- every
+player has had 50 turns -- the young king, without effective council, grows
+indulgent and tyrannical, the kingdom slips into chaos, and **everyone loses**
+(`--max-rounds`; 0 for no limit). Mixed tables of bots finish in a median of
+about 11 rounds, and fewer than 1 game in 300 goes past 50; four strategic bots
+block each other long enough that nearly 1 in 10 does.
+
 | Agenda | Copies | Condition |
 |---|---|---|
 | House Rising | 3 (one per family) | That family holds **3+** of the 7 inner seats, **at least one of them in the family's own estate** |

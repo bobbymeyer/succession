@@ -15,6 +15,7 @@ import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
 import { EventAnnouncement, EventModal } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
+import { Chaos } from "./components/Chaos";
 import { Rules } from "./components/Rules";
 import { CoachPanel } from "./components/Coach";
 import { FIRST_GAME_TABLE } from "./firstGame";
@@ -86,6 +87,8 @@ export function App() {
   // The story plays on a first visit, over the engine's boot.
   const [intro, setIntro] = useState(() => !introSeen());
   const [rulesOpen, setRulesOpen] = useState(false);
+  // The game whose fall into chaos has been watched.
+  const [chaosSeen, setChaosSeen] = useState<Update["result"]>(null);
   const [fatal, setFatal] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -597,6 +600,9 @@ export function App() {
           {tabs}
         </div>
         <Credit />
+        {result?.timeout && !waiting && chaosSeen !== result && (
+          <Chaos rounds={Math.ceil(result.turns / view.players.length)} onDone={() => setChaosSeen(result)} />
+        )}
         <Inspect card={inspecting} onClose={() => setInspecting(null)} />
         {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
         {briefing && <Briefing view={view} onBegin={begin} />}

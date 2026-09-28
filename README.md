@@ -276,7 +276,7 @@ Win rate by agenda    Barbarian Conquest              31.6%
    | without a strategic bot | 26.6% | 41.5 turns |
    | with a strategic bot | 16.0% | 53.6 turns |
 
-Games always resolve: no timeouts in 24,000 games at the 600-turn cap.
+Games always resolved: no timeouts in 24,000 games at the old 600-turn cap. (The game now ends after 50 rounds with no winner; see docs/RULES.md.)
 
 ### Discard & Draw
 

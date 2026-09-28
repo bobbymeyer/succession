@@ -180,7 +180,7 @@ def options() -> str:
         "rules": {
             "starting_hand": config.starting_hand,
             "hand_limit": config.hand_limit,
-            "max_turns": config.max_turns,
+            "max_rounds": config.max_rounds,
             "agendas": [
                 {"name": a.name, "clauses": [c.label for c in conditions(empty, a, rules)]}
                 for a in AGENDAS

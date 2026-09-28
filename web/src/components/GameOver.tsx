@@ -46,9 +46,14 @@ export function GameOver(props: Props) {
   return (
     <section className="prompt over" data-testid="game-over" aria-labelledby="over-title">
       <h2 id="over-title">{headline(view, result)}</h2>
-      {result.timeout && <p className="no-winner">No one wins.</p>}
+      {result.timeout && (
+        <p className="no-winner">
+          Without effective council, the young king grows indulgent and tyrannical, and the kingdom slips into chaos.
+          Everyone loses.
+        </p>
+      )}
       <p className="muted">
-        {result.timeout ? "The turn limit ran out" : "After"} {result.turns} turns ({rounds} rounds)
+        {result.timeout ? `${rounds} ${rounds === 1 ? "round" : "rounds"} passed` : "After"} {result.timeout ? `(${result.turns} turns)` : `${result.turns} turns (${rounds} rounds)`}
         {result.timeout ? " with no agenda met." : "."}
       </p>
 

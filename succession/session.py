@@ -211,7 +211,7 @@ class GameSession:
         state = self.state
         player = state.current
         if self._started is None:
-            if state.turn >= self.config.max_turns:
+            if state.turn >= self.config.turn_limit:
                 self.timeout = True
                 return self._finish()
             prompt = self._start(player)
@@ -422,6 +422,8 @@ class GameSession:
         if version not in (1, 2, 3, RECORD_VERSION):
             raise ValueError(f"unsupported record version {version!r}")
         config = dict(record["config"])
+        # Records from before the round limit played to the turn cap alone.
+        config.setdefault("max_rounds", None)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):
