@@ -1,7 +1,7 @@
 // Whole games in a real browser: Pyodide boots, the engine deals, and a
 // player gets from the first move to the end.
 import type { Page } from "@playwright/test";
-import { expect, playFromList, random, settle, test } from "./helpers";
+import { expect, fromMenu, openMenu, playFromList, random, settle, showPanel, test } from "./helpers";
 
 async function start(page: Page, errors: string[], seed?: number) {
   page.on("pageerror", (e) => errors.push(e.message));
@@ -25,6 +25,7 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   await page.getByTestId("begin").click();
   await expect(briefing).toBeHidden();
   await settle(page);
+  await showPanel(page, "agenda");
   await expect(page.getByTestId("agenda-tracker").locator("strong").first()).toHaveText(mine);
   expect(errors).toEqual([]);
 });
@@ -96,7 +97,7 @@ test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
   await playFromList(page);
   await settle(page);
   await page.mouse.move(0, 0); // no card preview over the tabs
-  await page.getByRole("tab", { name: "Log" }).click();
+  await showPanel(page, "log");
   await expect(page.getByRole("list", { name: "Game log" })).toContainText("You discard");
   await expect(page.getByRole("list", { name: "Game log" })).toContainText("to the hand limit");
   expect(errors).toEqual([]);
@@ -143,7 +144,8 @@ test("a card is picked up by clicking it and put down by clicking it again", asy
   const card = page.locator(".mine .card.live").first();
   await card.locator("> button.face").click();
   await expect(card).toHaveClass(/selected/);
-  await expect(card.getByTestId("offer").first()).toBeVisible();
+  // Its choices: over the card, or in the dock on a phone.
+  await expect(page.getByTestId("offer").first()).toBeVisible();
   await card.locator("> button.face").click();
   await expect(card).not.toHaveClass(/selected/);
   await expect(page.getByTestId("offer")).toHaveCount(0);
@@ -238,7 +240,7 @@ test("the end of a game: the reveal, export, play again", async ({ page }) => {
   await expect(page.locator(".opponent")).toHaveCount(3);
 
   // And the game is remembered on the setup screen.
-  await page.getByRole("button", { name: "New game" }).click();
+  await fromMenu(page, page.getByRole("button", { name: "New game" }));
   await expect(page.getByText("Your games (1 finished in this browser)")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -260,7 +262,7 @@ test("the rules open from the setup screen and from the table", async ({ page })
 
   await page.getByTestId("deal").click();
   await settle(page);
-  await page.getByTestId("show-rules").click();
+  await fromMenu(page, page.getByTestId("show-rules"));
   await expect(rules).toBeVisible();
   await rules.getByRole("button", { name: "Close the rules" }).click();
   await expect(rules).toBeHidden();
@@ -293,7 +295,7 @@ test("the tutorial teaches a short game and ends in a win", async ({ page }) => 
   await expect(page.getByTestId("game-over")).toContainText("You win");
   await expect(coach).toContainText("The court is yours");
   // Not kept among your finished games.
-  await page.getByRole("button", { name: "New game" }).click();
+  await fromMenu(page, page.getByRole("button", { name: "New game" }));
   await expect(page.getByText(/Your games/)).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -306,6 +308,7 @@ test("every screen credits bobbymeyer.com", async ({ page }) => {
   await expect(credit).toHaveAttribute("target", "_top");
   await page.getByTestId("deal").click();
   await settle(page);
+  await openMenu(page); // a phone keeps it in the menu
   await expect(page.getByRole("link", { name: "designed by bobbymeyer." })).toBeVisible();
 });
 
@@ -345,11 +348,12 @@ test("every courtier wears a sigil of their attributes as they stand", async ({ 
   for (const c of await courtiers.all()) {
     // The sigil reads out what the caption under the card says.
     const said = await c.locator(".sigil").getAttribute("aria-label");
-    const [estate, faith, house, origin] = await c.locator(".attr").allInnerTexts();
+    // (Read as text: a phone hides the caption and shows only the sigil.)
+    const [estate, faith, house, origin] = await c.locator(".attr").allTextContents();
     expect(said).toBe(`${house}, ${estate}, ${faith}, ${origin}`);
   }
   // The rules say how to read one.
-  await page.getByTestId("show-rules").click();
+  await fromMenu(page, page.getByTestId("show-rules"));
   await expect(page.getByTestId("rules")).toContainText("Faith is the shape");
   expect(errors).toEqual([]);
 });

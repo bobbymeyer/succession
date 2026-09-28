@@ -152,7 +152,7 @@ cd web
 npm install
 npm run dev              # http://localhost:5173, rebuilt as you edit
 npm run build            # web/dist: a static site, Pyodide included
-npx playwright test      # whole games in Chromium, against the build
+npx playwright test      # whole games in Chromium, against the build, on a desktop, an iPhone and a Pixel screen
 ```
 
 Both `dev` and `build` first copy Pyodide out of `node_modules` and zip
