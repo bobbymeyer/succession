@@ -635,3 +635,14 @@ a.button:hover { border-color: var(--gold); }
 .coach .kicker { color: var(--gold-bright); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; }
 .coach h2 { margin: 2px 0 6px; font-family: var(--serif); font-size: 1.15rem; text-transform: none; letter-spacing: 0; color: var(--ink); }
 .coach p { margin: 0; font-size: 0.92rem; line-height: 1.45; }
+
+/* -- the fall into chaos --------------------------------------------------- */
+.chaos .intro-dots span.on { background: #d4553f; }
+.chaos-title h1 { color: #e8836f; letter-spacing: 0.14em; padding-left: 0.14em; text-shadow: 0 0 30px rgba(212, 85, 63, 0.4), 0 4px 20px rgba(0, 0, 0, 0.9); }
+.chaos-title p {
+  margin: 0; font-family: var(--serif); font-size: clamp(1.05rem, 2.4vw, 1.4rem); text-align: center; max-width: 88vw;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9); animation: fade-in 1200ms 1200ms ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .chaos-title p { animation: none; }
+}

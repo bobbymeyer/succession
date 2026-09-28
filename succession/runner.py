@@ -88,6 +88,7 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         starting_hand=args.starting_hand,
         hand_limit=args.hand_limit,
         max_turns=args.max_turns,
+        max_rounds=args.max_rounds or None,
         shuffle_seats=not args.fixed_seats,
         outmaneuver_copies=args.outmaneuver_copies,
         removed_courtiers_return_to_deck=not args.removed_out_of_game,
@@ -206,6 +207,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--players", default=players, help=f"player types, clockwise (default: {players})")
     parser.add_argument("--starting-hand", type=int, default=5)
     parser.add_argument("--hand-limit", type=int, default=7)
+    parser.add_argument("--max-rounds", type=int, default=50, help="rounds before chaos: the game ends and everyone loses (0: no limit but --max-turns)")
     parser.add_argument("--max-turns", type=int, default=600, help="player-turn cap before a game is logged as a timeout")
     parser.add_argument("--outmaneuver-copies", type=int, default=1)
     parser.add_argument("--fixed-seats", action="store_true", help="do not randomise which tier sits where")

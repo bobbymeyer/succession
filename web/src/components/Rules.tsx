@@ -51,8 +51,15 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
           <h3>The aim</h3>
           <p>
             Every player holds a secret <strong>agenda</strong>: a shape the court could take. The moment the inner circle
-            shows yours, you reveal it and win. If one board meets two agendas at once, both players win. If nobody has won
-            after {rules.max_turns} turns, chaos grips the empire and nobody does.
+            shows yours, you reveal it and win. If one board meets two agendas at once, both players win.
+            {rules.max_rounds !== null && (
+              <>
+                {" "}
+                If nobody has won after {rules.max_rounds} rounds -- every player taking {rules.max_rounds} turns -- the
+                young king, without effective council, grows indulgent and tyrannical, the kingdom slips into chaos, and
+                everyone loses.
+              </>
+            )}
           </p>
         </section>
 

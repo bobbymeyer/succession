@@ -154,12 +154,40 @@ class Records(unittest.TestCase):
         self.assertFalse(again.config.discard_draws)
         self.assertEqual(fingerprint(again.state), fingerprint(session.state))
 
+    def test_a_record_from_before_the_round_limit_replays_without_it(self):
+        config = Config(players=(HUMAN, "naive", "greedy"), max_rounds=None)
+        session = GameSession(config, 6)
+        random_human(session, random.Random(6), stop_after=12)
+        old = session.record()
+        del old["config"]["max_rounds"]
+        again = GameSession.replay(json.loads(json.dumps(old)))
+        self.assertIsNone(again.config.max_rounds)
+        self.assertEqual(fingerprint(again.state), fingerprint(session.state))
+
     def test_the_record_keeps_the_rules_variant(self):
         config = Config(players=(HUMAN, "naive"), faith_seats=5, house_preferred_estates=(("Mitreas", "Church"),))
         session = GameSession(config, 4)
         session.advance()
         again = GameSession.replay(json.loads(json.dumps(session.record())))
         self.assertEqual(again.config, config)
+
+
+class RoundLimit(unittest.TestCase):
+    def test_the_limit_is_counted_in_rounds(self):
+        self.assertEqual(Config(players=("naive",) * 4).turn_limit, 200)
+        self.assertEqual(Config(players=("naive",) * 3).turn_limit, 150)
+        self.assertEqual(Config(max_rounds=None).turn_limit, Config().max_turns)
+
+    def test_everyone_loses_when_the_rounds_run_out(self):
+        config = Config(players=(HUMAN, "naive", "greedy"), max_rounds=2)
+        session = GameSession(config, 5)
+        random_human(session, random.Random(5))
+        if session.state.winners:
+            self.skipTest("won inside two rounds")
+        self.assertTrue(session.timeout)
+        self.assertEqual(session.state.turn, 6)
+        result = play_game(Config(max_rounds=2), 5, make_bot)
+        self.assertLessEqual(result.turns, 8)
 
 
 class Answers(unittest.TestCase):
