@@ -137,7 +137,7 @@ Empties an attribute. A strip does not spend the courtier's one mutation, so the
 | | Card | Type | What it does |
 |---|---|---|---|
 | <img src="cards/72-castration.jpg" alt="Castration" width="132"> | **Castration**<br><sub>Card 72</sub> | Strip · Family | A courtier's Family becomes None. They keep their seat. A strip does not spend a mutation, so Adoption can give them a family again. |
-| <img src="cards/73-excommunication.jpg" alt="Excommunication" width="132"> | **Excommunication**<br><sub>Card 73</sub> | Strip · Faith | A courtier's Faith becomes None. They keep their seat. A strip does not spend a mutation, so Conversion can bring them to a faith again. |
+| <img src="cards/73-excommunication.jpg" alt="Excommunication" width="132"> | **Excommunication**<br><sub>Card 73</sub> | Strip · Faith | A courtier's Faith becomes Godless. They keep their seat. A strip does not spend a mutation, so Conversion can bring them to a faith again. |
 
 ## Mutation
 
@@ -149,7 +149,7 @@ Changes one attribute. Each attribute may be mutated at most once per courtier.
 | <img src="cards/75-take-vows.jpg" alt="Take Vows" width="132"> | **Take Vows**<br><sub>Card 75</sub> | Mutation · Estate | A courtier's Estate becomes Church. If that un-matches the seat they hold, they are demoted to the outer circle at once. |
 | <img src="cards/76-enter-trade.jpg" alt="Enter Trade" width="132"> | **Enter Trade**<br><sub>Card 76</sub> | Mutation · Estate | A courtier's Estate becomes Merchant. If that un-matches the seat they hold, they are demoted to the outer circle at once. |
 | <img src="cards/77-lose-status.jpg" alt="Lose Status" width="132"> | **Lose Status**<br><sub>Card 77</sub> | Mutation · Estate | A courtier's Estate becomes Commons. If that un-matches the seat they hold, they are demoted to the outer circle at once. |
-| <img src="cards/78-conversion.jpg" alt="Conversion" width="132"> | **Conversion**<br><sub>Card 78</sub> | Mutation · Faith | A courtier's Faith becomes any faith but their own; you choose it. A godless or excommunicated courtier may be brought to any of the three. |
+| <img src="cards/78-conversion.jpg" alt="Conversion" width="132"> | **Conversion**<br><sub>Card 78</sub> | Mutation · Faith | A courtier's Faith becomes any faith but their own; you choose it. A godless courtier may be brought to any of the three. |
 | <img src="cards/79-apostasy.jpg" alt="Apostasy" width="132"> | **Apostasy**<br><sub>Card 79</sub> | Mutation · Faith | A courtier's Faith becomes Godless. Godlessness has no agenda, so their seat is one no faith can count. |
 | <img src="cards/80-go-native.jpg" alt="Go Native" width="132"> | **Go Native**<br><sub>Card 80</sub> | Mutation · Origin | A courtier's Origin becomes Barbarian. |
 | <img src="cards/81-assimilate.jpg" alt="Assimilate" width="132"> | **Assimilate**<br><sub>Card 81</sub> | Mutation · Origin | A courtier's Origin becomes Imperial. |

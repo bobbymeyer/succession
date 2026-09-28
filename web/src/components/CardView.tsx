@@ -1,6 +1,7 @@
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Attribute, Card } from "../protocol";
 import { useUi } from "../art";
+import { Sigil } from "./Sigil";
 
 export type CardSize = "xxs" | "xs" | "sm" | "md" | "lg";
 
@@ -35,7 +36,7 @@ export const GRID: { attribute: Attribute; label: string }[] = [
 export function attributeText(card: Card, attribute: Attribute): string {
   const value = card[attribute] as string;
   if (attribute === "family" && value === "None") return "No house";
-  if (attribute === "faith" && value === "None") return "No faith";
+  if (attribute === "faith" && value === "None") return "Godless"; // an old record's empty faith
   return value;
 }
 
@@ -126,6 +127,7 @@ export function CardView({
         onPointerDown={draggable ? onPress : undefined}
       >
         <Face card={card} />
+        {courtier && <Sigil card={card} />}
         {changed && <span className="changed-flag">Changed</span>}
       </button>
       {popover && <div className="popover">{popover}</div>}

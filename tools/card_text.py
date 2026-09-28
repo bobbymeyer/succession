@@ -180,8 +180,9 @@ RULES: dict[str, str] = {
         "not spend a mutation, so Adoption can give them a family again."
     ),
     "Excommunication": (
-        "A courtier's Faith becomes None. They keep their seat. A strip does "
-        "not spend a mutation, so Conversion can bring them to a faith again."
+        "A courtier's Faith becomes Godless. They keep their seat. A strip "
+        "does not spend a mutation, so Conversion can bring them to a faith "
+        "again."
     ),
     # --- Mutations ----------------------------------------------------------
     # Each attribute may be mutated at most once per courtier.
@@ -203,8 +204,7 @@ RULES: dict[str, str] = {
     ),
     "Conversion": (
         "A courtier's Faith becomes any faith but their own; you choose it. A "
-        "godless or excommunicated courtier may be brought to any of the "
-        "three."
+        "godless courtier may be brought to any of the three."
     ),
     "Apostasy": (
         "A courtier's Faith becomes Godless. Godlessness has no agenda, so "

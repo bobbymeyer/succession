@@ -401,7 +401,7 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         strip, convert = give(state, 0, "Excommunication", "Conversion")
         target = outer(state, "Crosser of Rivers")[0]
         apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
-        self.assertIs(state.cstate[target].faith, Faith.NONE)
+        self.assertIs(state.cstate[target].faith, Faith.GODLESS)
         self.assertFalse(state.cstate[target].mutated_faith)  # strips are not mutations
         options = {a.value for a in card_actions(state, 0, convert) if a.courtier == target}
         self.assertEqual(options, {f.value for f in FAITHS})
@@ -412,6 +412,21 @@ class TestDemotionsStripsMutations(unittest.TestCase):
             FixedRng(),
         )
         self.assertIs(state.cstate[target].faith, Faith.OLD_GODS)
+
+    def test_the_godless_cannot_be_excommunicated(self):
+        state = fresh()
+        strip = give(state, 0, "Excommunication")[0]
+        target = outer(state, "Crosser of Rivers")[0]
+        apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
+        again = give(state, 0, "Excommunication")[0]
+        self.assertNotIn(target, {a.courtier for a in card_actions(state, 0, again)})
+
+    def test_the_old_excommunication_left_an_empty_faith(self):
+        state = fresh(excommunication_godless=False)
+        strip = give(state, 0, "Excommunication")[0]
+        target = outer(state, "Crosser of Rivers")[0]
+        apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
+        self.assertIs(state.cstate[target].faith, Faith.NONE)
 
     def test_adoption_sacrifices_a_family_courtier(self):
         state = fresh()
@@ -469,7 +484,7 @@ class TestGodlessness(unittest.TestCase):
         state = fresh()
         card = give(state, 0, "Conversion")[0]
         target = outer(state, "Master Swordsmith")[0]
-        # Excommunication leaves the same empty slot Apostasy would, without
+        # Excommunication leaves them godless, as Apostasy would, without
         # spending the courtier's one faith change.
         strip = give(state, 0, "Excommunication")[0]
         apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())

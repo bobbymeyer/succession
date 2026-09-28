@@ -20,10 +20,11 @@ class Faith(str, Enum):
     OLD_GODS = "Old Gods"
     MYSTERY_CULTS = "Mystery Cults"
     ONE_GOD = "The One God"
-    #: Actively godless. A real faith value a courtier can be born with or be
-    #: pushed into by Apostasy -- distinct from NONE, which is the empty slot
-    #: an Excommunication leaves behind.
+    #: Actively godless. A real faith value a courtier can be born with, or be
+    #: pushed into by Apostasy or an Excommunication.
     GODLESS = "Godless"
+    #: The empty faith an Excommunication used to leave
+    #: (`Config.excommunication_godless=False`, and older game records).
     NONE = "None"
 
 

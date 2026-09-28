@@ -424,6 +424,8 @@ class GameSession:
         config = dict(record["config"])
         # Records from before the round limit played to the turn cap alone.
         config.setdefault("max_rounds", None)
+        # ...and before an Excommunication left a courtier godless.
+        config.setdefault("excommunication_godless", False)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):

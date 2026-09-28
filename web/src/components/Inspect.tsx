@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import type { Card } from "../protocol";
 import { useUi } from "../art";
 import { attributeText, GRID } from "./CardView";
+import { Sigil, sigilLabel } from "./Sigil";
 
 /** A card at full size, and what the printed card cannot say. */
 export function CardDetail({ card }: { card: Card }) {
@@ -11,6 +12,12 @@ export function CardDetail({ card }: { card: Card }) {
   return (
     <div className="detail">
       {src ? <img className="detail-image" src={src} alt={card.name} /> : <h3>{card.name}</h3>}
+      {courtier && (
+        <div className="live-sigil">
+          <Sigil card={card} className="sigil big" />
+          <span>{sigilLabel(card)}</span>
+        </div>
+      )}
       {courtier && (
         <dl className="live-attrs">
           {GRID.map(({ attribute: a, label }) => (

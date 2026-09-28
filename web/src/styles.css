@@ -646,3 +646,213 @@ a.button:hover { border-color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .chaos-title p { animation: none; }
 }
+
+/* -- a phone held upright: one screen, the hand under your thumb ----------- */
+/* The board scrolls, if it must, between the opponents' strip and the dock;
+   the page itself never does. Sizes come from the screen, so seven seats,
+   the outer circle and a full hand fit a 390 x 750 window. */
+.game.phone {
+  display: flex; flex-direction: column; gap: 0;
+  height: 100dvh; max-width: none; padding: 0; overflow: hidden;
+  padding-top: env(safe-area-inset-top);
+  --w-md: calc((100vw - 24px - 3 * 6px) / 4 - 10px);
+}
+.game.phone .board {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  gap: 8px; padding: 8px 12px 10px;
+}
+.game.phone .board > section { padding: 6px 8px; border-radius: 10px; }
+/* Sections keep their height and the board scrolls, rather than squeezing. */
+.game.phone .board > * { flex-shrink: 0; }
+.game.phone .court > h2 { display: none; }
+.game.phone .outer > h2, .game.phone .mine > h2 { font-size: 0.66rem; margin-bottom: 4px; }
+
+/* The strip: room on the right for the menu, one line if it can. */
+.game.phone .opponents { padding-right: 46px !important; gap: 4px; --chip-h: 30px; min-height: 36px; }
+.game.phone .opponent, .game.phone .status { gap: 5px; padding: 2px 7px; font-size: 0.74rem; }
+.game.phone .opponent .who > :not(strong):not(.seat-dot) { display: none; }
+.game.phone .their-agenda .agenda-name { display: none; }
+.game.phone .opponent.current { zoom: 1.12; }
+
+/* Seven seats, four and three, each a small tile: the estate is the colour
+   of the band over it, the name a line of small type. */
+.game.phone .court .seats { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.game.phone .seat { padding: 4px 2px 5px; gap: 3px; border-top: 3px solid var(--estate, var(--line)); border-radius: 6px; }
+.game.phone .estate-church { --estate: var(--church); }
+.game.phone .estate-military { --estate: var(--military); }
+.game.phone .estate-merchant { --estate: var(--merchant); }
+.game.phone .estate-commons { --estate: var(--commons); }
+.game.phone .seat-label { font-size: 0.62rem; min-height: 2.3em; line-height: 1.15; }
+.game.phone .seat-label small { display: none; }
+.game.phone .seat-take { font-size: 0.62rem; padding: 1px 4px; white-space: normal; line-height: 1.1; }
+/* The printed card carries the attributes; changed ones are flagged on the
+   face, and a tap on the magnifier reads them out. */
+.game.phone .attrs { display: none; }
+.game.phone .look { width: 20px; height: 20px; padding: 3px; top: 2px; right: 2px; }
+.game.phone .shield { font-size: 0.6rem; padding: 0 4px; }
+
+.game.phone .outer .row { gap: 6px; }
+.game.phone .outer .card { --w: calc(var(--w-md) * 0.85); }
+.game.phone .outer .muted { margin: 0; font-size: 0.8rem; }
+
+/* -- the dock -- */
+.dock {
+  position: relative; flex: none; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 12px calc(4px + env(safe-area-inset-bottom));
+  background: rgba(13, 20, 34, 0.97); border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+}
+.dock-question { max-height: 30dvh; overflow-y: auto; }
+.dock .prompt { padding: 7px 10px; border-radius: 10px; box-shadow: none; font-size: 0.86rem; }
+.dock .prompt p { margin: 0 0 2px; }
+.dock .prompt .buttons { margin: 4px 0 0; }
+.dock .all-moves { margin-top: 2px; font-size: 0.8rem; }
+.dock .all-moves ul { max-height: 9rem; }
+.dock .prompt .latest { font-size: 0.92rem; }
+.dock .prompt.over h2 { font-size: 1.1rem; }
+.dock .revealed-agenda .flip { width: 64px; }
+.dock .coach { padding: 7px 10px; max-height: 22dvh; overflow-y: auto; }
+.dock .coach h2 { font-size: 0.98rem; margin: 0 0 2px; }
+.dock .coach p { font-size: 0.82rem; line-height: 1.35; }
+.dock .error { margin: 0; font-size: 0.8rem; }
+
+/* Your hand shares the width: a full hand of five is as big as it can be,
+   and more cards only get narrower, never a second row. */
+.dock .mine { background: none; border: none; padding: 0; }
+.dock .mine > h2 { display: none; }
+.dock .mine .row {
+  flex-wrap: nowrap; justify-content: center; gap: 6px; padding-top: 4px;
+  --w-lg: min(84px, calc((100vw - 24px - (var(--n) - 1) * 6px) / var(--n)));
+}
+.dock .mine .card.selected .face { transform: translateY(-10px); }
+.dock .mine .card.selected .popover { bottom: calc(100% + 16px); }
+
+.dock-tabs { display: flex; gap: 6px; }
+.dock-tabs button {
+  flex: 1; padding: 6px 4px; border-radius: 8px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+  background: rgba(28, 40, 64, 0.7);
+}
+.dock-tabs button[aria-expanded="true"] { color: var(--ink); border-color: var(--gold); }
+.dock-tabs small { font-variant-numeric: tabular-nums; letter-spacing: 0; margin-left: 3px; }
+.dock-tabs small.met { color: var(--gold-bright); }
+
+/* A tab pulls a sheet up over the board; the same tab puts it away. */
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 100%;
+  max-height: 55dvh; overflow-y: auto; padding: 12px 14px;
+  background: var(--rail); border-top: 1px solid var(--gold); border-radius: 14px 14px 0 0;
+  box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.55);
+  animation: sheet-up 200ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+.sheet .log { margin: 0; padding: 0; list-style: none; font-size: 0.84rem; }
+.sheet .discard-pile { border: none; background: none; padding: 0; }
+
+/* The menu: a button in the strip's corner, and what the rail used to hold. */
+.menu { position: absolute; top: calc(8px + env(safe-area-inset-top)); right: 10px; z-index: 20; }
+.menu-button { width: 38px; height: 34px; padding: 6px 8px; border-radius: 8px; display: grid; place-items: center; }
+.menu-button svg { width: 18px; height: 18px; }
+.menu-panel {
+  position: absolute; top: calc(100% + 6px); right: 0; width: min(16rem, calc(100vw - 20px));
+  display: flex; flex-direction: column; gap: 8px; padding: 12px;
+  background: var(--rail); border: 1px solid var(--gold); border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+}
+.menu-panel label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.menu-panel button, .menu-panel a.button { width: 100%; text-align: center; }
+.menu-panel .credit { margin: 4px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet { animation: none; }
+}
+/* A tap anywhere else puts the sheet or the menu away. */
+.scrim { position: fixed; inset: 0; z-index: 4; background: rgba(5, 8, 14, 0.35); }
+.coach-fold {
+  display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 0 8px; width: 100%;
+  padding: 0; border: none; background: none; text-align: left;
+}
+.coach-fold .kicker { grid-column: 1; }
+.coach-fold h2 { grid-column: 1; }
+.coach-fold .fold-mark { grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--gold-bright); }
+.coach.folded h2 { margin: 0; }
+
+/* -- a courtier's sigil: faith the shape, house the colour, estate the sign,
+      origin the border -- */
+.card .face .sigil {
+  position: absolute; left: 5%; top: 14%; z-index: 1;
+  width: max(20px, 30%); height: auto; aspect-ratio: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); pointer-events: none;
+}
+.card.size-xxs .sigil, .card.size-xs .sigil { display: none; }
+.live-sigil { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; font-size: 0.9rem; }
+.sigil.big { width: 44px; height: 44px; flex: none; }
+.sigil-key { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 10px 20px; }
+.sigil-key h4 { margin: 0 0 6px; font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.sigil-key ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sigil-key li { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
+.sigil-key .sigil { width: 26px; height: 26px; flex: none; }
+/* The end of the game takes the room it needs: a shared win reveals two
+   agendas, and Play again must still be in reach. */
+.dock-question:has(.prompt.over) { max-height: 62dvh; }
+.dock .revealed-agenda { margin: 6px 0 8px; padding: 6px 8px; }
+
+/* -- phone, second pass ------------------------------------------------------ */
+/* The strip is one line: seat, hand, and a revealed agenda; the bots' names
+   are in the log. More players than fit scroll sideways. */
+.game.phone .opponents { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 46px 2px 0 !important; min-height: 38px; }
+.game.phone .opponents::-webkit-scrollbar { display: none; }
+.game.phone .opponent, .game.phone .status { flex: none; gap: 4px; padding: 2px 8px; }
+.game.phone .opponent .tier, .game.phone .their-agenda:has(.hidden-agenda) { display: none; }
+.game.phone .status { margin-left: 0; }
+.game.phone .opponent.current { zoom: 1; box-shadow: 0 0 0 2px var(--seat, var(--gold)), 0 0 14px color-mix(in srgb, var(--seat, var(--gold)) 60%, transparent); }
+
+/* Cards are sized by the screen's height too, so the court and the outer
+   circle fit above the dock on a short phone. */
+.game.phone {
+  --w-md: max(46px, min(calc((100vw - 24px - 3 * 6px) / 4 - 10px), calc((100dvh - 300px) / 3 * 0.62)));
+}
+
+/* The question is a line, and the move list folds out beside it. */
+.dock .prompt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.dock .prompt > p { flex: 1 1 12rem; }
+.dock .prompt .all-moves { margin: 0; margin-left: auto; }
+.dock .prompt .all-moves[open] { flex-basis: 100%; }
+.dock .prompt.over { display: block; }
+.dock .prompt .buttons { flex-basis: 100%; }
+
+/* A picked-up card's choices, in the dock. */
+.dock-offers { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dock-offers .offers { position: static; padding: 0; border: none; background: none; box-shadow: none; flex-wrap: wrap; }
+.dock-offers .offers::after { display: none; }
+.dock-offers .put-down { margin-left: auto; font-size: 0.8rem; padding: 0.3rem 0.6rem; color: var(--muted); }
+.dock .mine .card.selected .face { transform: translateY(-6px); }
+
+.dock-tabs button { padding: 4px; font-size: 0.66rem; }
+.dock .mine .look { width: 18px; height: 18px; padding: 2px; top: 2px; right: 2px; }
+
+/* The agenda briefing fits a short screen: a smaller card, and it scrolls. */
+@media (max-width: 600px) {
+  .briefing { max-height: calc(100dvh - 24px); overflow-y: auto; padding: 16px; }
+  .briefing .agenda-flip { width: min(210px, 40vw, 24dvh); }
+  .briefing h2 { font-size: 1.35rem; }
+  .briefing-clauses li { margin: 0; }
+}
+/* The strip stops short of the menu rather than running under it. */
+.game.phone .opponents { margin-right: 46px; padding-right: 0 !important; }
+.game.phone .status .pile .card { display: none; }
+/* An empty seat is a short outline: its chair card is only a label, and the
+   room is better spent on the outer circle. A row grows when someone sits. */
+.game.phone .seat.vacant .chair .face { aspect-ratio: 496 / 300; }
+.game.phone .seat.vacant .chair .face img { object-position: top; }
+@media (max-width: 600px) {
+  .briefing .agenda-flip { width: min(210px, 40vw, 17dvh); }
+  .briefing p, .briefing-clauses { font-size: 0.9rem; line-height: 1.3; }
+}
+/* A hand is a number in the seat's colour; the card back is for wider screens. */
+.game.phone .opponent .hand-count .card { display: none; }
+.game.phone .opponent .hand-count::before { content: ""; width: 7px; height: 10px; border-radius: 1.5px; border: 1.5px solid var(--seat); margin-right: 1px; }
+.game.phone .status { font-size: 0.7rem; }
+/* A card's two faces share the name "side" with the rail's panel; narrow
+   screens give that panel margins and a border, which the faces must not take. */
+.revealed-agenda .side, .agenda-flip .side { margin: 0; padding: 0; border: none; max-height: none; }

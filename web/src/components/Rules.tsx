@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { TableOptions } from "../protocol";
+import { SigilKey } from "./Sigil";
 
 // How to play, in a modal. The agendas and the events come from the engine
 // (webapi `options`), so their numbers are the ones the game actually plays
@@ -21,7 +22,7 @@ const CARDS: [string, string][] = [
   ["Demotion", "Sends a seated courtier back to the outer circle, leaving the seat empty."],
   ["Removal", "A courtier leaves play. Targeted Poisoning allows a saving roll."],
   ["Defense", "Paid for with a courtier of the same estate from your hand, it shields a seated courtier from the next removal, demotion, strip or mutation. It does not stop events."],
-  ["Strip", "Takes away a courtier's house (Castration) or faith (Excommunication)."],
+  ["Strip", "Takes away a courtier's house (Castration), or their faith, leaving them godless (Excommunication)."],
   ["Mutation", "Changes one of a courtier's attributes. Each attribute can be changed only once."],
   ["Outmaneuver", "The player you name skips their next turn."],
   ["Schismatic Event", "Swap your agenda for a new secret one."],
@@ -82,6 +83,15 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
             read the board, and anyone may move any outer courtier. Every courtier has an <strong>estate</strong>, a{" "}
             <strong>faith</strong>, a <strong>house</strong> and an <strong>origin</strong>.
           </p>
+        </section>
+
+        <section>
+          <h3>Reading a courtier</h3>
+          <p>
+            The mark in each courtier's corner is all four at once, as they stand now: a courtier changed in play wears
+            the new mark, whatever the printed card says.
+          </p>
+          <SigilKey />
         </section>
 
         <section>

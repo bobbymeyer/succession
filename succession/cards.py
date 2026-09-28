@@ -125,7 +125,7 @@ DEFENSE_CARDS: tuple[CardDef, ...] = (
 
 STRIP_CARDS: tuple[CardDef, ...] = (
     CardDef("Castration", CardKind.STRIP, attribute="family", value=Family.NONE.value),
-    CardDef("Excommunication", CardKind.STRIP, attribute="faith", value=Faith.NONE.value),
+    CardDef("Excommunication", CardKind.STRIP, attribute="faith", value=Faith.GODLESS.value),
 )
 
 MUTATION_CARDS: tuple[CardDef, ...] = (

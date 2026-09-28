@@ -297,7 +297,7 @@ def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=
 
     if kind is CardKind.STRIP:
         if not defense_absorbs(state, target, kind):
-            value = Family.NONE if card.attribute == "family" else Faith.NONE
+            value = Family.NONE if card.attribute == "family" else _no_faith(state)
             # A strip does not consume the once-per-courtier mutation allowance.
             state.cstate[target] = state.cstate[target].with_attribute(
                 card.attribute, value, is_mutation=False
@@ -702,3 +702,9 @@ def play_game(
     return game_result(
         state, tiers, game_id=game_id, seed=seed, timeout=timeout, keep_state=keep_state
     )
+
+
+def _no_faith(state: GameState) -> Faith:
+    """What an Excommunication leaves: godlessness, or the old empty slot."""
+
+    return Faith.GODLESS if state.config.excommunication_godless else Faith.NONE
