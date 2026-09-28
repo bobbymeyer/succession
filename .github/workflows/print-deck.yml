@@ -15,6 +15,7 @@ on:
     paths:
       - "assets/**"
       - "tools/mpcfill.py"
+      - "tools/sigil.py"
       - "tools/card_text.py"
       - "succession/cards.py"
       - "succession/courtiers.py"

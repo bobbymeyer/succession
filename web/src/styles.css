@@ -780,9 +780,14 @@ a.button:hover { border-color: var(--gold); }
 /* -- a courtier's sigil: faith the shape, house the colour, estate the sign,
       origin the border -- */
 .card .face .sigil {
-  position: absolute; left: 5%; top: 14%; z-index: 1;
-  width: max(20px, 30%); height: auto; aspect-ratio: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); pointer-events: none;
+  /* Exactly over the sigil printed on the card (tools/sigil.py: centred
+     0.43 x 2.46 in on a 2.48 x 3.46 in card, 0.44 in wide), so a courtier
+     changed in play covers the printed mark with the live one. Never smaller
+     than a finger can read. */
+  position: absolute; left: 17.34%; top: 71.1%; z-index: 1;
+  width: max(18px, 17.74%); height: auto; aspect-ratio: 1; overflow: visible;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 .card.size-xxs .sigil, .card.size-xs .sigil { display: none; }
 .live-sigil { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; font-size: 0.9rem; }

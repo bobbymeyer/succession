@@ -47,6 +47,7 @@ from succession.state import Config  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import SEAT_ESTATE, Family, Seat  # noqa: E402
 from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
+from tools.sigil import SIGIL_CENTRE_X_IN, SIGIL_CENTRE_Y_IN, SIGIL_SIZE_IN, draw_sigil  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
 
@@ -455,6 +456,31 @@ def render_front(card: CardDef, art_path: Path, layout: Layout, fonts: Fonts, al
         fill_attribute_plate(canvas, card, body, layout, fonts, accent)
     else:
         fill_rules_plate(canvas, card, body, layout, fonts, accent)
+    return canvas.convert("RGB")
+
+
+def with_sigil(front: Image.Image, card: CardDef, layout: Layout) -> Image.Image:
+    """A courtier's front with their four attributes again as one mark, over
+    the art's lower left (tools/sigil.py).
+
+    The browser game's cards go without it: the game draws the live sigil in
+    the same place, and a printed one underneath would show round the edges
+    of a courtier whose faith changed shape in play.
+    """
+
+    if not card.is_courtier:
+        return front
+    attrs = dict(courtier_attributes(card))
+    canvas = front.convert("RGBA")
+    draw_sigil(
+        canvas,
+        attrs["Estate"],
+        attrs["Faith"],
+        attrs["House"],
+        attrs["Origin"],
+        (layout.px(BLEED_MARGIN_IN + SIGIL_CENTRE_X_IN), layout.px(BLEED_MARGIN_IN + SIGIL_CENTRE_Y_IN)),
+        layout.px(SIGIL_SIZE_IN),
+    )
     return canvas.convert("RGB")
 
 
@@ -1086,7 +1112,9 @@ def main(argv: list[str] | None = None) -> int:
             directory.mkdir(parents=True, exist_ok=True)
     only = {int(n) for n in args.only.split(",")} if args.only else None
 
-    def emit(image: Image.Image | None, stem: str, slug: str) -> tuple[Path, str, str]:
+    def emit(
+        image: Image.Image | None, stem: str, slug: str, game_image: Image.Image | None = None
+    ) -> tuple[Path, str, str]:
         """Write a composed card to whichever renditions were asked for.
 
         The docs thumbnails take a slugged name rather than the printed one:
@@ -1112,7 +1140,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             if want_game:
                 save(
-                    trimmed(image, layout, args.game_dpi),
+                    trimmed(game_image or image, layout, args.game_dpi),
                     game_dir / slug,
                     "webp",
                     args.game_quality,
@@ -1129,8 +1157,9 @@ def main(argv: list[str] | None = None) -> int:
         stem = f"{asset.index:02d} {card.name}"
         slug = f"{asset.index:02d}-{cardlist.slugify(card.name)}"
         wanted = only is None or asset.index in only
-        image = render_front(card, asset.path, layout, fonts, args.panel_alpha) if wanted else None
-        printed, web_name, doc_name = emit(image, stem, slug)
+        plain = render_front(card, asset.path, layout, fonts, args.panel_alpha) if wanted else None
+        image = with_sigil(plain, card, layout) if plain is not None else None
+        printed, web_name, doc_name = emit(image, stem, slug, game_image=plain)
         if wanted:
             print(f"  [{slot:>2}] {stem}")
         if len(by_index[asset.index]) > 1:
