@@ -160,8 +160,12 @@ export function Inspect({
             {(n > 0 || offers.length > 0) && (
               <p className="count" aria-live="polite">
                 {n > 0 && `${at + 1} of ${n} in your hand`}
-                {n > 0 && offers.length > 0 && " · "}
-                {offers.length > 0 && (asking ? "Esc to close" : "Click or Enter to play")}
+                {offers.length > 0 && (
+                  <span className="keys">
+                    {n > 0 && " · "}
+                    {asking ? "Esc to close" : "Click or Enter to play"}
+                  </span>
+                )}
               </p>
             )}
           </div>

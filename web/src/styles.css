@@ -207,6 +207,7 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 }
 .inspect.carousel .detail-image { max-height: 62vh; }
 .inspect:focus { outline: none; }
+@media (hover: none) { .inspect .count .keys { display: none; } }
 .inspect .count { margin: 10px 0 0; text-align: center; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 /* Click the card (or Enter) and its moves pop up over it, as on the table. */
 .playable { position: relative; }
