@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import type { TableOptions } from "../protocol";
+import { SigilKey } from "./Sigil";
 
 // How to play, in a modal. The agendas and the events come from the engine
 // (webapi `options`), so their numbers are the ones the game actually plays
@@ -82,6 +83,15 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
             read the board, and anyone may move any outer courtier. Every courtier has an <strong>estate</strong>, a{" "}
             <strong>faith</strong>, a <strong>house</strong> and an <strong>origin</strong>.
           </p>
+        </section>
+
+        <section>
+          <h3>Reading a courtier</h3>
+          <p>
+            The mark in each courtier's corner is all four at once, as they stand now: a courtier changed in play wears
+            the new mark, whatever the printed card says.
+          </p>
+          <SigilKey />
         </section>
 
         <section>

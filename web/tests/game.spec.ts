@@ -335,3 +335,21 @@ test("when the rounds run out, the kingdom falls into chaos and everyone loses",
   await expect(page.getByTestId("game-over")).toContainText("Everyone loses.");
   expect(errors).toEqual([]);
 });
+
+test("every courtier wears a sigil of their attributes as they stand", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 3);
+  await settle(page);
+  const courtiers = page.locator(".board .card:has(.attrs)");
+  expect(await courtiers.count()).toBeGreaterThan(0);
+  for (const c of await courtiers.all()) {
+    // The sigil reads out what the caption under the card says.
+    const said = await c.locator(".sigil").getAttribute("aria-label");
+    const [estate, faith, house, origin] = await c.locator(".attr").allInnerTexts();
+    expect(said).toBe(`${house}, ${estate}, ${faith === "No faith" ? "No faith" : faith}, ${origin}`);
+  }
+  // The rules say how to read one.
+  await page.getByTestId("show-rules").click();
+  await expect(page.getByTestId("rules")).toContainText("Faith is the shape");
+  expect(errors).toEqual([]);
+});
