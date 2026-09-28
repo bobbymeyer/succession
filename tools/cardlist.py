@@ -45,7 +45,13 @@ GROUP_NOTES: dict[str, str] = {
         "Forty courtiers. These four printed attributes are the whole of what "
         "an agenda reads off the board. A courtier who dies goes to the "
         "discard and may come back as a new person carrying exactly these "
-        "values again -- never the mutations the dead one had collected."
+        "values again -- never the mutations the dead one had collected. "
+        "The sigil over each portrait's lower left is the same four at a "
+        "glance: faith is its shape (One God a circle, Old Gods a square, "
+        "Mystery Cults a hexagon, godless a diamond), house its colour "
+        "(Argaian red, Mitreas green, Amonides blue, no house black), estate "
+        "the sign inside (a sword, a coin, praying hands; Commons none), and "
+        "origin its border (Imperial gold, Barbarian iron)."
     ),
     "Event": (
         "Five events. Nobody holds one: an event plays the moment it is drawn, "

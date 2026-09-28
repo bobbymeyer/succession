@@ -10,8 +10,10 @@ import type { Card } from "../protocol";
 //                          hands; Commons nothing
 //   origin -> the border   Imperial gold, Barbarian iron
 //
+// The printed cards carry the same mark (tools/sigil.py, same geometry and
+// colours: keep them in step), and the game lays this one exactly over it.
 // It always shows the attributes as they stand now, so a courtier changed in
-// play wears their new sigil while the printed card keeps the old words.
+// play wears their new sigil over the printed one.
 
 export const HOUSE_COLOUR: Record<string, string> = {
   Argaian: "#c8453a",
