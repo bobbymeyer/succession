@@ -160,6 +160,14 @@ Both `dev` and `build` first copy Pyodide out of `node_modules` and zip
 build. The site uses relative paths throughout: it can be served from any
 directory, or iframed into another page.
 
+On a phone it lays out for one screen, upright or on its side: the board, with
+a dock under your thumb for the question, your hand and the log. Tap a card to
+pick it up, hold one to read it, or hold and drag. It can be added to a home
+screen (`web/public/manifest.webmanifest`) and, once opened, plays offline:
+`web/public/sw.js` keeps the page, Pyodide (under its version, so an upgrade
+replaces it), the engine and the art, and phones draw 320px copies of the cards
+(`web/public/cards/sm/`).
+
 The cards on the table are the printed cards: `tools/mpcfill.py --profile game`
 composes every card, agenda and seat exactly as the print deck does, trims and
 shrinks them to 496px WebP (3.8 MB for all 100), and writes them with a

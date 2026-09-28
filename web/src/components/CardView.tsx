@@ -71,7 +71,7 @@ export function Attributes({ card }: { card: Card }) {
 
 function Face({ card }: { card: Card }) {
   const { art } = useUi();
-  const src = art.card(card.name);
+  const src = art.thumb(art.card(card.name));
   if (src) return <img src={src} alt={card.name} draggable={false} />;
   // No picture (the game rendition was not built): set the card in type.
   return (
@@ -213,7 +213,7 @@ export function CardBack({ size = "xs", label }: { size?: CardSize; label?: stri
   const { art } = useUi();
   return (
     <div className={`card back size-${size}`} aria-label={label} role={label ? "img" : undefined}>
-      <span className="face">{art.back ? <img src={art.back} alt="" draggable={false} /> : <span className="text-face" />}</span>
+      <span className="face">{art.back ? <img src={art.thumb(art.back)!} alt="" draggable={false} /> : <span className="text-face" />}</span>
     </div>
   );
 }

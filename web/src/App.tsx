@@ -11,6 +11,7 @@ import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, Hand, NO_INTERACTION, type Interaction } from "./components/Board";
 import { usePhone } from "./usePhone";
+import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
@@ -144,6 +145,11 @@ export function App() {
   const [inspecting, setInspecting] = useState<Card | null>(null);
   const [hovered, setHovered] = useState<Card | null>(null);
   const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered }), [art]);
+
+  // Once the engine and the art are in, the offline cache takes the rest.
+  useEffect(() => {
+    if (options && art !== NO_ART) warmOffline(art.offline);
+  }, [options, art]);
 
   useEffect(() => {
     engine.ready.then((r) => setOptions(r.options)).catch((e: Error) => setFatal(e.message));
@@ -688,7 +694,7 @@ export function App() {
     );
     return (
       <UiContext.Provider value={ui}>
-        <main className={`app game phone${holding ? " holding" : ""}`}>
+        <main className={`app game phone ${phone}${holding ? " holding" : ""}`}>
           <Board
             view={view}
             act={phoneAct}

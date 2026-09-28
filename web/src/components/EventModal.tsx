@@ -30,7 +30,7 @@ export function EventModal({ report, view, onContinue }: { report: EventReport; 
         <h3>{label}</h3>
         <ul>
           {cards.map((c) => {
-            const face = art.card(c.name);
+            const face = art.thumb(art.card(c.name));
             return (
               <li key={c.uid}>
                 <button type="button" className="thumb" onClick={() => inspect(c)} aria-label={`Look at ${c.name}`} title={c.name}>

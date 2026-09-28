@@ -46,6 +46,11 @@ class GameCards(unittest.TestCase):
         # ...and nothing is there that the manifest does not name.
         self.assertEqual({p.name for p in CARDS.glob("*.webp")}, set(files))
 
+    def test_every_card_has_a_small_copy_for_phones(self):
+        # tools/mpcfill.py writes them with the game rendition.
+        full = {p.name for p in CARDS.glob("*.webp")}
+        self.assertEqual({p.name for p in (CARDS / "sm").glob("*.webp")}, full)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -161,3 +161,36 @@ test("a courtier held, then dragged to the outer circle, is played there", async
   }
   throw new Error("no courtier in the opening hand to drag");
 });
+
+test.describe("on its side", () => {
+  test.use({ viewport: { width: 844, height: 390 } });
+
+  test("the board and the dock sit side by side, on one screen", async ({ page }) => {
+    const errors: string[] = [];
+    await deal(page, errors);
+    await expect(page.locator("main.game")).toHaveClass(/landscape/);
+    const [w, h] = await page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.scrollHeight]);
+    expect(w).toBeLessThanOrEqual(844);
+    expect(h).toBeLessThanOrEqual(390);
+    // Seven seats in one row, left of the dock; the hand in the dock.
+    const seats = await page.locator(".seat").evaluateAll((s) => s.map((e) => e.getBoundingClientRect().top));
+    expect(new Set(seats.map(Math.round)).size).toBe(1);
+    const dock = (await page.locator(".dock").boundingBox())!;
+    const court = (await page.locator(".court").boundingBox())!;
+    expect(court.x + court.width).toBeLessThanOrEqual(dock.x);
+    await expect(page.locator(".dock .mine .card").first()).toBeInViewport();
+    expect(await playFromList(page, random)).toBe(true);
+    expect(errors).toEqual([]);
+  });
+});
+
+test("a phone draws its cards from the small copies", async ({ page }) => {
+  const errors: string[] = [];
+  await deal(page, errors);
+  const src = await page.locator(".dock .mine .card img").first().getAttribute("src");
+  expect(src).toContain("/cards/sm/");
+  // The inspector shows the full card.
+  await page.locator(".dock .mine .card .look").first().tap();
+  expect(await page.locator("dialog.inspect[open] img.detail-image").getAttribute("src")).not.toContain("/sm/");
+  expect(errors).toEqual([]);
+});
