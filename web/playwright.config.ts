@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 // Runs against the production build, served the way GitHub Pages will serve
 // it. `npm run build` first.
@@ -6,6 +6,14 @@ export default defineConfig({
   testDir: "tests",
   timeout: 180_000,
   use: { baseURL: "http://127.0.0.1:4173/", browserName: "chromium" },
+  // The whole suite on a desktop, and again as two phones. Only Chromium is
+  // installed where this runs, so the iPhone is Chromium wearing an iPhone 13's
+  // screen, user agent and touch -- its layout and input, not Safari's engine.
+  projects: [
+    { name: "desktop" },
+    { name: "iphone", use: { ...devices["iPhone 13"], browserName: "chromium" } },
+    { name: "pixel", use: { ...devices["Pixel 7"], browserName: "chromium" } },
+  ],
   webServer: [
     {
       command: "npx vite preview --port 4173 --strictPort --host 127.0.0.1",
