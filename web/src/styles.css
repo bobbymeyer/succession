@@ -796,3 +796,63 @@ a.button:hover { border-color: var(--gold); }
    agendas, and Play again must still be in reach. */
 .dock-question:has(.prompt.over) { max-height: 62dvh; }
 .dock .revealed-agenda { margin: 6px 0 8px; padding: 6px 8px; }
+
+/* -- phone, second pass ------------------------------------------------------ */
+/* The strip is one line: seat, hand, and a revealed agenda; the bots' names
+   are in the log. More players than fit scroll sideways. */
+.game.phone .opponents { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 2px 46px 2px 0 !important; min-height: 38px; }
+.game.phone .opponents::-webkit-scrollbar { display: none; }
+.game.phone .opponent, .game.phone .status { flex: none; gap: 4px; padding: 2px 8px; }
+.game.phone .opponent .tier, .game.phone .their-agenda:has(.hidden-agenda) { display: none; }
+.game.phone .status { margin-left: 0; }
+.game.phone .opponent.current { zoom: 1; box-shadow: 0 0 0 2px var(--seat, var(--gold)), 0 0 14px color-mix(in srgb, var(--seat, var(--gold)) 60%, transparent); }
+
+/* Cards are sized by the screen's height too, so the court and the outer
+   circle fit above the dock on a short phone. */
+.game.phone {
+  --w-md: max(46px, min(calc((100vw - 24px - 3 * 6px) / 4 - 10px), calc((100dvh - 300px) / 3 * 0.62)));
+}
+
+/* The question is a line, and the move list folds out beside it. */
+.dock .prompt { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.dock .prompt > p { flex: 1 1 12rem; }
+.dock .prompt .all-moves { margin: 0; margin-left: auto; }
+.dock .prompt .all-moves[open] { flex-basis: 100%; }
+.dock .prompt.over { display: block; }
+.dock .prompt .buttons { flex-basis: 100%; }
+
+/* A picked-up card's choices, in the dock. */
+.dock-offers { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.dock-offers .offers { position: static; padding: 0; border: none; background: none; box-shadow: none; flex-wrap: wrap; }
+.dock-offers .offers::after { display: none; }
+.dock-offers .put-down { margin-left: auto; font-size: 0.8rem; padding: 0.3rem 0.6rem; color: var(--muted); }
+.dock .mine .card.selected .face { transform: translateY(-6px); }
+
+.dock-tabs button { padding: 4px; font-size: 0.66rem; }
+.dock .mine .look { width: 18px; height: 18px; padding: 2px; top: 2px; right: 2px; }
+
+/* The agenda briefing fits a short screen: a smaller card, and it scrolls. */
+@media (max-width: 600px) {
+  .briefing { max-height: calc(100dvh - 24px); overflow-y: auto; padding: 16px; }
+  .briefing .agenda-flip { width: min(210px, 40vw, 24dvh); }
+  .briefing h2 { font-size: 1.35rem; }
+  .briefing-clauses li { margin: 0; }
+}
+/* The strip stops short of the menu rather than running under it. */
+.game.phone .opponents { margin-right: 46px; padding-right: 0 !important; }
+.game.phone .status .pile .card { display: none; }
+/* An empty seat is a short outline: its chair card is only a label, and the
+   room is better spent on the outer circle. A row grows when someone sits. */
+.game.phone .seat.vacant .chair .face { aspect-ratio: 496 / 300; }
+.game.phone .seat.vacant .chair .face img { object-position: top; }
+@media (max-width: 600px) {
+  .briefing .agenda-flip { width: min(210px, 40vw, 17dvh); }
+  .briefing p, .briefing-clauses { font-size: 0.9rem; line-height: 1.3; }
+}
+/* A hand is a number in the seat's colour; the card back is for wider screens. */
+.game.phone .opponent .hand-count .card { display: none; }
+.game.phone .opponent .hand-count::before { content: ""; width: 7px; height: 10px; border-radius: 1.5px; border: 1.5px solid var(--seat); margin-right: 1px; }
+.game.phone .status { font-size: 0.7rem; }
+/* A card's two faces share the name "side" with the rail's panel; narrow
+   screens give that panel margins and a border, which the faces must not take. */
+.revealed-agenda .side, .agenda-flip .side { margin: 0; padding: 0; border: none; max-height: none; }

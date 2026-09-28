@@ -81,7 +81,7 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
     >
       <span className="who">
         <span className="seat-dot" aria-hidden="true" />
-        <strong>P{player.seat}</strong> {tierName(player.tier).replace(" bot", "")}
+        <strong>P{player.seat}</strong> <span className="tier">{tierName(player.tier).replace(" bot", "")}</span>
       </span>
       <span className="hand-count" data-hand={player.seat} title={`${player.hand} cards in hand`}>
         <CardBack size="xxs" />

@@ -49,6 +49,9 @@ function glide(speed: Speed): number {
 const tapped = (hint: string) =>
   hint
     .replace(/,? or drag [^,.]*/g, "")
+    .replace(/choose above (it|the card)/g, "choose below")
+    .replace(/Choose above the card/g, "Choose below")
+    .replace(/ Click it again to put it down\./g, "")
     .replace(/\bClick\b/g, "Tap")
     .replace(/\bclick\b/g, "tap");
 
@@ -628,6 +631,20 @@ export function App() {
   // corner, over a dock that holds the question, your hand, and tabs that pull
   // up your agenda, the log and the discard pile.
   if (phone) {
+    // A picked-up card's choices sit in the dock, not over the card, where
+    // they would cover the question; with a way to put the card down.
+    const offers =
+      turnPrompt && now && now.active !== null && now.offers.length
+        ? now.offers.map((o) => ({ label: o.label, run: () => apply(o.selection) }))
+        : pickPrompt && picked !== null
+          ? [{ label: pickVerb, run: () => pick(picked) }]
+          : null;
+    const holding = (turnPrompt && now?.active != null) || (pickPrompt && picked !== null);
+    const putDown = () => {
+      setSelection({});
+      setPicked(null);
+    };
+    const phoneAct: Interaction = { ...act, popover: () => null };
     const met = myAgenda ? myAgenda.status.filter((c) => c.met).length : 0;
     const sheetTab = (key: Sheet, label: React.ReactNode) => (
       <button
@@ -642,7 +659,13 @@ export function App() {
     return (
       <UiContext.Provider value={ui}>
         <main className="app game phone">
-          <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} hand={false} />
+          <Board
+            view={view}
+            act={phoneAct}
+            playing={playing}
+            won={result && !waiting ? winningCourt(view) : undefined}
+            hand={false}
+          />
           {(menuOpen || sheet) && (
             <div
               className="scrim"
@@ -690,8 +713,16 @@ export function App() {
             )}
             {shown.coach && <CoachPanel coach={shown.coach} foldable />}
             <div className="dock-question">{question}</div>
+            {holding && (
+              <div className="dock-offers">
+                {offers && offerButtons(offers)}
+                <button type="button" className="put-down" data-testid="put-down" onClick={putDown}>
+                  Put it down
+                </button>
+              </div>
+            )}
             {error && <p className="error">{error}</p>}
-            {view.you >= 0 && <Hand view={view} act={act} />}
+            {view.you >= 0 && <Hand view={view} act={phoneAct} />}
             <nav className="dock-tabs" aria-label="Agenda, log and discard pile">
               {myAgenda &&
                 sheetTab(

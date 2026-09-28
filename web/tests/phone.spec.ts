@@ -27,11 +27,21 @@ test("the table fits one screen, with the hand in the dock", async ({ page }) =>
   await expect(page.locator(".seat").last()).toBeInViewport();
   await expect(page.getByText("Tap a card to pick it up.")).toBeVisible();
 
-  // A card picked up offers what it can do, over the dock.
+  // A card picked up offers what it can do in the dock, never over the
+  // question, and can be put down again.
   await page.locator(".dock .mine .card.live > button.face").first().tap();
-  await expect(page.getByTestId("offer").first()).toBeInViewport();
+  await expect(page.locator(".dock-offers").getByTestId("offer").first()).toBeInViewport();
+  await expect(page.locator(".popover")).toHaveCount(0);
+  await page.getByTestId("put-down").tap();
+  await expect(page.getByTestId("offer")).toHaveCount(0);
+  await page.locator(".dock .mine .card.live > button.face").first().tap();
   await page.locator(".dock .mine .card.selected > button.face").tap();
   await expect(page.getByTestId("offer")).toHaveCount(0);
+  // The strip is one line, clear of the menu.
+  const strip = await page.locator(".opponents").boundingBox();
+  const menu = await page.getByTestId("menu").boundingBox();
+  expect(strip!.height).toBeLessThan(50);
+  expect(strip!.x + strip!.width).toBeLessThanOrEqual(menu!.x);
 
   // The dock's tabs pull up the agenda, the log and the discard pile.
   await page.getByTestId("dock-agenda").tap();
