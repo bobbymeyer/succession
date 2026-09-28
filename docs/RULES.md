@@ -92,7 +92,7 @@ courtier is bumped to the outer circle.
 | Demotion (5) | Inner courtier → outer; seat left empty. |
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
 | Defense (5) | Attached preemptively to an inner-circle courtier by sacrificing a matching-estate courtier *from hand* (`Patron Protection`: any estate). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
-| Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → None. The courtier stays where they are. |
+| Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → Godless. The courtier stays where they are. |
 | Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
 | Event (10) | Hits the whole table, not one courtier. Five minor/major pairs -- see below. No Defense covers an event. |
 | Outmaneuver (1) | The targeted player skips their next turn. |
@@ -141,12 +141,16 @@ Two cards move a courtier across that line, and each spends the courtier's one
 faith mutation, so nobody crosses it twice:
 
 * **Apostasy** (mutation) -- target's faith becomes Godless.
+* **Excommunication** (strip) -- target's faith becomes Godless too, but as a
+  strip it spends no mutation, so Conversion can still bring them back. A
+  courtier already godless cannot be excommunicated.
 * **Conversion** (mutation) -- moves a courtier to any faith but their own; a
-  godless or excommunicated courtier can be brought to any of the three.
+  godless courtier can be brought to any of the three.
 
-Godless is distinct from the `None` an `Excommunication` leaves: `None` is an
-empty slot, godlessness is a conviction. Both count for no faith agenda; only
-the distinction in the log tells you which happened.
+Excommunication used to leave an empty faith (`None`) instead, which counted
+for no agenda either; there was no difference in play but the word, so the two
+are now one. `--excommunication-none` restores it, and game records from before
+the change replay under it.
 
 Because Apostasy advances nobody's agenda, the greedy bot never plays it --
 0 of 52 draws over 4,000 games -- while the strategic bot plays 93% of the ones

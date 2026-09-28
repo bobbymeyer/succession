@@ -3,8 +3,7 @@ import type { Card } from "../protocol";
 // A courtier's four attributes as one mark, read at a glance and at any size:
 //
 //   faith  -> the shape    One God a circle, Old Gods a square, Mystery Cults
-//                          a hexagon; no faith a diamond (dashed when an
-//                          Excommunication has emptied the slot)
+//                          a hexagon; godless a diamond
 //   house  -> its colour   Argaian red, Mitreas green, Amonides blue; no
 //                          house black
 //   estate -> the glyph    Military a sword, Merchant a coin, Church praying
@@ -81,7 +80,8 @@ function Glyph({ estate, ground }: { estate: string; ground: string }) {
 /** Read aloud: "Mitreas, Merchant, Mystery Cults, Imperial". */
 export function sigilLabel(card: Pick<Card, "estate" | "faith" | "family" | "origin">): string {
   const house = card.family && card.family !== "None" ? card.family : "No house";
-  const faith = !card.faith || card.faith === "None" ? "No faith" : card.faith;
+  // An old record's empty faith (before Excommunication left the godless).
+  const faith = !card.faith || card.faith === "None" ? "Godless" : card.faith;
   return `${house}, ${card.estate ?? "no estate"}, ${faith}, ${card.origin ?? ""}`.replace(/, $/, "");
 }
 
@@ -107,7 +107,6 @@ export function Sigil({
         stroke={ring}
         strokeWidth={3.2}
         strokeLinejoin="round"
-        strokeDasharray={faith === "None" ? "5 3.2" : undefined}
       />
       <Glyph estate={card.estate ?? ""} ground={fill} />
     </svg>
@@ -125,7 +124,6 @@ export function SigilKey() {
         ["Old Gods", { faith: "Old Gods" }],
         ["Mystery Cults", { faith: "Mystery Cults" }],
         ["Godless", { faith: "Godless" }],
-        ["No faith (excommunicated)", { faith: "None" }],
       ],
     },
     {

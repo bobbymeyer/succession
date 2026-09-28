@@ -187,9 +187,14 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
 
     if kind is CardKind.STRIP:
         attribute = card.attribute
-        none_value = Family.NONE if attribute == "family" else Faith.NONE
+        if attribute == "family":
+            stripped = {Family.NONE}
+        elif state.config.excommunication_godless:
+            stripped = {Faith.GODLESS, Faith.NONE}  # nothing left to take
+        else:
+            stripped = {Faith.NONE}
         for cand in _touchable(state):
-            if getattr(state.cstate[cand], attribute) is not none_value:
+            if getattr(state.cstate[cand], attribute) not in stripped:
                 out.append(Action(PLAY, card=uid, courtier=cand))
         return out
 
@@ -222,8 +227,8 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
     out: list[Action] = []
 
     if attribute == "faith" and card.value is None:  # Conversion
-        # Any faith but the one they already hold. A godless or excommunicated
-        # courtier can be brought to any of the three.
+        # Any faith but the one they already hold. A godless courtier can be
+        # brought to any of the three.
         for cand in _touchable(state):
             cs = state.cstate[cand]
             if cs.mutated_faith:

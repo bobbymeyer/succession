@@ -71,6 +71,9 @@ class Config:
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
+    #: Excommunication leaves a courtier Godless. False: it leaves the old
+    #: empty faith (None), which a godless courtier could still be stripped to.
+    excommunication_godless: bool = True
     #: Require one of a House Rising trio to sit in the family's own estate.
     house_rising_requires_preferred_seat: bool = True
     #: Inner seats a faith must hold for Faith Ascendant.

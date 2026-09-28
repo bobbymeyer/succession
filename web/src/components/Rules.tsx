@@ -22,7 +22,7 @@ const CARDS: [string, string][] = [
   ["Demotion", "Sends a seated courtier back to the outer circle, leaving the seat empty."],
   ["Removal", "A courtier leaves play. Targeted Poisoning allows a saving roll."],
   ["Defense", "Paid for with a courtier of the same estate from your hand, it shields a seated courtier from the next removal, demotion, strip or mutation. It does not stop events."],
-  ["Strip", "Takes away a courtier's house (Castration) or faith (Excommunication)."],
+  ["Strip", "Takes away a courtier's house (Castration), or their faith, leaving them godless (Excommunication)."],
   ["Mutation", "Changes one of a courtier's attributes. Each attribute can be changed only once."],
   ["Outmaneuver", "The player you name skips their next turn."],
   ["Schismatic Event", "Swap your agenda for a new secret one."],

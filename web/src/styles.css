@@ -792,3 +792,7 @@ a.button:hover { border-color: var(--gold); }
 .sigil-key ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .sigil-key li { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
 .sigil-key .sigil { width: 26px; height: 26px; flex: none; }
+/* The end of the game takes the room it needs: a shared win reveals two
+   agendas, and Play again must still be in reach. */
+.dock-question:has(.prompt.over) { max-height: 62dvh; }
+.dock .revealed-agenda { margin: 6px 0 8px; padding: 6px 8px; }

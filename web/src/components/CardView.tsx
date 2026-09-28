@@ -36,7 +36,7 @@ export const GRID: { attribute: Attribute; label: string }[] = [
 export function attributeText(card: Card, attribute: Attribute): string {
   const value = card[attribute] as string;
   if (attribute === "family" && value === "None") return "No house";
-  if (attribute === "faith" && value === "None") return "No faith";
+  if (attribute === "faith" && value === "None") return "Godless"; // an old record's empty faith
   return value;
 }
 

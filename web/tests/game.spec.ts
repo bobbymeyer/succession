@@ -346,7 +346,7 @@ test("every courtier wears a sigil of their attributes as they stand", async ({ 
     // The sigil reads out what the caption under the card says.
     const said = await c.locator(".sigil").getAttribute("aria-label");
     const [estate, faith, house, origin] = await c.locator(".attr").allInnerTexts();
-    expect(said).toBe(`${house}, ${estate}, ${faith === "No faith" ? "No faith" : faith}, ${origin}`);
+    expect(said).toBe(`${house}, ${estate}, ${faith}, ${origin}`);
   }
   // The rules say how to read one.
   await page.getByTestId("show-rules").click();
