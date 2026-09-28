@@ -1,5 +1,5 @@
 // Playing a game through from a test, one decision at a time.
-import { test as base, type Frame, type FrameLocator, type Page } from "@playwright/test";
+import { test as base, type Frame, type FrameLocator, type Locator, type Page } from "@playwright/test";
 
 export { expect } from "@playwright/test";
 
@@ -55,4 +55,28 @@ export async function playFromList(surface: Surface, choose: <T>(items: T[]) => 
 
 export function random<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+// -- one test for every screen: where a phone keeps what a desktop shows ----
+
+/** On a phone, open the ☰ menu, where the rail's controls live. */
+export async function openMenu(page: Page) {
+  const menu = page.getByTestId("menu");
+  if ((await menu.isVisible()) && (await menu.getAttribute("aria-expanded")) !== "true") await menu.click();
+}
+
+/** Click one of the table's controls (Rules, New game), through the menu on a phone. */
+export async function fromMenu(page: Page, control: Locator) {
+  await openMenu(page);
+  await control.click();
+}
+
+/** Show your agenda or the log: a tab on a desktop, a sheet from the dock on a phone. */
+export async function showPanel(page: Page, which: "agenda" | "log") {
+  const dock = page.getByTestId(`dock-${which}`);
+  if (await dock.isVisible()) {
+    if ((await dock.getAttribute("aria-expanded")) !== "true") await dock.click();
+  } else {
+    await page.getByRole("tab", { name: which === "log" ? "Log" : /Agenda/ }).click();
+  }
 }
