@@ -61,11 +61,14 @@ const Chevron = ({ flip }: { flip?: boolean }) => (
 export function Inspect({
   card,
   hand,
+  moves,
   onPick,
   onClose,
 }: {
   card: Card | null;
   hand: Card[];
+  /** Play, discard and the like, for the card on show. */
+  moves(uid: number): { label: string; run(): void }[];
   onPick(card: Card): void;
   onClose(): void;
 }) {
@@ -82,6 +85,16 @@ export function Inspect({
   const at = card ? hand.findIndex((c) => c.uid === card.uid) : -1;
   const n = at >= 0 && hand.length > 1 ? hand.length : 0;
   const shown = at >= 0 ? hand[at] : card;
+  const offers = shown ? moves(shown.uid) : [];
+  // The moves pop up over the card it was asked on, and go when you page on.
+  const [askedOn, setAskedOn] = useState<number | null>(null);
+  const asking = offers.length > 0 && askedOn === shown?.uid;
+  const toggle = () => offers.length && setAskedOn(asking ? null : shown!.uid);
+  // A focused move that goes away would take the arrow keys with it.
+  useEffect(() => {
+    const d = dialog.current;
+    if (d?.open && !d.contains(document.activeElement)) d.focus();
+  }, [asking, shown?.uid]);
   useEffect(() => {
     if (n) document.querySelector(`.mine [data-uid="${shown!.uid}"]`)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [n, shown?.uid]);
@@ -95,11 +108,15 @@ export function Inspect({
     <dialog
       ref={dialog}
       className={`inspect${n ? " carousel" : ""}`}
+      tabIndex={-1}
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && onClose()}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
         else if (e.key === "ArrowLeft") go(-1);
+        // Enter on a move plays it; anywhere else it brings the moves up.
+        else if (e.key === "Enter" && offers.length && !(e.target as HTMLElement).closest(".moves")) toggle();
+        else if (e.key === "Escape" && asking) setAskedOn(null);
         else return;
         e.preventDefault();
       }}
@@ -116,10 +133,30 @@ export function Inspect({
             </>
           )}
           <div key={shown.uid} className={`panel${from ? ` from-${from}` : ""}`}>
-            <CardDetail card={shown} />
-            {n > 0 && (
+            <div className={`playable${offers.length ? " can" : ""}${asking ? " asking" : ""}`} onClick={toggle}>
+              <CardDetail card={shown} />
+              {asking && (
+                <div className="moves" role="group" aria-label={`What to do with ${shown.name}`} onClick={(e) => e.stopPropagation()}>
+                  {offers.map((o, i) => (
+                    <button
+                      key={o.label}
+                      type="button"
+                      className={i === 0 ? "primary" : undefined}
+                      data-testid="inspect-move"
+                      autoFocus={i === 0}
+                      onClick={o.run}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {(n > 0 || offers.length > 0) && (
               <p className="count" aria-live="polite">
-                {at + 1} of {n} in your hand
+                {n > 0 && `${at + 1} of ${n} in your hand`}
+                {n > 0 && offers.length > 0 && " · "}
+                {offers.length > 0 && (asking ? "Esc to close" : "Click or Enter to play")}
               </p>
             )}
           </div>

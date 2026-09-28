@@ -57,6 +57,28 @@ test("the magnifier pages through your hand, round and round", async ({ page }) 
   expect(errors).toEqual([]);
 });
 
+test("a card can be discarded from the magnified view", async ({ page }) => {
+  const errors: string[] = [];
+  await start(page, errors, 3);
+  await page.getByTestId("begin").click();
+  await settle(page);
+  const first = page.locator(".mine .card").first();
+  const uid = await first.getAttribute("data-uid");
+  await first.locator(".look").click();
+  const dialog = page.locator("dialog.inspect");
+  const moves = dialog.getByTestId("inspect-move");
+  await expect(moves).toHaveCount(0);
+  await page.keyboard.press("Enter");
+  await expect(moves.first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(moves).toHaveCount(0);
+  await expect(dialog).toBeVisible();
+  await dialog.locator(".detail-image").click();
+  await moves.filter({ hasText: "Discard & Draw" }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await expect(page.locator(`.mine [data-uid="${uid}"]`)).toHaveCount(0);
+});
+
 test("a new player's first game is the kind deal, unless they choose a seed", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
