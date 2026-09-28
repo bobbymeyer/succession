@@ -25,7 +25,7 @@ test("the table fits one screen, with the hand in the dock", async ({ page }) =>
   const hand = page.locator(".dock .mine .card");
   await expect(hand.first()).toBeInViewport();
   await expect(page.locator(".seat").last()).toBeInViewport();
-  await expect(page.getByText("Tap a card to pick it up.")).toBeVisible();
+  await expect(page.getByText("Tap a card to pick it up, or hold one to read it.")).toBeVisible();
 
   // A card picked up offers what it can do in the dock, never over the
   // question, and can be put down again.
@@ -89,4 +89,75 @@ test("the tutorial's coach folds away to give the board room", async ({ page }) 
   await expect(coach).toContainText("Thwarted");
   await expect(coach).toContainText("Now build your own");
   expect(errors).toEqual([]);
+});
+
+// A finger, through the browser's own touch input: hold, move, lift.
+async function finger(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  const at = (x: number, y: number) => [{ x, y, id: 1 }];
+  return {
+    down: (x: number, y: number) => cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: at(x, y) }),
+    move: (x: number, y: number) => cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: at(x, y) }),
+    up: () => cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }),
+  };
+}
+
+async function centre(locator: import("@playwright/test").Locator) {
+  const b = (await locator.boundingBox())!;
+  return [b.x + b.width / 2, b.y + b.height / 2] as const;
+}
+
+test("holding a card opens it to read, without picking it up", async ({ page }) => {
+  const errors: string[] = [];
+  await deal(page, errors);
+  const card = page.locator(".dock .mine .card.live").first();
+  const [x, y] = await centre(card.locator("> button.face"));
+  const f = await finger(page);
+  await f.down(x, y);
+  await page.waitForTimeout(700);
+  await f.up();
+  await expect(page.locator("dialog.inspect[open]")).toBeVisible();
+  await expect(page.locator(".card.selected")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a quick swipe across a card never drags it", async ({ page }) => {
+  const errors: string[] = [];
+  await deal(page, errors, "4");
+  const card = page.locator(".dock .mine .card.grab").first();
+  const [x, y] = await centre(card.locator("> button.face"));
+  const f = await finger(page);
+  await f.down(x, y);
+  for (let i = 1; i <= 6; i++) await f.move(x, y - i * 30);
+  await f.up();
+  await expect(page.locator(".card.ghost")).toHaveCount(0);
+  await expect(page.locator(".drop-live")).toHaveCount(0);
+  await expect(page.locator(".card.selected")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("a courtier held, then dragged to the outer circle, is played there", async ({ page }) => {
+  const errors: string[] = [];
+  await deal(page, errors, "4");
+  const outer = page.locator("section.outer");
+  const f = await finger(page);
+  for (const card of await page.locator(".dock .mine .card.grab").all()) {
+    const uid = await card.getAttribute("data-uid");
+    const [x, y] = await centre(card.locator("> button.face"));
+    await f.down(x, y);
+    await page.waitForTimeout(320); // held: now it drags
+    await expect(card).toHaveClass(/armed/);
+    for (let i = 1; i <= 3; i++) await f.move(x + i * 4, y - i * 8);
+    if (!(await outer.evaluate((el) => el.classList.contains("drop-live")))) {
+      await f.up(); // not a courtier: dropped nowhere
+      continue;
+    }
+    const [tx, ty] = await centre(outer);
+    for (let i = 1; i <= 8; i++) await f.move(x + ((tx - x) * i) / 8, y + ((ty - y) * i) / 8);
+    await f.up();
+    await expect(page.locator(`section.outer [data-uid="${uid}"], section.court [data-uid="${uid}"]`)).toBeVisible();
+    expect(errors).toEqual([]);
+    return;
+  }
+  throw new Error("no courtier in the opening hand to drag");
 });

@@ -861,3 +861,22 @@ a.button:hover { border-color: var(--gold); }
 /* A card's two faces share the name "side" with the rail's panel; narrow
    screens give that panel margins and a border, which the faces must not take. */
 .revealed-agenda .side, .agenda-flip .side { margin: 0; padding: 0; border: none; max-height: none; }
+
+/* -- touch: hold to read, hold to drag ------------------------------------- */
+/* A finger swipes the page as usual; a card is only dragged once held
+   (App's DRAG_HOLD_MS), so a draggable card must still let the page scroll. */
+@media (pointer: coarse) {
+  .card.grab .face { touch-action: pan-x pan-y; }
+}
+/* No text selection or "save image" menu on a held card. */
+.card, .card .face img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Held long enough to drag: it lifts to say so. */
+.card.armed .face { transform: translateY(-6px) scale(1.05); box-shadow: 0 0 0 3px var(--gold-bright), 0 10px 22px rgba(0, 0, 0, 0.55); }
+
+/* While a card is in hand, everything it cannot go to steps back. */
+.game.phone.holding .board .card:not(.live):not(.selected):not(.drop-live) > .face,
+.game.phone.holding .seat.vacant:not(.live) .chair .face {
+  filter: brightness(0.5) saturate(0.6);
+  transition: filter 160ms ease;
+}
+.game.phone.holding .opponent:not(.live) { opacity: 0.55; }

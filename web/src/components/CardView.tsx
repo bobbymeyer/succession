@@ -1,4 +1,4 @@
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { useRef, type PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Attribute, Card } from "../protocol";
 import { useUi } from "../art";
 import { Sigil } from "./Sigil";
@@ -85,6 +85,50 @@ function Face({ card }: { card: Card }) {
   );
 }
 
+/** How long a finger rests on a card before it opens to be read. */
+export const LONG_PRESS_MS = 480;
+
+/**
+ * Touch: a finger held still on a card opens it to read, the way a mouse
+ * hovers; the tap that would have followed is swallowed. Moving the finger
+ * (a scroll, a drag) calls it off.
+ */
+function useLongPress(onLong: () => void) {
+  const timer = useRef(0);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const fired = useRef(false);
+  const cancel = () => {
+    window.clearTimeout(timer.current);
+    start.current = null;
+  };
+  return {
+    fired,
+    handlers: {
+      onPointerDown: (e: ReactPointerEvent<HTMLElement>) => {
+        fired.current = false;
+        if (e.pointerType !== "touch") return;
+        start.current = { x: e.clientX, y: e.clientY };
+        timer.current = window.setTimeout(() => {
+          fired.current = true;
+          start.current = null;
+          navigator.vibrate?.(12);
+          onLong();
+        }, LONG_PRESS_MS);
+      },
+      onPointerMove: (e: ReactPointerEvent<HTMLElement>) => {
+        const s = start.current;
+        if (s && Math.hypot(e.clientX - s.x, e.clientY - s.y) > 8) cancel();
+      },
+      onPointerUp: cancel,
+      onPointerCancel: cancel,
+      // A long press is not a right-click, and no image menu either.
+      onContextMenu: (e: React.MouseEvent) => {
+        if (fired.current || start.current) e.preventDefault();
+      },
+    },
+  };
+}
+
 // One card on the table. Clicking a lit-up card makes a choice; clicking any
 // other card picks it up to look at. The printed card shows printed
 // attributes, so a courtier whose attributes changed in play says so on top.
@@ -102,6 +146,7 @@ export function CardView({
   popover,
 }: Props) {
   const { inspect, hover } = useUi();
+  const long = useLongPress(() => inspect(card));
   const courtier = card.kind === "Courtier";
   const changed = courtier && (card.changed?.length ?? 0) > 0;
   const classes = ["card", `size-${size}`];
@@ -123,8 +168,19 @@ export function CardView({
         className="face"
         aria-pressed={live ? selected : undefined}
         aria-label={live ? `Choose ${card.name}` : `Look at ${card.name}`}
-        onClick={live && onClick ? onClick : () => inspect(card)}
-        onPointerDown={draggable ? onPress : undefined}
+        {...long.handlers}
+        onClick={() => {
+          if (long.fired.current) {
+            long.fired.current = false;
+            return;
+          }
+          if (live && onClick) onClick();
+          else inspect(card);
+        }}
+        onPointerDown={(e) => {
+          long.handlers.onPointerDown(e);
+          if (draggable) onPress?.(e);
+        }}
       >
         <Face card={card} />
         {courtier && <Sigil card={card} />}
