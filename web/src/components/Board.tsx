@@ -41,7 +41,7 @@ export const NO_INTERACTION: Interaction = {
 function Agenda({ player, size }: { player: Player; size: "xxs" | "xs" | "sm" | "md" }) {
   const { art, inspect } = useUi();
   if (!player.agenda) return <CardBack size={size} label="Hidden agenda" />;
-  const src = art.agenda(player.agenda.name);
+  const src = art.thumb(art.agenda(player.agenda.name));
   // An agenda is not a card in the engine's sense; show it as one to look at.
   const asCard: Card = { uid: -1, name: player.agenda.name, kind: "Agenda", estate: null };
   return (
@@ -195,7 +195,7 @@ export function Board({
             if (act.seatSelected(s.seat)) classes.push("selected");
             if (!s.courtier) classes.push("vacant");
             if (act.dropLive(`seat:${s.seat}`)) classes.push("drop-live");
-            const src = art.seat(s.seat);
+            const src = art.thumb(art.seat(s.seat));
             return (
               <div
                 key={s.seat}

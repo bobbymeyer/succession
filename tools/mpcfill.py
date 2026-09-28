@@ -940,6 +940,35 @@ def trimmed(full: Image.Image, layout: Layout, target_dpi: int) -> Image.Image:
     return card
 
 
+#: The game's thumbnails on a phone: a card there is under 90 CSS px wide, so
+#: 320px covers even a 3x screen, at about half the bytes of the full card.
+SMALL_WIDTH = 320
+
+
+def small_copies(game_dir: Path, quality: int) -> None:
+    """A small copy of every game card in `sm/`, for a phone's board and hand.
+
+    Made from the full-size card, and only where the card is newer than its
+    copy; copies of cards that are gone go too.
+    """
+
+    small_dir = game_dir / "sm"
+    small_dir.mkdir(exist_ok=True)
+    full = {p.name: p for p in game_dir.glob("*.webp")}
+    for name, path in full.items():
+        target = small_dir / name
+        if target.exists() and target.stat().st_mtime >= path.stat().st_mtime:
+            continue
+        with Image.open(path) as image:
+            height = round(image.height * SMALL_WIDTH / image.width)
+            image.convert("RGB").resize((SMALL_WIDTH, height), Image.LANCZOS).save(
+                target, "WEBP", quality=quality, method=6
+            )
+    for orphan in small_dir.glob("*.webp"):
+        if orphan.name not in full:
+            orphan.unlink()
+
+
 def save(image: Image.Image, path: Path, fmt: str, quality: int, dpi: int) -> Path:
     """Write the file, stamping the DPI it was actually rendered at.
 
@@ -1354,6 +1383,7 @@ def main(argv: list[str] | None = None) -> int:
             game_manifest["width"] = round(TRIM_W_IN * args.game_dpi)
             game_manifest["height"] = round(TRIM_H_IN * args.game_dpi)
             (game_dir / "manifest.json").write_text(json.dumps(game_manifest, indent=1) + "\n")
+        small_copies(game_dir, args.game_quality)
         game_mb = sum(f.stat().st_size for f in game_dir.glob("*.webp")) / 1e6
         print(
             f"\nGame:  {len(files) if only is None else 'some'} cards at "

@@ -1,14 +1,20 @@
 // Stage what the game loads at runtime into public/: Pyodide itself, copied out
 // of node_modules so the site hosts its own copy (no CDN, works offline and
 // embedded), and the rules engine zipped from ../succession.
-import { copyFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const web = join(dirname(fileURLToPath(import.meta.url)), "..");
 const from = join(web, "node_modules", "pyodide");
-const to = join(web, "public", "pyodide");
+// Under its own version, so the offline cache can keep it until an upgrade
+// (public/sw.js); older versions are cleared out.
+const version = JSON.parse(readFileSync(join(from, "package.json"), "utf8")).version;
+const root = join(web, "public", "pyodide");
+mkdirSync(root, { recursive: true });
+for (const entry of readdirSync(root)) if (entry !== version) rmSync(join(root, entry), { recursive: true, force: true });
+const to = join(root, version);
 
 // Only what loading the interpreter and the standard library needs.
 const PYODIDE = [
@@ -20,7 +26,7 @@ const PYODIDE = [
 ];
 mkdirSync(to, { recursive: true });
 for (const name of PYODIDE) copyFileSync(join(from, name), join(to, name));
-console.log(`copied ${PYODIDE.length} Pyodide files to public/pyodide`);
+console.log(`copied ${PYODIDE.length} Pyodide files to public/pyodide/${version}`);
 
 const python = process.env.PYTHON ?? "python3";
 const zip = spawnSync(python, [join(web, "..", "tools", "webbundle.py"), join(web, "public", "engine.zip")], {

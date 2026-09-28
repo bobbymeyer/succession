@@ -7,7 +7,7 @@ import { useUi } from "../art";
 // is exactly the win.
 export function AgendaTracker({ agenda }: { agenda: Agenda }) {
   const { art, inspect } = useUi();
-  const src = art.agenda(agenda.name);
+  const src = art.thumb(art.agenda(agenda.name));
   const met = agenda.status.filter((c) => c.met).length;
   return (
     <div className={`tracker${agenda.met ? " done" : ""}`} data-testid="agenda-tracker">

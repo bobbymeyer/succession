@@ -23,7 +23,7 @@ function post(message: WorkerMessage) {
 async function boot(base: string) {
   // Pyodide is hosted with the site (public/pyodide), so the game works
   // offline and inside an embedding page without a CDN.
-  const indexURL = new URL("pyodide/", base).href;
+  const indexURL = new URL(`pyodide/${__PYODIDE_VERSION__}/`, base).href;
   const { loadPyodide } = (await import(/* @vite-ignore */ `${indexURL}pyodide.mjs`)) as typeof import("pyodide");
   const [pyodide, engine] = await Promise.all([
     loadPyodide({ indexURL }) as Promise<PyodideAPI>,

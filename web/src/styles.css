@@ -861,3 +861,70 @@ a.button:hover { border-color: var(--gold); }
 /* A card's two faces share the name "side" with the rail's panel; narrow
    screens give that panel margins and a border, which the faces must not take. */
 .revealed-agenda .side, .agenda-flip .side { margin: 0; padding: 0; border: none; max-height: none; }
+
+/* -- touch: hold to read, hold to drag ------------------------------------- */
+/* A finger swipes the page as usual; a card is only dragged once held
+   (App's DRAG_HOLD_MS), so a draggable card must still let the page scroll. */
+@media (pointer: coarse) {
+  .card.grab .face { touch-action: pan-x pan-y; }
+}
+/* No text selection or "save image" menu on a held card. */
+.card, .card .face img { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+/* Held long enough to drag: it lifts to say so. */
+.card.armed .face { transform: translateY(-6px) scale(1.05); box-shadow: 0 0 0 3px var(--gold-bright), 0 10px 22px rgba(0, 0, 0, 0.55); }
+
+/* While a card is in hand, everything it cannot go to steps back. */
+.game.phone.holding .board .card:not(.live):not(.selected):not(.drop-live) > .face,
+.game.phone.holding .seat.vacant:not(.live) .chair .face {
+  filter: brightness(0.5) saturate(0.6);
+  transition: filter 160ms ease;
+}
+.game.phone.holding .opponent:not(.live) { opacity: 0.55; }
+
+/* -- a phone on its side ------------------------------------------------------ */
+/* The board on the left with the seven seats in one row, and the dock as a
+   column on the right, under the right thumb. */
+.game.phone.landscape {
+  flex-direction: row;
+  padding-top: 0;
+  --dock-w: min(42vw, 360px);
+  --w-md: max(38px, min(calc((100vw - var(--dock-w) - 24px - 6 * 6px) / 7 - 8px), calc((100dvh - 150px) / 2 * 0.62)));
+}
+.game.phone.landscape .board {
+  padding: calc(6px + env(safe-area-inset-top)) 10px 8px calc(10px + env(safe-area-inset-left));
+}
+.game.phone.landscape .court .seats { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.game.phone.landscape .seat-label { font-size: 0.56rem; }
+.game.phone.landscape .menu { right: calc(var(--dock-w) + 10px); top: calc(6px + env(safe-area-inset-top)); }
+.game.phone.landscape .dock {
+  width: var(--dock-w); height: 100dvh; justify-content: flex-end;
+  padding: 8px calc(10px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) 10px;
+  border-top: none; border-left: 1px solid var(--line);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.45);
+}
+.game.phone.landscape .dock-question { max-height: none; min-height: 0; flex: 0 1 auto; overflow-y: auto; }
+.game.phone.landscape .dock .coach { max-height: 40dvh; flex: 0 1 auto; }
+.game.phone.landscape .dock .mine .row {
+  --w-lg: min(64px, calc((var(--dock-w) - 24px - (var(--n) - 1) * 5px) / var(--n)));
+  gap: 5px;
+}
+/* The sheet drops from the dock's top rather than rising over the board. */
+.game.phone.landscape .sheet {
+  top: 0; bottom: auto; max-height: calc(100dvh - 48px);
+  border-top: none; border-bottom: 1px solid var(--gold); border-radius: 0 0 14px 14px;
+  animation-name: sheet-down;
+}
+@keyframes sheet-down { from { transform: translateY(-24px); opacity: 0; } }
+.game.phone .changed-flag { font-size: 0.5rem; letter-spacing: 0.04em; padding: 1px 0; }
+/* A short screen: the briefing, the event and the inspector fit its height. */
+@media (max-height: 500px) {
+  .briefing { max-height: calc(100dvh - 16px); overflow-y: auto; padding: 14px 18px; }
+  .briefing .agenda-flip { width: min(150px, 26vw, 42dvh); }
+  .briefing-clauses { columns: 2; column-gap: 1.5rem; }
+  .briefing h2 { font-size: 1.3rem; }
+  .inspect .detail-image { max-height: 62dvh; }
+}
+@media (max-height: 500px) {
+  .event-modal { max-height: calc(100dvh - 16px); overflow-y: auto; }
+  .event-art { width: min(260px, 38vw, calc((100dvh - 64px) * 496 / 692)); }
+}

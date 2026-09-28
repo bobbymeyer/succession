@@ -11,6 +11,7 @@ import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
 import { Board, Hand, NO_INTERACTION, type Interaction } from "./components/Board";
 import { usePhone } from "./usePhone";
+import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
@@ -45,6 +46,9 @@ function glide(speed: Speed): number {
   return Math.min(900, SPEEDS[speed] * 0.7);
 }
 
+/** How long a finger holds a card before it can be dragged. */
+const DRAG_HOLD_MS = 200;
+
 /** The instruction for a finger rather than a mouse. */
 const tapped = (hint: string) =>
   hint
@@ -52,6 +56,7 @@ const tapped = (hint: string) =>
     .replace(/choose above (it|the card)/g, "choose below")
     .replace(/Choose above the card/g, "Choose below")
     .replace(/ Click it again to put it down\./g, "")
+    .replace("Click a card to pick it up.", "Tap a card to pick it up, or hold one to read it.")
     .replace(/\bClick\b/g, "Tap")
     .replace(/\bclick\b/g, "tap");
 
@@ -140,6 +145,11 @@ export function App() {
   const [inspecting, setInspecting] = useState<Card | null>(null);
   const [hovered, setHovered] = useState<Card | null>(null);
   const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered }), [art]);
+
+  // Once the engine and the art are in, the offline cache takes the rest.
+  useEffect(() => {
+    if (options && art !== NO_ART) warmOffline(art.offline);
+  }, [options, art]);
 
   useEffect(() => {
     engine.ready.then((r) => setOptions(r.options)).catch((e: Error) => setFatal(e.message));
@@ -383,11 +393,39 @@ export function App() {
     if (!targets.size) return;
     const source = (e.currentTarget.closest(".card") as HTMLElement) ?? e.currentTarget;
     dragging.current = { uid, source, x0: e.clientX, y0: e.clientY, ghost: null, targets };
+    // A finger has to hold a card a moment before it drags: until then a
+    // swipe is the page scrolling, and the drag lets go. Once it is held, the
+    // page stops scrolling under it.
+    const touch = e.pointerType === "touch";
+    let armed = !touch;
+    const block = (tev: TouchEvent) => armed && tev.preventDefault();
+    const arm = touch
+      ? window.setTimeout(() => {
+          armed = true;
+          source.classList.add("armed");
+          navigator.vibrate?.(8);
+        }, DRAG_HOLD_MS)
+      : 0;
+    if (touch) document.addEventListener("touchmove", block, { passive: false });
+    const release = () => {
+      window.clearTimeout(arm);
+      source.classList.remove("armed");
+      document.removeEventListener("touchmove", block);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", up);
+    };
     const move = (ev: PointerEvent) => {
       const d = dragging.current;
       if (!d) return;
       if (!d.ghost) {
         if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return; // still a click
+        // Moved before the hold, or held into a look at the card: not a drag.
+        if (!armed || document.querySelector("dialog[open]")) {
+          release();
+          dragging.current = null;
+          return;
+        }
         const rect = d.source.getBoundingClientRect();
         const ghost = d.source.cloneNode(true) as HTMLElement;
         ghost.classList.add("ghost");
@@ -406,9 +444,7 @@ export function App() {
       d.ghost.style.top = `${ev.clientY - Number(d.ghost.dataset.dy)}px`;
     };
     const up = (ev: PointerEvent) => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      window.removeEventListener("pointercancel", up);
+      release();
       const d = dragging.current;
       dragging.current = null;
       if (!d?.ghost) return; // a click: the button's own click handler takes it
@@ -658,7 +694,7 @@ export function App() {
     );
     return (
       <UiContext.Provider value={ui}>
-        <main className="app game phone">
+        <main className={`app game phone ${phone}${holding ? " holding" : ""}`}>
           <Board
             view={view}
             act={phoneAct}
