@@ -93,14 +93,14 @@ courtier is bumped to the outer circle.
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
 | Defense (5) | Kept in hand, **never played on your own turn**. When another player plays a Removal / Demotion / Strip / Mutation on a seated courtier of the card's estate (`Patron Protection`: any), each other player in turn from the attacker's left may discard a Defense to block it: both cards go and the attack does nothing. **Does not stop Events.** (`--attached-defense`: the older rule, attached to a courtier in advance on your turn.) |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → Godless. The courtier stays where they are. |
-| Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
+| Mutation (8) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
 | Event (10) | Hits the whole table, not one courtier. Five minor/major pairs -- see below. No Defense covers an event. |
 | Outmaneuver (1) | The targeted player skips their next turn. |
 | Pivot (1) | `Schismatic Event`: discard your agenda, draw a new one from the unused pool. The act is public; both agendas stay private. |
 
-Strips do **not** consume a courtier's mutation allowance, so a stripped
-attribute can be restored later by `Conversion` (the player picks the faith) or
-`Adoption` (the player picks the house).
+Strips do **not** consume a courtier's mutation allowance, so an excommunicated
+courtier can be brought back to a faith by `Conversion` (the player picks the
+faith). Nothing restores a house: Castration is for good.
 
 ## Faith and godlessness
 
@@ -206,8 +206,8 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-79 cards: 40 courtiers + 5 events + 5 promotions + 5 demotions + 6 removals +
-5 defenses + 2 strips + 9 mutations + 1 pivot + 1 Outmaneuver. When the draw
+78 cards: 40 courtiers + 5 events + 5 promotions + 5 demotions + 6 removals +
+5 defenses + 2 strips + 8 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
 
 The five events are the minor halves of the pairs below -- Quarantine,
@@ -232,7 +232,8 @@ first; the flag flips it.
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2g | **Balance needs all seven seats filled.** It asked for six while it also wanted two barbarians. With one barbarian and six seats it won 34% of the time, the strongest agenda; with one barbarian and all seven seats it wins 24.5%, an even share. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
-| 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone), and Adoption gives any house but the target's own, as Conversion does for faith. The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. | no costs | `--courtier-costs` |
+| 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone). The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. | no costs | `--courtier-costs` |
+| 3b | **Adoption is out of the deck.** Houses change only by Castration, which is for good. Over 3,000 games the agendas' win rates narrowed from 21.3–32.1% to 24.2–30.2%: Conquest, the weakest, rose from 21.3% to 24.2%. | out | `--adoption` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
 | 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |

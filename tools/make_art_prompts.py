@@ -806,7 +806,8 @@ def build_lines() -> tuple[list[str], list[str]]:
     filenames: list[str] = []
     seen: set[str] = set()
 
-    for card in build_cards():
+    # Art for every card ever drawn: Adoption left the deck, its number stays.
+    for card in build_cards(adoption=True):
         if card.name in seen:
             continue  # extra Outmaneuver copies share one illustration
         seen.add(card.name)

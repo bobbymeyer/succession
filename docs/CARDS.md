@@ -1,6 +1,6 @@
 # The deck
 
-All 94 cards, in the order `succession/cards.py` builds them: the 79-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the five events taken out of the deck leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
+All 93 cards, in the order `succession/cards.py` builds them: the 78-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the cards taken out of the deck (five events and Adoption) leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
 
 **[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)** -- the card images plus the MPC Autofill order file, ready to order. [docs/PRINTING.md](PRINTING.md) has the steps.
 
@@ -15,7 +15,7 @@ Rebuild any of this with `python tools/mpcfill.py` -- see [docs/PRINTING.md](PRI
 - [Removal](#removal) (6)
 - [Defense](#defense) (5)
 - [Strip](#strip) (2)
-- [Mutation](#mutation) (9)
+- [Mutation](#mutation) (8)
 - [Pivot](#pivot) (1)
 - [Outmaneuver](#outmaneuver) (1)
 - [Agenda](#agenda) (8)
@@ -136,7 +136,7 @@ Empties an attribute. A strip does not spend the courtier's one mutation, so the
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/72-castration.jpg" alt="Castration" width="132"> | **Castration**<br><sub>Card 72</sub> | Strip · Family | A courtier's Family becomes None. They keep their seat. A strip does not spend a mutation, so Adoption can give them a family again. |
+| <img src="cards/72-castration.jpg" alt="Castration" width="132"> | **Castration**<br><sub>Card 72</sub> | Strip · Family | A courtier's Family becomes None. They keep their seat, and no card gives them a house again. |
 | <img src="cards/73-excommunication.jpg" alt="Excommunication" width="132"> | **Excommunication**<br><sub>Card 73</sub> | Strip · Faith | A courtier's Faith becomes Godless. They keep their seat. A strip does not spend a mutation, so Conversion can bring them to a faith again. |
 
 ## Mutation
@@ -153,7 +153,6 @@ Changes one attribute. Each attribute may be mutated at most once per courtier.
 | <img src="cards/79-apostasy.jpg" alt="Apostasy" width="132"> | **Apostasy**<br><sub>Card 79</sub> | Mutation · Faith | A courtier's Faith becomes Godless. Godlessness has no agenda, so their seat is one no faith can count. |
 | <img src="cards/80-go-native.jpg" alt="Go Native" width="132"> | **Go Native**<br><sub>Card 80</sub> | Mutation · Origin | A courtier's Origin becomes Barbarian. |
 | <img src="cards/81-assimilate.jpg" alt="Assimilate" width="132"> | **Assimilate**<br><sub>Card 81</sub> | Mutation · Origin | A courtier's Origin becomes Imperial. |
-| <img src="cards/82-adoption.jpg" alt="Adoption" width="132"> | **Adoption**<br><sub>Card 82</sub> | Mutation · Family | A courtier's House becomes any house but their own; you choose it. A courtier of no house may be brought into any of the three. |
 
 ## Pivot
 

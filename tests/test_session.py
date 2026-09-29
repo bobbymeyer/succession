@@ -406,7 +406,7 @@ class Terminal(unittest.TestCase):
             try:
                 sys.stdin = io.StringIO("1\n2\n1\nq\n")
                 with redirect_stdout(io.StringIO()) as first:
-                    main(["play", "--seed", "8", "--record", str(path)])
+                    main(["play", "--seed", "1", "--record", str(path)])
                 record = json.loads(path.read_text())
                 self.assertEqual(len(record["decisions"]), 3)
 
@@ -433,7 +433,7 @@ class WinningMoves(unittest.TestCase):
         from succession.agendas import AGENDAS_BY_KEY, satisfied
 
         taken = 0
-        for seed in range(40):
+        for seed in range(60):
             session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), seed)
             me, rng = session.humans[0], random.Random(seed)
             prompt = session.advance()

@@ -140,10 +140,12 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.GODLESS.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
-    # Adoption: any house you choose (or, with Config.courtier_costs, the
-    # house of a family courtier sacrificed from hand).
-    CardDef("Adoption", CardKind.MUTATION, attribute="family"),
 )
+
+#: Out of the deck (Config.adoption brings it back, for old records): any
+#: house you choose, or, with Config.courtier_costs, the house of a family
+#: courtier sacrificed from hand.
+ADOPTION_CARD = CardDef("Adoption", CardKind.MUTATION, attribute="family")
 
 PIVOT_CARDS: tuple[CardDef, ...] = (
     CardDef("Schismatic Event", CardKind.PIVOT),
@@ -152,7 +154,9 @@ PIVOT_CARDS: tuple[CardDef, ...] = (
 OUTMANEUVER_CARD = CardDef("Outmaneuver", CardKind.OUTMANEUVER)
 
 
-def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("minor", "major")) -> tuple[CardDef, ...]:
+def build_cards(
+    outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("minor", "major"), adoption: bool = False
+) -> tuple[CardDef, ...]:
     """Return every card in the play deck, indexed by position (its uid).
 
     `event_tiers` leaves out the minor or major half of the events -- a
@@ -168,6 +172,8 @@ def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("mi
     cards.extend(DEFENSE_CARDS)
     cards.extend(STRIP_CARDS)
     cards.extend(MUTATION_CARDS)
+    if adoption:
+        cards.append(ADOPTION_CARD)
     cards.extend(PIVOT_CARDS)
     cards.extend(OUTMANEUVER_CARD for _ in range(outmaneuver_copies))
     return tuple(cards)

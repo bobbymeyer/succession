@@ -172,8 +172,8 @@ RULES: dict[str, str] = {
     # A strip empties the slot without spending the courtier's one mutation,
     # so the attribute can be filled again later.
     "Castration": (
-        "A courtier's Family becomes None. They keep their seat. A strip does "
-        "not spend a mutation, so Adoption can give them a family again."
+        "A courtier's Family becomes None. They keep their seat, and no card "
+        "gives them a house again."
     ),
     "Excommunication": (
         "A courtier's Faith becomes Godless. They keep their seat. A strip "
@@ -208,10 +208,6 @@ RULES: dict[str, str] = {
     ),
     "Go Native": "A courtier's Origin becomes Barbarian.",
     "Assimilate": "A courtier's Origin becomes Imperial.",
-    "Adoption": (
-        "A courtier's House becomes any house but their own; you choose it. A "
-        "courtier of no house may be brought into any of the three."
-    ),
     # --- Pivot and Outmaneuver ----------------------------------------------
     "Schismatic Event": (
         "Discard your agenda and draw a new one from the pool of agendas "

@@ -106,7 +106,6 @@ const BY_NAME: Record<string, string> = {
   Apostasy: "Faith → Godless",
   "Go Native": "Origin → Barbarian",
   Assimilate: "Origin → Imperial",
-  Adoption: "House → another",
   Castration: "House → none",
   Excommunication: "Faith → Godless",
   "Targeted Poisoning": "Kill, if no save",

@@ -75,6 +75,9 @@ class Config:
     #: now): a Defense's estate says whom it can shield instead of what it
     #: costs, and Adoption picks the new house freely, like Conversion.
     courtier_costs: bool = False
+    #: Adoption (a courtier's house becomes another) is in the deck. Off:
+    #: houses change only by Castration.
+    adoption: bool = False
     #: A Defense is played from hand when a seated courtier of its estate is
     #: attacked, by any player but the attacker, and the attack fails. Off:
     #: the older rule, attached to a courtier in advance on your own turn.
@@ -189,7 +192,7 @@ class GameState:
     # -- construction -------------------------------------------------------
     @classmethod
     def new(cls, config: Config) -> "GameState":
-        cards = build_cards(config.outmaneuver_copies, config.event_tiers)
+        cards = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption)
         state = cls(config=config, cards=cards)
         state.seats = {s: None for s in SEATS}
         state.hands = [[] for _ in range(config.num_players)]

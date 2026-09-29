@@ -100,7 +100,7 @@ GitHub release whenever `main` changes anything printed on a card (the art, the
 card text, the layout or the cards themselves), and it can be run from the
 Actions tab at any time.
 
-Two renditions of the same 87 cards -- the 79-card play deck plus the eight
+Two renditions of the same 86 cards -- the 78-card play deck plus the eight
 agendas. **Print** is full bleed at 600 DPI with the MPC Autofill order file
 beside it; **web** is the trimmed card at 744 px with a self-contained
 `index.html` that shows the deck. Each card is composed once and the web one is

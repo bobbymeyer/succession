@@ -39,14 +39,14 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
   await setSeed(page, "");
   await page.getByTestId("deal").click();
   // You move first, with House Rising: Mitreas.
-  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Argaian");
+  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
   await expect(page.getByTestId("briefing")).toContainText("You move first.");
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 18: a bot draws Caravan before your first turn, and it plays at once.
+  // Seed 23: a bot draws Caravan before your first turn, and it plays at once.
   const errors: string[] = [];
-  await start(page, errors, 18);
+  await start(page, errors, 23);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
@@ -67,9 +67,9 @@ test("an event stops play and says what it did", async ({ page }) => {
 });
 
 test("an event that asks you something is announced first", async ({ page }) => {
-  // Seed 6: a bot draws Debasement of the Coinage before your first turn.
+  // Seed 48: a bot draws Debasement of the Coinage before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 6);
+  await start(page, errors, 48);
   await page.getByTestId("begin").click();
   const announce = page.getByTestId("event-announce");
   await expect(announce).toBeVisible({ timeout: 30_000 });
@@ -438,20 +438,20 @@ test("the table shows the round, who plays next, and names each bot's move", asy
 });
 
 test("a rival's attack on a courtier your Defense covers can be blocked", async ({ page }) => {
-  // Seed 1: taking the first move each time, a bot plays Take Vows on Master
-  // Swordsmith on your ninth decision, and your hand holds his shield.
+  // Seed 8: after your first move, a bot plays Heresy Accusation on Hand of
+  // the Oracle, and your hand holds Patron Protection.
   const errors: string[] = [];
-  await start(page, errors, 1);
+  await start(page, errors, 8);
   const block = page.getByTestId("block");
   for (let i = 0; i < 30 && !(await block.isVisible()); i++) {
     await playFromList(page);
     await settle(page);
   }
-  await expect(block).toContainText("plays Take Vows on Master Swordsmith");
+  await expect(block).toContainText("plays Heresy Accusation on Hand of the Oracle");
   await expect(page.locator(".card.attacked")).toHaveCount(1);
   await block.getByTestId("block-with").first().click();
   await settle(page);
   await showPanel(page, "log");
-  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Master Swordsmith is untouched");
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Hand of the Oracle is untouched");
   expect(errors).toEqual([]);
 });

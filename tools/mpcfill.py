@@ -1057,7 +1057,7 @@ def main(argv: list[str] | None = None) -> int:
         "--no-agendas",
         dest="include_agendas",
         action="store_false",
-        help="leave out the 8 agenda cards, for a 79-card order",
+        help="leave out the 8 agenda cards, for a 78-card order",
     )
     parser.add_argument(
         "--board-dpi", type=int, default=300, help="resolution of the printable board PDF"

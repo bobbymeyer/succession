@@ -208,10 +208,10 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.REMOVAL], 6)
         self.assertEqual(kinds[CardKind.DEFENSE], 5)
         self.assertEqual(kinds[CardKind.STRIP], 2)
-        self.assertEqual(kinds[CardKind.MUTATION], 9)
+        self.assertEqual(kinds[CardKind.MUTATION], 8)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
-        self.assertEqual(len(cards), 84)
+        self.assertEqual(len(cards), 83)
 
     def test_every_house_fields_one_charioteer(self):
         """A house's charioteer is its only route to the Master of the Market's seat."""
@@ -439,7 +439,7 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         self.assertIs(state.cstate[target].faith, Faith.NONE)
 
     def test_adoption_gives_any_house_but_their_own(self):
-        state = fresh()
+        state = fresh(adoption=True)
         adopt = give(state, 0, "Adoption")[0]
         target = outer(state, "Crosser of Rivers")[0]  # Mitreas
         options = {a.value for a in card_actions(state, 0, adopt) if a.courtier == target}
@@ -450,7 +450,7 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         self.assertTrue(state.cstate[target].mutated_family)
 
     def test_old_rules_adoption_sacrifices_a_family_courtier(self):
-        state = fresh(courtier_costs=True)
+        state = fresh(courtier_costs=True, adoption=True)
         adopt, donor = give(state, 0, "Adoption", "Beloved of the Gods")
         target = outer(state, "Silver Tongue")[0]  # no family
         action = next(
@@ -460,6 +460,10 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         apply_action(state, 0, action, FixedRng())
         self.assertIs(state.cstate[target].family, Family.AMONIDES)
         self.assertIn(donor, state.discard)
+
+    def test_adoption_is_out_of_the_deck(self):
+        self.assertNotIn("Adoption", {c.name for c in build_cards()})
+        self.assertIn("Adoption", {c.name for c in build_cards(adoption=True)})
 
     def test_castration_clears_family(self):
         state = fresh()
@@ -1125,7 +1129,7 @@ class TestDeckAndTurns(unittest.TestCase):
         state = GameState.new(config)
         events = sorted(c.name for c in state.cards if c.kind.value == "Event")
         self.assertEqual(events, sorted(c.name for c in EVENT_CARDS if c.tier == "minor"))
-        self.assertEqual(len(state.cards), 79)
+        self.assertEqual(len(state.cards), 78)
 
     def test_either_half_of_the_events_can_be_left_out(self):
         from succession.cards import EVENT_CARDS
@@ -1133,7 +1137,7 @@ class TestDeckAndTurns(unittest.TestCase):
         for tier in ("minor", "major"):
             state = GameState.new(Config(event_tiers=(tier,)))
             names = {c.name for c in state.cards}
-            self.assertEqual(len(state.cards), 79)
+            self.assertEqual(len(state.cards), 78)
             for c in EVENT_CARDS:
                 self.assertEqual(c.name in names, c.tier == tier)
 

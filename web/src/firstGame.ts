@@ -1,11 +1,11 @@
 // A new player's first game is dealt from one kind seed rather than a random
-// one: you move first, holding House Rising: Argaian with two Argaian
+// one: you move first, holding House Rising: Mitreas with two Mitreas
 // courtiers in hand. tools/friendly_seed.py found it; with a bot in your
-// chair the naive, greedy and strategic bots all win from it, and a player
-// choosing at random wins 7 games in 30 (about one in fifteen on a random
+// chair the greedy and strategic bots both win from it, and a player
+// choosing at random wins 10 games in 30 (about one in fifteen on a random
 // deal). tests/test_friendly_seed.py keeps the engine from quietly changing it.
 
-export const FIRST_GAME_SEED = 2791;
+export const FIRST_GAME_SEED = 498;
 
 /** The table the seed was chosen for: you and one of each bot, in this order. */
 export const FIRST_GAME_TABLE = ["naive", "greedy", "strategic"];

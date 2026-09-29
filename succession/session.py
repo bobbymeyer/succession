@@ -441,6 +441,8 @@ class GameSession:
         config.setdefault("courtier_costs", True)
         # ...and before a Defense was played in answer to an attack.
         config.setdefault("reactive_defense", False)
+        # ...and before Adoption left the deck.
+        config.setdefault("adoption", True)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):
