@@ -132,11 +132,17 @@ test("an event that asks you something is announced first", async ({ page }) => 
   await expect(announce).toContainText("Choose what to discard.");
   // It goes by itself, and the question is waiting behind it.
   await expect(announce).toBeHidden({ timeout: 6_000 });
+  // It stays in effect on screen until it resolves.
+  const banner = page.getByTestId("event-banner");
+  await expect(banner).toContainText("Debasement of the Coinage");
+  await expect(banner).toContainText("Your choice");
+  await expect(page.locator("main.event-live")).toHaveCount(1);
   await expect(page.locator(".prompt")).toContainText("every player discards, all at once");
   await page.locator(".mine .card.live > button.face").first().click();
   await page.getByTestId("offer").first().click();
   // Then the whole event, resolved together.
   await expect(page.getByTestId("event")).toBeVisible();
+  await expect(banner).toHaveCount(0);
   await expect(page.getByTestId("event").locator(".event-effects li")).toHaveCount(4);
   expect(errors).toEqual([]);
 });

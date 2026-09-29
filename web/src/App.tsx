@@ -15,7 +15,7 @@ import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
-import { EventAnnouncement, EventModal, HandLimitNotice } from "./components/EventModal";
+import { EventAnnouncement, EventBanner, EventModal, HandLimitNotice } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
 import { Chaos } from "./components/Chaos";
 import { Rules } from "./components/Rules";
@@ -372,6 +372,12 @@ export function App() {
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
   const pickPrompt = !waiting && prompt && prompt.kind !== "turn" && prompt.kind !== "block" ? prompt : null;
   const blockPrompt = !waiting && prompt?.kind === "block" ? prompt : null;
+  // An event asking the table something is in effect until its result is
+  // shown, including while the others choose after you have.
+  const liveEvent =
+    prompt && (prompt.kind === "courtier" || prompt.kind === "discard") && prompt.card !== null && !events && !result
+      ? prompt
+      : null;
   const latest = log.length ? readableLog(log[log.length - 1].view, log[log.length - 1].text) : null;
 
   // -- playing by hand: click to pick up, or drag -----------------------------
@@ -699,6 +705,7 @@ export function App() {
       <Inspect card={inspecting} hand={view.hand} moves={movesFor} onPick={setInspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
+      {liveEvent && <EventBanner prompt={liveEvent} actor={shown.actor} view={view} yours={pickPrompt !== null} />}
       {limitNotice && (
         <HandLimitNotice
           key={view.turn}
@@ -761,7 +768,7 @@ export function App() {
     );
     return (
       <UiContext.Provider value={ui}>
-        <main className={`app game phone ${phone}${holding ? " holding" : ""}`}>
+        <main className={`app game phone ${phone}${holding ? " holding" : ""}${liveEvent ? " event-live" : ""}`}>
           <Board
             view={view}
             act={phoneAct}
@@ -853,7 +860,7 @@ export function App() {
 
   return (
     <UiContext.Provider value={ui}>
-      <main className="app game">
+      <main className={`app game${liveEvent ? " event-live" : ""}`}>
         <Board
           view={view}
           act={act}
