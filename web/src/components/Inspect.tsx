@@ -73,6 +73,8 @@ export function Inspect({
   onClose(): void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const pressedOutside = useRef(false);
+  const outside = (e: React.SyntheticEvent) => e.target === e.currentTarget || (e.target as Element).classList.contains("stage");
   const [from, setFrom] = useState<"left" | "right" | null>(null);
   useEffect(() => {
     const d = dialog.current;
@@ -110,7 +112,10 @@ export function Inspect({
       className={`inspect${n ? " carousel" : ""}`}
       tabIndex={-1}
       onClose={onClose}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      // Only a press that starts outside the card closes it: the click that
+      // ends the long press which opened it lands out here too.
+      onPointerDown={(e) => (pressedOutside.current = outside(e))}
+      onClick={(e) => pressedOutside.current && outside(e) && onClose()}
       onKeyDown={(e) => {
         if (e.key === "ArrowRight") go(1);
         else if (e.key === "ArrowLeft") go(-1);
@@ -128,7 +133,7 @@ export function Inspect({
       aria-label={shown ? shown.name : "Card"}
     >
       {shown && (
-        <div className="stage" onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className="stage">
           {n > 0 && (
             <>
               <button type="button" className="nav prev" onClick={() => go(-1)} aria-label="Previous card in your hand">
