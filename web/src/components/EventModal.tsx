@@ -139,3 +139,40 @@ export function EventAnnouncement({
     </dialog>
   );
 }
+
+// Your turn ends over the hand limit: say so before any card is lit for
+// discarding, so a click meant for a play does not throw a card away. The
+// button wakes a moment late, so a double click that ended the turn cannot
+// dismiss it too.
+export function HandLimitNotice({ hand, over, onDone }: { hand: number; over: number; onDone(): void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const d = dialog.current;
+    if (d && !d.open) d.showModal();
+    const t = window.setTimeout(() => setArmed(true), 450);
+    return () => window.clearTimeout(t);
+  }, []);
+  const count = over === 1 ? "one card" : `${over} cards`;
+
+  return (
+    <dialog ref={dialog} className="event-modal limit-notice" data-testid="hand-limit" onClose={onDone} aria-labelledby="limit-title">
+      <div className="event-text">
+        <span className="kicker">End of your turn</span>
+        <h2 id="limit-title">Discard {count}</h2>
+        <p className="event-summary">
+          You hold {hand} cards and the hand limit is {hand - over}. Before your turn can end, choose {count} to
+          throw away.
+        </p>
+        <p className="event-ask">
+          <strong>Next:</strong> the cards you may discard are lit. Click one, then Discard.
+        </p>
+        <form method="dialog">
+          <button type="submit" className="primary" data-testid="limit-continue" disabled={!armed} autoFocus>
+            Choose {over === 1 ? "a card" : "cards"} to discard
+          </button>
+        </form>
+      </div>
+    </dialog>
+  );
+}

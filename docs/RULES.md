@@ -39,7 +39,9 @@ player is chosen at random.
 **The hand limit is 7, checked as your turn ends.** Nothing ever stops you
 drawing, so an event can leave a hand overfull. That hand is only trimmed at the
 end of its owner's next turn taken: they choose cards to discard until they
-hold 7. A skipped turn is not taken, so it checks nothing.
+hold 7. A skipped turn is not taken, so it checks nothing. A turn that meets
+your agenda wins at once, before any discard: the hand has nothing to do with
+winning.
 (`--hand-limit-on-draw` restores the old rule, where a full hand drew nothing.)
 
 **Events play the moment they are drawn.** An event is never held: whoever

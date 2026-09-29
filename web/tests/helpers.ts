@@ -24,7 +24,8 @@ export async function settle(surface: Surface) {
   // A new round opens on your agenda, and an event stops play until it has
   // been read: begin, or carry on, until the page asks for a decision. An
   // event that asks you something is announced first; it closes by itself.
-  const buttons = "[data-testid=begin], [data-testid=event-continue]";
+  // A turn that ends over the hand limit says so before the discard.
+  const buttons = "[data-testid=begin], [data-testid=event-continue], [data-testid=limit-continue]";
   const announce = surface.locator("[data-testid=event-announce]");
   for (let i = 0; i < 50; i++) {
     await surface.locator(`${ready}, ${buttons}, [data-testid=event-announce]`).first().waitFor({ timeout: 60_000 });

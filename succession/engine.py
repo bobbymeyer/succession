@@ -680,8 +680,12 @@ def resolve_turn(state: GameState, player: int, action: Action, rng, deciders) -
             if getattr(decider, "observes", False):
                 decider.observe(player, before, after)
 
-    enforce_hand_limit(state, player, deciders)
-    winners = check_winners(state)
+    # A win is the board alone, so it is declared before any hand-limit
+    # discard: the winning turn never stops to trim a hand.
+    winners = check_winners(state) if state.config.win_before_hand_limit else []
+    if not winners:
+        enforce_hand_limit(state, player, deciders)
+        winners = check_winners(state)
     if winners:
         state.winners = winners
         for p in winners:

@@ -78,6 +78,9 @@ class Config:
     #: Adoption (a courtier's house becomes another) is in the deck. Off:
     #: houses change only by Castration.
     adoption: bool = False
+    #: A turn that meets an agenda wins at once, over the hand limit or not.
+    #: Off: the hand is trimmed first, then the win declared.
+    win_before_hand_limit: bool = True
     #: Courtiers added after the first forty (courtiers.ADDED_COURTIERS) that
     #: are dealt: all of them, unless a record from before says otherwise.
     added_courtiers: tuple[str, ...] = ALL_ADDED_COURTIERS

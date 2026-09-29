@@ -117,7 +117,7 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
             </li>
             <li>
               <strong>Mind the hand limit.</strong> Nothing stops you drawing, but if you hold more than {rules.hand_limit}{" "}
-              as your turn ends, you discard down to {rules.hand_limit}.
+              as your turn ends, you discard down to {rules.hand_limit}, unless that turn won the game.
             </li>
           </ol>
           <p>An occupied seat can only be taken with a promotion.</p>
