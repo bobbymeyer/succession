@@ -32,7 +32,7 @@ python -m succession run --games 1000 --out r.csv --summary
 python -m succession run --games 20000 --jobs 8 --out r.db --format sqlite
 python -m succession analyze r.csv other.csv           # pool logs and summarise
 python -m succession play                              # take a seat against the bots
-python -m unittest discover -s tests                   # 147 rule, session and print tests
+python -m unittest discover -s tests                   # rule, session, deal and print tests
 ```
 
 Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
@@ -60,7 +60,6 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/cardlist.py` | Writes `docs/CARDS.md`, the deck as Markdown |
 | `tools/boardsheet.py` | Lays the seat cards out as a print-at-home PDF |
 | `tools/webbundle.py` | Zips `succession/` for the browser game to run under Pyodide |
-| `tools/friendly_seed.py` | Finds the kind seed a new player's first browser game is dealt from |
 | `web/` | The browser game: React on top of this package running in Pyodide |
 | `web/public/cards/` | The game's card pictures and `manifest.json`, from `mpcfill.py --profile game` |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
@@ -129,6 +128,19 @@ particular game, and every rules flag from `run` works here too.
 rules, and each decision you made. `--replay game.json` plays it back to where
 it stopped and hands you the next move -- which makes a bug report one small
 file.
+
+A record replays only under the rules it was played by, and only the current
+rules are kept: every change of rules bumps `RECORD_VERSION` in
+`succession/session.py`, and an older record is refused with a message rather
+than replayed wrongly.
+
+**Deals.** A game can start from a stacked deal (`succession/deal.py`)
+instead of a pure shuffle: whose hand holds what, which agendas are dealt, the
+next cards off the deck, who moves first. A new player's first game is the
+deal named `first_game`. Tests set up the situation they need this way rather
+than hunting for a seed that happens to produce it, so a change to the deck
+cannot quietly move them. In the browser, `?deal=<JSON>` on the address deals
+it for the next Play -- handy for sharing a situation.
 
 The terminal is one front end on `succession/session.py`; the browser game is
 the other. `GameSession` runs the same turn loop as
@@ -304,7 +316,6 @@ card. Over 4,000 games each (`--seed 1`, default mix):
 
 The bots price a discard the way they always have: their lookahead does not
 draw the replacement, which would show them the top of the deck.
-`--discard-no-draw` plays the old rule.
 
 ### One cynic makes the faiths divide evenly
 
@@ -369,4 +380,3 @@ someone else's. The bots split exactly as their definitions say they should
 | `--house-any-three` | drops the own-estate requirement |
 | `--house-preferred-estates mitreas=church` | reassign a house's own estate |
 | `--removed-out-of-game` | killed courtiers never return |
-| `--defense-matches-target` | an estate Defense may only shield its own estate |

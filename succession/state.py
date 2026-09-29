@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Optional
 
-from .cards import ALL_ADDED_COURTIERS, CardDef, build_cards
+from .cards import CardDef, build_cards
 from .courtiers import COURTIERS_BY_NAME, CourtierDef
 from .enums import SEAT_ESTATE, SEATS, Estate, Seat
 
@@ -45,52 +45,14 @@ class Config:
     #: person with printed attributes. Set False to take them out of the game
     #: entirely (the stricter reading of the Removals text).
     removed_courtiers_return_to_deck: bool = True
-    #: Discard & Draw: a turn spent discarding draws a replacement at once.
-    discard_draws: bool = True
-    #: The hand limit is checked as each turn you take ends: draws are never
-    #: capped, and a hand over the limit then discards down to it. False is
-    #: the old rule, where a full hand simply draws nothing.
-    hand_limit_at_end_of_turn: bool = True
-    #: A variant: an event is never held. Drawn, it plays at once for the
-    #: player who drew it, who then draws a replacement. Events dealt into a
-    #: starting hand go back into the deck.
-    #: An event is never held: drawn, it plays at once for whoever drew it,
-    #: who then draws again and takes their turn. Events dealt into a starting
-    #: hand go back into the deck.
-    events_on_draw: bool = True
-    #: With `events_on_draw`, only the minor events play when drawn; the
-    #: major ones are held and played as usual.
-    events_on_draw_minor_only: bool = False
     #: Which halves of the event pairs are in the deck. The five majors
-    #: (Siege, Plague, Treasure Fleet, Famine, Meteor) are out.
+    #: (Siege, Plague, Treasure Fleet, Famine, Meteor) are out. Every event
+    #: plays the moment it is drawn.
     event_tiers: tuple[str, ...] = ("minor",)
     #: A variant: every event favours whoever plays it (see engine
     #: `_resolve_event`): the caster draws more, discards nothing, names two in
     #: a Plague, is not held by their own Siege, and so on.
     caster_edge: bool = False
-    #: Require an estate-specific Defense to protect a courtier of that estate
-    #: (the text only requires the *sacrificed* courtier to match).
-    defense_requires_matching_target: bool = False
-    #: Defenses and Adoption cost a courtier from your hand. Off (the rules
-    #: now): a Defense's estate says whom it can shield instead of what it
-    #: costs, and Adoption picks the new house freely, like Conversion.
-    courtier_costs: bool = False
-    #: Adoption (a courtier's house becomes another) is in the deck. Off:
-    #: houses change only by Castration.
-    adoption: bool = False
-    #: A turn that meets an agenda wins at once, over the hand limit or not.
-    #: Off: the hand is trimmed first, then the win declared.
-    win_before_hand_limit: bool = True
-    #: Courtiers added after the first forty (courtiers.ADDED_COURTIERS) that
-    #: are dealt: all of them, unless a record from before says otherwise.
-    added_courtiers: tuple[str, ...] = ALL_ADDED_COURTIERS
-    #: A Defense is played from hand when a seated courtier of its estate is
-    #: attacked, by any player but the attacker, and the attack fails. Off:
-    #: the older rule, attached to a courtier in advance on your own turn.
-    reactive_defense: bool = True
-    #: Excommunication leaves a courtier Godless. False: it leaves the old
-    #: empty faith (None), which a godless courtier could still be stripped to.
-    excommunication_godless: bool = True
     #: Require one of a House Rising trio to sit in the family's own estate.
     house_rising_requires_preferred_seat: bool = True
     #: Inner seats a faith must hold for Faith Ascendant.
@@ -131,8 +93,8 @@ class CourtierState:
     """A courtier's live attributes plus which of them have been mutated.
 
     Each attribute may be mutated at most once per courtier. Strips do *not*
-    consume the mutation allowance, so a stripped attribute can be restored
-    later by Conversion or Adoption.
+    consume the mutation allowance, so an excommunicated courtier can be
+    brought back to a faith by Conversion.
     """
 
     estate: Estate
@@ -168,8 +130,6 @@ class GameState:
     outer: list[int] = field(default_factory=list)
     seats: dict[Seat, Optional[int]] = field(default_factory=dict)
     removed: list[int] = field(default_factory=list)
-    #: courtier uid -> defense card uid attached to them
-    defenses: dict[int, int] = field(default_factory=dict)
     #: courtier card uid -> live attributes
     cstate: dict[int, CourtierState] = field(default_factory=dict)
     #: per-player agenda key; agendas stay private unless revealed
@@ -198,7 +158,7 @@ class GameState:
     # -- construction -------------------------------------------------------
     @classmethod
     def new(cls, config: Config) -> "GameState":
-        cards = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption, config.added_courtiers)
+        cards = build_cards(config.outmaneuver_copies, config.event_tiers)
         state = cls(config=config, cards=cards)
         state.seats = {s: None for s in SEATS}
         state.hands = [[] for _ in range(config.num_players)]
@@ -223,7 +183,6 @@ class GameState:
             outer=list(self.outer),
             seats=dict(self.seats),
             removed=list(self.removed),
-            defenses=dict(self.defenses),
             cstate=dict(self.cstate),  # values are frozen
             agendas=list(self.agendas),
             unused_agendas=list(self.unused_agendas),

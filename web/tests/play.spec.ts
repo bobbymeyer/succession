@@ -11,23 +11,22 @@ const act = (fields: Partial<Action>): Action => ({
   courtier: null,
   seat: null,
   target_player: null,
-  sacrifice: null,
   value: null,
   text: "",
   ...fields,
 });
 
 // Hand: 50 Promotion (targets 1 into two seats), 7 a courtier, 60 Outmaneuver,
-// 70 Adoption (target 1, pay with 7, value chosen). Outer courtier 3 can move.
+// 70 Conversion (target 1, one faith to choose). Outer courtier 3 can move.
 const PROMOTE_ORACLE = act({ card: 50, courtier: 1, seat: "Oracle" });
 const PROMOTE_ARCH = act({ card: 50, courtier: 1, seat: "Archpriest" });
 const DISCARD_50 = act({ kind: "discard", card: 50 });
 const PLAY_7 = act({ card: 7 });
 const DISCARD_7 = act({ kind: "discard", card: 7 });
 const OUTMANEUVER_2 = act({ card: 60, target_player: 2 });
-const ADOPT = act({ card: 70, courtier: 1, sacrifice: 7, value: "Mitreas" });
+const CONVERT = act({ card: 70, courtier: 1, value: "Old Gods" });
 const MOVE_3 = act({ kind: "move", courtier: 3, seat: "Lord General" });
-const ACTIONS = [PROMOTE_ORACLE, PROMOTE_ARCH, DISCARD_50, PLAY_7, DISCARD_7, OUTMANEUVER_2, ADOPT, MOVE_3];
+const ACTIONS = [PROMOTE_ORACLE, PROMOTE_ARCH, DISCARD_50, PLAY_7, DISCARD_7, OUTMANEUVER_2, CONVERT, MOVE_3];
 
 test("with nothing picked up, every card with a move is lit", () => {
   const s = stage(ACTIONS, {});
@@ -62,9 +61,9 @@ test("an action aimed at a player lights that player", () => {
 });
 
 test("a single remaining choice settles the action at once", () => {
-  // Adoption on courtier 1 has one payment and one value: pinned down.
+  // Conversion on courtier 1 has one value left: pinned down.
   const s = stage(ACTIONS, { card: 70 });
-  expect(settled(ACTIONS, s.cards.get(1)!)).toBe(ADOPT);
+  expect(settled(ACTIONS, s.cards.get(1)!)).toBe(CONVERT);
 });
 
 test("an outer courtier picked up lights the seats it can take", () => {

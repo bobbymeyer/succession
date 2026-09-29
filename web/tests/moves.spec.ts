@@ -13,7 +13,6 @@ function action(fields: Partial<Action>): Action {
     courtier: null,
     seat: null,
     target_player: null,
-    sacrifice: null,
     value: null,
     text: "",
     ...fields,

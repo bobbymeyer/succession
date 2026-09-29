@@ -22,7 +22,6 @@ STAT_COLUMNS: tuple[str, ...] = (
     "cards_given",
     "cards_forced_out",
     "redeals",
-    "courtiers_sacrificed",
     "defenses_triggered",
     "saves_made",
     "pivots",

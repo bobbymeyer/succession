@@ -31,9 +31,8 @@ RULES: dict[str, str] = {
     # takes exactly one turn under it.
     "Quarantine": (
         "The seats are sealed until just before your next turn. No promotion, "
-        "no demotion, no move into an empty seat, and no Defense attached. A "
-        "seated courtier cannot be removed, stripped or mutated. The outer "
-        "circle plays on."
+        "no demotion, no move into an empty seat. A seated courtier cannot be "
+        "removed, stripped or mutated. The outer circle plays on."
     ),
     "Siege": (
         "The board is sealed until just before your next turn. Nothing enters "

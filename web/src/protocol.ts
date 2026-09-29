@@ -17,7 +17,6 @@ export interface Card {
   origin?: string;
   changed?: Attribute[];
   mutated?: Attribute[];
-  defense?: Card | null;
 }
 
 export interface Seat {
@@ -89,7 +88,6 @@ export interface Action {
   courtier: number | null;
   seat: string | null;
   target_player: number | null;
-  sacrifice: number | null;
   value: string | null;
   text: string;
   wins?: boolean; // completes your agenda, played out on a copy of the game
@@ -120,6 +118,7 @@ export interface GameRecord {
   config: Record<string, unknown>;
   decisions: number[];
   scenario?: string; // "tutorial": a set game, not a deal
+  deal?: Record<string, unknown>; // a stacked deal (succession/deal.py)
 }
 
 export interface Result {
@@ -177,7 +176,7 @@ export interface TableOptions {
 
 // -- worker messages --------------------------------------------------------
 export type Request =
-  | { type: "new"; players: string[]; seed?: number }
+  | { type: "new"; players: string[]; seed?: number; deal?: string | Record<string, unknown> }
   | { type: "tutorial" }
   | { type: "answer"; choice: number }
   | { type: "load"; record: GameRecord }

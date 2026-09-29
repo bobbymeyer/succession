@@ -14,7 +14,7 @@ from succession.actions import DISCARD, MOVE, PASS, PLAY, Action, card_actions, 
 from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
-from succession.courtiers import COURTIERS, COURTIERS_BY_NAME, FAMILY_PREFERRED_ESTATE
+from succession.courtiers import COURTIERS, COURTIERS_BY_NAME, FAMILY_PREFERRED_ESTATE, LATE_ARRIVALS
 from succession.engine import (
     apply_action,
     check_winners,
@@ -75,9 +75,9 @@ class Namers(list):
 
 
 #: The card tests below exercise every event card, so they deal the whole
-#: ten-event deck with events held in hand, as the game once played. The
+#: ten-event deck and put an event straight into a hand to play it. The
 #: current rules (five minor events, played when drawn) have tests of their own.
-ALL_EVENTS_HELD = {"event_tiers": ("minor", "major"), "events_on_draw": False}
+ALL_EVENTS_HELD = {"event_tiers": ("minor", "major")}
 
 
 def fresh(**overrides) -> GameState:
@@ -148,10 +148,15 @@ def outer(state: GameState, *names: str) -> list[int]:
     return uids
 
 
+#: The table as first drawn up, balanced to the courtier; later arrivals are
+#: tested for what they add.
+FIRST_FORTY = tuple(c for c in COURTIERS if c.name not in LATE_ARRIVALS)
+
+
 class TestData(unittest.TestCase):
     def test_courtier_table_totals(self):
-        self.assertEqual(len(COURTIERS), 40)
-        faith = collections.Counter(c.faith for c in COURTIERS)
+        self.assertEqual(len(FIRST_FORTY), 40)
+        faith = collections.Counter(c.faith for c in FIRST_FORTY)
         # One cynic off the top leaves thirty-nine to split three ways.
         self.assertEqual(faith[Faith.OLD_GODS], 13)
         self.assertEqual(faith[Faith.MYSTERY_CULTS], 13)
@@ -171,22 +176,22 @@ class TestData(unittest.TestCase):
 
         for faith in FAITHS:
             estates = collections.Counter(
-                c.estate for c in COURTIERS if c.faith is faith
+                c.estate for c in FIRST_FORTY if c.faith is faith
             )
             self.assertEqual(
                 dict(estates),
                 {Estate.CHURCH: 3, Estate.MILITARY: 4, Estate.MERCHANT: 3, Estate.COMMONS: 3},
                 faith.value,
             )
-        origin = collections.Counter(c.origin for c in COURTIERS)
+        origin = collections.Counter(c.origin for c in FIRST_FORTY)
         self.assertEqual(origin[Origin.IMPERIAL], 32)
         self.assertEqual(origin[Origin.BARBARIAN], 8)
-        estate = collections.Counter(c.estate for c in COURTIERS)
+        estate = collections.Counter(c.estate for c in FIRST_FORTY)
         self.assertEqual(estate[Estate.MILITARY], 12)
         self.assertEqual(estate[Estate.CHURCH], 9)
         self.assertEqual(estate[Estate.MERCHANT], 9)
         self.assertEqual(estate[Estate.COMMONS], 10)
-        family = collections.Counter(c.family for c in COURTIERS)
+        family = collections.Counter(c.family for c in FIRST_FORTY)
         for house in (Family.AMONIDES, Family.MITREAS, Family.ARGAIAN):
             self.assertEqual(family[house], 8)
 
@@ -230,12 +235,13 @@ class TestData(unittest.TestCase):
             (Estate.CHURCH, Faith.OLD_GODS, Family.NONE, Origin.BARBARIAN),
         )
         self.assertIn(seeress.name, {c.name for c in build_cards()})
-        self.assertNotIn(seeress.name, {c.name for c in build_cards(added_courtiers=())})
-        self.assertNotIn(seeress.name, {c.name for c in fresh(added_courtiers=()).cards})
+        self.assertEqual(len(COURTIERS), 41)
+        # She is the one courtier past the even thirteens.
+        self.assertEqual(collections.Counter(c.faith for c in COURTIERS)[Faith.OLD_GODS], 14)
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
-            c.people for c in COURTIERS if c.origin is Origin.BARBARIAN
+            c.people for c in FIRST_FORTY if c.origin is Origin.BARBARIAN
         )
         self.assertEqual(set(peoples.values()), {2})
         self.assertEqual(len(peoples), 4)
@@ -333,51 +339,6 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=card, courtier=victim), FixedRng([4]))
         self.assertNotIn(victim, state.outer)  # no save allowed
 
-    def test_defense_negates_one_attack_then_is_spent(self):
-        state = fresh()
-        defended = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
-        cost, shield, kill1, kill2 = give(
-            state, 0, "Beloved of the Gods", "Sanctuary", "Assassination", "Martyrdom"
-        )
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
-        self.assertEqual(state.defenses[defended], shield)
-        self.assertIn(cost, state.discard)
-
-        apply_action(state, 0, Action(PLAY, card=kill1, courtier=defended), FixedRng())
-        self.assertEqual(state.seats[Seat.ARCHPRIEST], defended)  # negated
-        self.assertNotIn(defended, state.defenses)
-
-        apply_action(state, 0, Action(PLAY, card=kill2, courtier=defended), FixedRng())
-        self.assertIsNone(state.seats[Seat.ARCHPRIEST])  # second one lands
-
-    def test_a_defense_costs_nothing_and_its_estate_is_whom_it_shields(self):
-        state = fresh(reactive_defense=False)
-        church = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
-        soldier = seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
-        bodyguard = give(state, 0, "Bodyguard")[0]  # Military
-        self.assertEqual({a.courtier for a in card_actions(state, 0, bodyguard)}, {soldier})
-        self.assertTrue(all(a.sacrifice < 0 for a in card_actions(state, 0, bodyguard)))
-        patron = give(state, 0, "Patron Protection")[0]  # anyone
-        self.assertEqual({a.courtier for a in card_actions(state, 0, patron)}, {church, soldier})
-
-    def test_old_rules_defense_costs_a_matching_estate_courtier(self):
-        state = fresh(courtier_costs=True, reactive_defense=False)
-        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
-        shield = give(state, 0, "Bodyguard")[0]  # Military
-        give(state, 0, "Beloved of the Gods")  # Church: cannot pay
-        self.assertEqual(card_actions(state, 0, shield), [])
-        give(state, 0, "Crosser of Rivers")  # Military: can pay
-        self.assertTrue(card_actions(state, 0, shield))
-
-    def test_old_rules_patron_protection_accepts_any_estate(self):
-        state = fresh(courtier_costs=True, reactive_defense=False)
-        seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
-        shield = give(state, 0, "Patron Protection")[0]
-        give(state, 0, "Golden Thumb")
-        self.assertTrue(card_actions(state, 0, shield))
-
 
 class TestDemotionsStripsMutations(unittest.TestCase):
     def test_demotion_empties_the_seat(self):
@@ -440,40 +401,6 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
         again = give(state, 0, "Excommunication")[0]
         self.assertNotIn(target, {a.courtier for a in card_actions(state, 0, again)})
-
-    def test_the_old_excommunication_left_an_empty_faith(self):
-        state = fresh(excommunication_godless=False)
-        strip = give(state, 0, "Excommunication")[0]
-        target = outer(state, "Crosser of Rivers")[0]
-        apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
-        self.assertIs(state.cstate[target].faith, Faith.NONE)
-
-    def test_adoption_gives_any_house_but_their_own(self):
-        state = fresh(adoption=True)
-        adopt = give(state, 0, "Adoption")[0]
-        target = outer(state, "Crosser of Rivers")[0]  # Mitreas
-        options = {a.value for a in card_actions(state, 0, adopt) if a.courtier == target}
-        self.assertEqual(options, {"Amonides", "Argaian"})
-        action = next(a for a in card_actions(state, 0, adopt) if a.courtier == target and a.value == "Argaian")
-        apply_action(state, 0, action, FixedRng())
-        self.assertIs(state.cstate[target].family, Family.ARGAIAN)
-        self.assertTrue(state.cstate[target].mutated_family)
-
-    def test_old_rules_adoption_sacrifices_a_family_courtier(self):
-        state = fresh(courtier_costs=True, adoption=True)
-        adopt, donor = give(state, 0, "Adoption", "Beloved of the Gods")
-        target = outer(state, "Silver Tongue")[0]  # no family
-        action = next(
-            a for a in card_actions(state, 0, adopt) if a.courtier == target
-        )
-        self.assertEqual(action.sacrifice, donor)
-        apply_action(state, 0, action, FixedRng())
-        self.assertIs(state.cstate[target].family, Family.AMONIDES)
-        self.assertIn(donor, state.discard)
-
-    def test_adoption_is_out_of_the_deck(self):
-        self.assertNotIn("Adoption", {c.name for c in build_cards()})
-        self.assertIn("Adoption", {c.name for c in build_cards(adoption=True)})
 
     def test_castration_clears_family(self):
         state = fresh()
@@ -560,19 +487,18 @@ class TestGodlessness(unittest.TestCase):
     def test_a_defense_stops_apostasy(self):
         state = fresh()
         defended = seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
-        cost, shield, card = give(
-            state, 0, "Hand of the Oracle", "Sanctuary", "Apostasy"
-        )
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
+        shield = give(state, 1, "Sanctuary")[0]
+        card = give(state, 0, "Apostasy")[0]
+        blocker = ReactiveDefense.Always()
         apply_action(
             state,
             0,
             Action(PLAY, card=card, courtier=defended, value=Faith.GODLESS.value),
             FixedRng(),
+            [None, blocker, None, None],
         )
         self.assertIs(state.cstate[defended].faith, Faith.OLD_GODS)
+        self.assertIn(shield, state.discard)
 
     def test_balance_does_not_ask_for_a_godless_courtier(self):
         state = fresh()
@@ -825,13 +751,10 @@ class TestEvents(unittest.TestCase):
     def test_no_defense_stops_an_event(self):
         state = fresh()
         defended = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
-        cost, shield = give(state, 0, "Beloved of the Gods", "Sanctuary")
-        apply_action(
-            state, 0, Action(PLAY, card=shield, courtier=defended, sacrifice=cost), FixedRng()
-        )
+        shield = give(state, 1, "Sanctuary")[0]
         self.play(state, "Plague")
         self.assertIn(defended, state.discard)
-        self.assertIn(shield, state.discard)
+        self.assertIn(shield, state.hands[1])
 
 
 class TestOutmaneuverAndPivot(unittest.TestCase):
@@ -862,7 +785,7 @@ class TestOutmaneuverAndPivot(unittest.TestCase):
                 return next(a for a in actions if a.kind == DISCARD)
 
         result = play_game(
-            Config(max_turns=80, **ALL_EVENTS_HELD),
+            Config(max_turns=80, event_tiers=()),
             seed=4,
             bot_factory=lambda tier, seat, rng: Staller(seat, rng),
             keep_state=True,
@@ -1078,12 +1001,6 @@ class TestDeckAndTurns(unittest.TestCase):
         draw(state, 0, random.Random(0), count=4)
         self.assertEqual(len(state.hands[0]), 4)
 
-    def test_the_old_rule_caps_the_draw(self):
-        state = fresh(hand_limit=3, hand_limit_at_end_of_turn=False)
-        state.deck = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
-        draw(state, 0, random.Random(0), count=4)
-        self.assertEqual(len(state.hands[0]), 3)
-
     def test_a_turn_ends_by_discarding_down_to_the_limit(self):
         state = fresh(hand_limit=3)
         names = ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker", "Master Mason")
@@ -1116,46 +1033,28 @@ class TestDeckAndTurns(unittest.TestCase):
             def pick_discard(self, state, player, hand):
                 raise AssertionError("a winning turn is not trimmed")
 
-        for before, trimmed in ((True, 4), (False, 3)):
-            state = fresh(hand_limit=3, win_before_hand_limit=before)
-            state.hands[0] = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
-            chooser = NoDiscard() if before else None
-            with mock.patch.object(engine, "check_winners", return_value=[0]):
-                over = resolve_turn(state, 0, Action(PASS, 0), random.Random(0), [chooser, None, None, None])
-            self.assertTrue(over)
-            self.assertEqual(state.winners, [0])
-            self.assertEqual(len(state.hands[0]), trimmed)
-
-    def test_the_old_rule_never_discards_to_the_limit(self):
-        state = fresh(hand_limit=3, hand_limit_at_end_of_turn=False)
+        state = fresh(hand_limit=3)
         state.hands[0] = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
-        enforce_hand_limit(state, 0, None)
+        with mock.patch.object(engine, "check_winners", return_value=[0]):
+            over = resolve_turn(state, 0, Action(PASS, 0), random.Random(0), [NoDiscard(), None, None, None])
+        self.assertTrue(over)
+        self.assertEqual(state.winners, [0])
         self.assertEqual(len(state.hands[0]), 4)
 
-    def test_events_on_draw_play_at_once_and_are_replaced(self):
-        # Variant: a drawn event resolves for whoever drew it, goes to the
-        # discard, and the drawer draws again.
-        state = fresh(events_on_draw=True)
+    def test_a_drawn_event_plays_at_once_and_is_replaced(self):
+        # A drawn event resolves for whoever drew it, goes to the discard,
+        # and the drawer draws again.
+        state = fresh()
         state.deck = [uid(state, "Golden Thumb"), uid(state, "Siege")]  # Siege on top
         draw(state, 0, random.Random(0))
         self.assertEqual([state.name(u) for u in state.hands[0]], ["Golden Thumb"])
         self.assertEqual([state.name(u) for u in state.discard], ["Siege"])
         self.assertTrue(state.board_frozen)
 
-    def test_minor_events_on_draw_leaves_the_majors_in_hand(self):
-        state = fresh(events_on_draw=True, events_on_draw_minor_only=True)
-        state.deck = [uid(state, n) for n in ("Golden Thumb", "Siege", "Quarantine")]  # Quarantine on top
-        draw(state, 0, random.Random(0), count=2)
-        self.assertEqual([state.name(u) for u in state.hands[0]], ["Siege", "Golden Thumb"])
-        self.assertEqual([state.name(u) for u in state.discard], ["Quarantine"])
-        self.assertTrue(state.inner_frozen)
-
     def test_the_deck_holds_the_five_minor_events_played_when_drawn(self):
         from succession.cards import EVENT_CARDS
 
-        config = Config()
-        self.assertTrue(config.events_on_draw)
-        state = GameState.new(config)
+        state = GameState.new(Config())
         events = sorted(c.name for c in state.cards if c.kind.value == "Event")
         self.assertEqual(events, sorted(c.name for c in EVENT_CARDS if c.tier == "minor"))
         self.assertEqual(len(state.cards), 79)
@@ -1170,11 +1069,11 @@ class TestDeckAndTurns(unittest.TestCase):
             for c in EVENT_CARDS:
                 self.assertEqual(c.name in names, c.tier == tier)
 
-    def test_events_on_draw_never_deals_an_event_into_a_starting_hand(self):
+    def test_no_event_is_dealt_into_a_starting_hand(self):
         from succession.enums import CardKind
 
         for seed in range(20):
-            state = setup_game(Config(events_on_draw=True), random.Random(seed))
+            state = setup_game(Config(), random.Random(seed))
             for hand in state.hands:
                 self.assertEqual(len(hand), state.config.starting_hand)
                 self.assertFalse(any(state.card(u).kind is CardKind.EVENT for u in hand))
@@ -1226,32 +1125,11 @@ class TestDeckAndTurns(unittest.TestCase):
                 seen.append(len(state.hands[player]))
                 return next(a for a in actions if a.kind == DISCARD)
 
-        # Without Discard & Draw, so the discards do not refill the hand.
-        config = Config(max_turns=8, discard_draws=False, **ALL_EVENTS_HELD)
+        # No events, so nothing else deals a card.
+        config = Config(max_turns=4, event_tiers=())
         play_game(config, seed=1, bot_factory=lambda t, s, r: Watcher(s, r))
-        # Dealt five, drew a sixth before being asked to act.
-        self.assertEqual(seen[0], config.starting_hand + 1)
-        self.assertTrue(all(n == config.starting_hand + 1 for n in seen))
-
-    def test_one_card_leaves_the_deck_per_turn_taken(self):
-        """The draw is the first thing a turn does, and the only one it does."""
-
-        class Discarder:
-            observes = False
-
-            def __init__(self, seat, rng):
-                self.rng = rng
-
-            def choose(self, state, player, actions):
-                return next(a for a in actions if a.kind == DISCARD)
-
-        config = Config(max_turns=10, discard_draws=False, **ALL_EVENTS_HELD)
-        result = play_game(
-            config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True
-        )
-        state = result.final_state
-        dealt = config.starting_hand * config.num_players
-        self.assertEqual(len(state.deck), len(state.cards) - dealt - result.turns)
+        # Each player, dealt five, drew a sixth before being asked to act.
+        self.assertEqual(seen, [config.starting_hand + 1] * config.num_players)
 
     def test_discard_and_draw_keeps_the_hand_whole(self):
         """A turn spent discarding draws a replacement straight away."""
@@ -1278,7 +1156,7 @@ class TestDeckAndTurns(unittest.TestCase):
             def choose(self, state, player, actions):
                 return next(a for a in actions if a.kind == DISCARD)
 
-        config = Config(max_turns=4, **ALL_EVENTS_HELD)
+        config = Config(max_turns=4, event_tiers=())
         result = play_game(config, seed=1, bot_factory=lambda t, s, r: Discarder(s, r), keep_state=True)
         dealt = config.starting_hand * config.num_players
         # One at the top of each turn, one to replace each discard.
@@ -1298,8 +1176,6 @@ class TestDeckAndTurns(unittest.TestCase):
         state = setup_game(Config(), random.Random(3))
         uid = state.hands[state.current][0]
         self.assertEqual(Action(DISCARD, card=uid).describe(state), f"discard & draw: {state.name(uid)}")
-        plain = setup_game(Config(discard_draws=False), random.Random(3))
-        self.assertEqual(Action(DISCARD, card=uid).describe(plain), f"discard {plain.name(uid)}")
 
     def test_a_player_always_has_a_legal_action(self):
         state = setup_game(Config(), random.Random(5))
@@ -1446,7 +1322,6 @@ class TestGames(unittest.TestCase):
             + state.removed
             + [u for u in state.seats.values() if u is not None]
             + [u for hand in state.hands for u in hand]
-            + list(state.defenses.values())  # attachments sit face-up on the table
         )
         self.assertEqual(len(everywhere), len(state.cards))
         self.assertEqual(len(set(everywhere)), len(state.cards))

@@ -3,15 +3,50 @@
 import type { Page } from "@playwright/test";
 import { expect, fromMenu, openMenu, playFromList, random, setSeed, settle, showPanel, test } from "./helpers";
 
-async function start(page: Page, errors: string[], seed?: number) {
+async function start(page: Page, errors: string[], seed?: number, deal?: Deal) {
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
-  await page.goto("./");
+  await page.goto(deal ? `./?deal=${encodeURIComponent(JSON.stringify(deal))}` : "./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 }); // Pyodide boot
   if (seed !== undefined) await setSeed(page, seed);
   await page.getByTestId("deal").click();
 }
+
+// A test that needs a situation sets it up with a deal (succession/deal.py)
+// rather than hunting for a seed that happens to produce it, so a change to
+// the deck or the rules cannot quietly move it. You are seat 0; the bots are
+// seats 1-3. The seed only settles what the deal leaves to chance.
+type Deal = Record<string, unknown>;
+
+/** P1 draws Caravan to open the game; plain cards behind it, so nothing else interrupts. */
+const CARAVAN_FIRST: Deal = { first: 1, deck: ["Caravan", "Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker", "Master Mason"] };
+/** P1 draws Debasement of the Coinage to open the game: everyone, you too, must discard. */
+const DEBASEMENT_FIRST: Deal = { first: 1, deck: ["Debasement of the Coinage"] };
+/** You move first holding eight cards: whatever you do, your turn ends over the limit. */
+const OVER_THE_LIMIT: Deal = {
+  first: 0,
+  deck: ["Silver Tongue"],
+  hands: { "0": ["Golden Thumb", "Crosser of Rivers", "Horse Breaker", "Mender of Bones", "Promotion", "Demotion", "Bodyguard", "Outmaneuver"] },
+};
+/** Silver Tongue holds the Voice of the People; every rival holds only attacks, and you two Defenses that cover him. */
+const UNDER_ATTACK: Deal = {
+  first: 1,
+  seats: { "Voice of the People": "Silver Tongue" },
+  hands: {
+    "0": ["Patron Protection", "Popularity", "Golden Thumb", "Crosser of Rivers", "Horse Breaker"],
+    "1": ["Demotion", "Ostracism", "Mob Violence", "Assassination", "Excommunication"],
+    "2": ["Targeted Poisoning", "Take Up the Sword", "Take Vows", "Enter Trade", "Go Native"],
+    "3": ["Apostasy", "Conversion", "Castration", "Lose Status", "Acclamation"],
+  },
+};
+/** You move first with courtiers in hand, and the court already has people in it. */
+const A_PEOPLED_COURT: Deal = {
+  first: 0,
+  hands: { "0": ["Golden Thumb", "Crosser of Rivers", "Horse Breaker", "Promotion", "Demotion"] },
+  seats: { Archpriest: "Beloved of the Gods", "Lord General": "Warlord of the Iron Grove" },
+  outer: ["Silver Tongue", "Seeress of the Sacred Grove"],
+};
 
 test("a round opens on your agenda and waits for you to begin", async ({ page }) => {
   const errors: string[] = [];
@@ -98,9 +133,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 123: a bot draws Caravan before your first turn, and it plays at once.
+  // A bot draws Caravan before your first turn, and it plays at once.
   const errors: string[] = [];
-  await start(page, errors, 123);
+  await start(page, errors, 1, CARAVAN_FIRST);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
@@ -113,17 +148,15 @@ test("an event stops play and says what it did", async ({ page }) => {
   await page.waitForTimeout(800);
   await expect(page.locator(".status .turn")).toHaveText(turn);
   await page.getByTestId("event-continue").click();
-  // Caravan closes. (Your own first draw here is another event, which may
-  // already be up behind it.)
-  await expect(page.getByTestId("event").filter({ hasText: "Caravan" })).toHaveCount(0);
+  await expect(page.getByTestId("event")).toHaveCount(0);
   await settle(page);
   expect(errors).toEqual([]);
 });
 
 test("an event that asks you something is announced first", async ({ page }) => {
-  // Seed 104: a bot draws Debasement of the Coinage before your first turn.
+  // A bot draws Debasement of the Coinage before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 104);
+  await start(page, errors, 1, DEBASEMENT_FIRST);
   await page.getByTestId("begin").click();
   const announce = page.getByTestId("event-announce");
   await expect(announce).toBeVisible({ timeout: 30_000 });
@@ -147,20 +180,12 @@ test("an event that asks you something is announced first", async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
-// A saved game stopped at the hand limit: seed 1, three moves in, with more
-// than seven cards in hand. The record carries its own rules, so later
-// rule changes leave it where it is.
-const AT_THE_HAND_LIMIT = {"version": 4, "seed": 1, "config": {"players": ["human", "naive", "greedy", "strategic"], "starting_hand": 5, "hand_limit": 7, "max_turns": 600, "max_rounds": 50, "shuffle_seats": true, "outmaneuver_copies": 1, "save_on_even": true, "removed_courtiers_return_to_deck": true, "discard_draws": true, "hand_limit_at_end_of_turn": true, "events_on_draw": true, "events_on_draw_minor_only": false, "event_tiers": ["minor"], "caster_edge": false, "defense_requires_matching_target": false, "courtier_costs": false, "reactive_defense": true, "excommunication_godless": true, "house_rising_requires_preferred_seat": true, "faith_seats": 4, "balance_seats": 7, "balance_barbarians": 1, "conquest_barbarians": 3, "conquest_military_seats": 0, "conquest_outer_barbarians": 1, "excluded_agendas": [], "house_preferred_estates": []}, "decisions": [4, 18, 24]};
-
 test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
   const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
-  await page.goto("./");
-  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
-  await page.getByText("Load a saved game").click();
-  await page.getByLabel("Game record").fill(JSON.stringify(AT_THE_HAND_LIMIT));
-  await page.getByRole("button", { name: "Load", exact: true }).click();
+  await start(page, errors, 1, OVER_THE_LIMIT);
+  await page.getByTestId("begin").click();
+  await settle(page);
+  await playFromList(page);
   // Before any card is lit for discarding, the page says why.
   const notice = page.getByTestId("hand-limit");
   await expect(notice).toBeVisible({ timeout: 30_000 });
@@ -221,7 +246,7 @@ test("a game played by clicking the board", async ({ page }) => {
 
 test("a card is picked up by clicking it and put down by clicking it again", async ({ page }) => {
   const errors: string[] = [];
-  await start(page, errors, 4);
+  await start(page, errors, 1, A_PEOPLED_COURT);
   await settle(page);
   const card = page.locator(".mine .card.live").first();
   await card.locator("> button.face").click();
@@ -238,7 +263,7 @@ test("a courtier dragged from the hand onto the outer circle is played there", a
   const errors: string[] = [];
   // Tall enough that the whole hand and the board are on screen to drag across.
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await start(page, errors, 4);
+  await start(page, errors, 1, A_PEOPLED_COURT);
   await settle(page);
   const outer = page.locator("section.outer");
   for (const card of await page.locator(".mine .card.grab").all()) {
@@ -267,7 +292,7 @@ test("a card dragged onto the discard pile is discarded and replaced", async ({ 
   const errors: string[] = [];
   // Tall enough that the whole hand and the board are on screen to drag across.
   await page.setViewportSize({ width: 1280, height: 1000 });
-  await start(page, errors, 4);
+  await start(page, errors, 1, A_PEOPLED_COURT);
   await settle(page);
   const card = page.locator(".mine .card.grab").first();
   const uid = await card.getAttribute("data-uid");
@@ -401,7 +426,7 @@ test("when the rounds run out, the kingdom falls into chaos and everyone loses",
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
   // A game played to a one-round limit: you pass, the bot fails to win.
-  const record = { version: 4, seed: 0, config: { players: ["human", "naive"], max_rounds: 1 }, decisions: [0] };
+  const record = { version: 5, seed: 0, config: { players: ["human", "naive"], max_rounds: 1 }, decisions: [0] };
   await page.getByText("Load a saved game").click();
   await page.getByLabel("Game record").fill(JSON.stringify(record));
   await page.getByRole("button", { name: "Load", exact: true }).click();
@@ -423,7 +448,7 @@ test("when the rounds run out, the kingdom falls into chaos and everyone loses",
 
 test("every courtier wears a sigil of their attributes as they stand", async ({ page }) => {
   const errors: string[] = [];
-  await start(page, errors, 3);
+  await start(page, errors, 1, A_PEOPLED_COURT);
   await settle(page);
   const courtiers = page.locator(".board .card:has(.attrs)");
   expect(await courtiers.count()).toBeGreaterThan(0);
@@ -504,16 +529,15 @@ test("the table shows the round, who plays next, and names each bot's move", asy
 });
 
 test("a rival's attack on a courtier your Defense covers can be blocked", async ({ page }) => {
-  // Seed 6: taking the first move each time, a bot plays Ostracism on Silver
-  // Tongue after your third, and your hand holds Patron Protection.
+  // Every rival holds only attacks on Silver Tongue, and you hold his shields.
   const errors: string[] = [];
-  await start(page, errors, 6);
+  await start(page, errors, 1, UNDER_ATTACK);
   const block = page.getByTestId("block");
   for (let i = 0; i < 30 && !(await block.isVisible()); i++) {
     await playFromList(page);
     await settle(page);
   }
-  await expect(block).toContainText("plays Ostracism on Silver Tongue");
+  await expect(block).toContainText("on Silver Tongue");
   await expect(page.locator(".card.attacked")).toHaveCount(1);
   await block.getByTestId("block-with").first().click();
   await settle(page);

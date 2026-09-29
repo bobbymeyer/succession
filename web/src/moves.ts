@@ -8,7 +8,7 @@
 
 import type { Action } from "./protocol";
 
-export const FIELDS = ["card", "kind", "courtier", "seat", "target_player", "sacrifice", "value"] as const;
+export const FIELDS = ["card", "kind", "courtier", "seat", "target_player", "value"] as const;
 export type Field = (typeof FIELDS)[number];
 export type Value = Action[Field];
 export type Selection = Partial<Record<Field, Value>>;
@@ -58,13 +58,12 @@ export function choose(builder: Builder, value: Value): Selection {
 
 /**
  * The selection a click on a card leads to, or null if the click means
- * nothing right now. Hand cards pick the card to play (or the courtier to
- * sacrifice); courtiers on the board pick a target -- or, with nothing yet
+ * nothing right now. Hand cards pick the card to play; courtiers on the board pick a target -- or, with nothing yet
  * chosen, the courtier to move into an empty seat.
  */
 export function clickCard(actions: Action[], builder: Builder, uid: number): Selection | null {
   const { field, choices, selection } = builder;
-  if (field && (field === "card" || field === "courtier" || field === "sacrifice") && choices.includes(uid)) {
+  if (field && (field === "card" || field === "courtier") && choices.includes(uid)) {
     return choose(builder, uid);
   }
   if (Object.keys(selection).length === 0 && actions.some((a) => a.kind === "move" && a.courtier === uid)) {

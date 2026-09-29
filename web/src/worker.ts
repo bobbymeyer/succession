@@ -61,7 +61,7 @@ self.onmessage = async (event: MessageEvent) => {
       return;
     }
     let json: string;
-    if (data.type === "new") json = table.new_game(JSON.stringify({ players: data.players, seed: data.seed }));
+    if (data.type === "new") json = table.new_game(JSON.stringify({ players: data.players, seed: data.seed, deal: data.deal }));
     else if (data.type === "tutorial") json = table.tutorial();
     else if (data.type === "answer") json = table.answer(data.choice);
     else json = table.load(JSON.stringify(data.record));

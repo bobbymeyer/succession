@@ -1,21 +1,29 @@
-// A new player's first game is dealt from one kind seed rather than a random
-// one: you move first, holding House Rising: Mitreas with two Mitreas
-// courtiers in hand. tools/friendly_seed.py found it; with a bot in your
-// chair the naive, greedy and strategic bots all win from it, and a player
-// choosing at random wins 7 games in 30 (about one in fifteen on a random
-// deal). tests/test_friendly_seed.py keeps the engine from quietly changing it.
+// A new player's first game is dealt kindly rather than at random: the deal
+// named "first_game" in succession/deal.py, where you move first holding
+// House Rising: Mitreas with two Mitreas courtiers in hand. The rest of the
+// table is shuffled as usual. tests/test_deal.py keeps it kind.
 
-export const FIRST_GAME_SEED = 1205;
+export const FIRST_GAME_DEAL = "first_game";
 
-/** The table the seed was chosen for: you and one of each bot, in this order. */
+/** The table the deal was written for: you and one of each bot, in this order. */
 export const FIRST_GAME_TABLE = ["naive", "greedy", "strategic"];
 
+/** Whether a deal should be the first game: nothing finished in this browser yet, the default table, no seed typed. */
+export function isFirstGame(typed: number | undefined, finished: number | null, bots: string[]): boolean {
+  return typed === undefined && finished === 0 && bots.join() === FIRST_GAME_TABLE.join();
+}
+
 /**
- * The seed for a deal: the one typed in, else the kind one for a first game
- * (nothing finished in this browser yet, at the default table), else random.
+ * A deal given in the address, `?deal=<JSON>` (succession/deal.py's shape),
+ * for the next game Play deals: how the browser tests set up a situation,
+ * and a way to share one. Null when there is none, or it doesn't parse.
  */
-export function dealSeed(typed: number | undefined, finished: number | null, bots: string[]): number | undefined {
-  if (typed !== undefined) return typed;
-  const firstGame = finished === 0 && bots.join() === FIRST_GAME_TABLE.join();
-  return firstGame ? FIRST_GAME_SEED : undefined;
+export function urlDeal(): Record<string, unknown> | null {
+  try {
+    const text = new URLSearchParams(window.location.search).get("deal");
+    const deal = text ? JSON.parse(text) : null;
+    return deal && typeof deal === "object" ? deal : null;
+  } catch {
+    return null;
+  }
 }

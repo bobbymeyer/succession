@@ -41,8 +41,7 @@ drawing, so an event can leave a hand overfull. That hand is only trimmed at the
 end of its owner's next turn taken: they choose cards to discard until they
 hold 7. A skipped turn is not taken, so it checks nothing. A turn that meets
 your agenda wins at once, before any discard: the hand has nothing to do with
-winning.
-(`--hand-limit-on-draw` restores the old rule, where a full hand drew nothing.)
+winning. (The old rule, where a full hand drew nothing, is retired.)
 
 **Events play the moment they are drawn.** An event is never held: whoever
 draws one -- at the top of their turn, from Discard & Draw, or from a Caravan --
@@ -51,15 +50,16 @@ draw again, and carry on: the turn begins once that draw is a card they keep.
 An event dealt into a starting hand goes back into the deck. Only the five
 minor events are in the deck (see **Deck**).
 
-Earlier rules held all ten events and played them from hand
-(`--events all --events-held`). Other combinations tested:
+Earlier rules held all ten events and played them from hand. The
+combinations tested (the held variants have since been retired from the
+simulator; `--events all` still deals all ten, every one played when drawn):
 
 | Deck, and how events play | Events a game | Median game | Courtiers killed | Balance | Strategic bot |
 |---|---|---|---|---|---|
 | All ten, held (the old rules) | 2.6 | 45 | 3.3 | 21.0% | 57.6% |
 | **Five minors, played when drawn (these rules)** | **6.8** | **43** | **4.3** | **21.2%** | **60.7%** |
 | All ten, all played when drawn | 29.7 | 61 | 13.0 | 11.1% | 66.3% |
-| All ten, minors when drawn, majors held (`--minor-events-on-draw`) | 8.8 | 46 | 5.1 | 19.9% | 63.8% |
+| All ten, minors when drawn, majors held | 8.8 | 46 | 5.1 | 19.9% | 63.8% |
 | Five majors only, played when drawn | 10.1 | 51 | 7.5 | 14.6% | 64.6% |
 
 (5,000 games each, `naive, greedy, strategic, naive`, seats shuffled, seed 1.)
@@ -80,7 +80,7 @@ widened the strategic bot's lead from 58% to 61%.
    *empty* seat of their estate.
 3. **Discard & Draw** — discard a card and draw a replacement at once. If the
    deck is empty the discard pile, the card just thrown included, is shuffled
-   in first. (`--discard-no-draw` restores the plain discard.)
+   in first.
 
 An **occupied** seat can only be taken with a promotion card; the sitting
 courtier is bumped to the outer circle.
@@ -156,8 +156,7 @@ faith mutation, so nobody crosses it twice:
 
 Excommunication used to leave an empty faith (`None`) instead, which counted
 for no agenda either; there was no difference in play but the word, so the two
-are now one. `--excommunication-none` restores it, and game records from before
-the change replay under it.
+are now one.
 
 Because Apostasy advances nobody's agenda, the greedy bot never plays it --
 0 of 52 draws over 4,000 games -- while the strategic bot plays 93% of the ones
@@ -239,12 +238,12 @@ first; the flag flips it.
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2g | **Balance needs all seven seats filled.** It asked for six while it also wanted two barbarians. With one barbarian and six seats it won 34% of the time, the strongest agenda; with one barbarian and all seven seats it wins 24.5%, an even share. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
-| 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone). The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. | no costs | `--courtier-costs` |
-| 3b | **Adoption is out of the deck.** Houses change only by Castration, which is for good. Over 3,000 games the agendas' win rates narrowed from 21.3–32.1% to 24.2–30.2%: Conquest, the weakest, rose from 21.3% to 24.2%. | out | `--adoption` |
-| 3c | **A barbarian for the Church.** The Seeress of the Sacred Grove (Church, Old Gods, no house, German) joins the court, the only barbarian the Church can seat. Conquest rises from 24.2% to 26.4% and the agendas' spread narrows to 25.4–29.3%. Three new barbarians (Church, Merchant, Commons) overshot: Conquest 33.7%. | in | `--first-forty` |
+| 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone). The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. Defenses are now played from hand to block an attack (see **Card resolution**); attached in advance, only 0.07 were played a game against 1.27 blocked. | no costs | retired |
+| 3b | **Adoption is out of the deck.** Houses change only by Castration, which is for good. Over 3,000 games the agendas' win rates narrowed from 21.3–32.1% to 24.2–30.2%: Conquest, the weakest, rose from 21.3% to 24.2%. | out | retired |
+| 3c | **A barbarian for the Church.** The Seeress of the Sacred Grove (Church, Old Gods, no house, German) joins the court, the only barbarian the Church can seat. Conquest rises from 24.2% to 26.4% and the agendas' spread narrows to 25.4–29.3%. Three new barbarians (Church, Merchant, Commons) overshot: Conquest 33.7%. | in | -- |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
-| 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |
+| 6 | A courtier who leaves play reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |
 | 7 | **The false-reveal rule is not exercised.** The brief has it that a premature reveal stays revealed and the game continues without that player's fog. A bot has no reason to bluff, so none does, and nothing reads `GameState.revealed` but the win check. Simulating bluffing would need a deliberate-reveal action and a strategic bot that plays differently against a known agenda. | — | — |
 | 8 | A skipped turn (Outmaneuver) consumes the whole turn, so the skipped player never reaches their draw. | — | — |
 
@@ -269,8 +268,7 @@ A freeze runs **until just before the caster's next turn**, so every other
 player takes one turn under it.
 
 * **Quarantine** seals the seats. No promotion, no demotion, no free move into
-  an empty seat, and no Defense attached (defenses only go on seated
-  courtiers). A seated courtier cannot be removed, stripped or mutated, and a
+  an empty seat. A seated courtier cannot be removed, stripped or mutated, and a
   purge played during it can only reach the outer circle. Courtiers can still
   be played to the outer circle, and outer courtiers can still be targeted.
 * **Siege** seals everything. Nothing enters the board, leaves it or changes on

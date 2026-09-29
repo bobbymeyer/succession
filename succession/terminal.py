@@ -22,8 +22,6 @@ def _courtier(card: dict) -> str:
         mark = "*" if attribute in card["changed"] else ""
         bits.append(f"{card[attribute]}{mark}")
     text = f"{card['name']} [{' / '.join(bits)}]"
-    if card["defense"]:
-        text += f" +{card['defense']['name']}"
     return text
 
 

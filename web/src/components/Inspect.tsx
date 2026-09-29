@@ -32,7 +32,6 @@ export function CardDetail({ card }: { card: Card }) {
           ))}
         </dl>
       )}
-      {card.defense && <p className="defense-note">Protected by {card.defense.name}.</p>}
     </div>
   );
 }

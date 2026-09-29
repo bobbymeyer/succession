@@ -76,7 +76,7 @@ Five events. Nobody holds one: an event plays the moment it is drawn, for whoeve
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/41-quarantine.jpg" alt="Quarantine" width="132"> | **Quarantine**<br><sub>Card 41</sub> | Event · Minor | The seats are sealed until just before your next turn. No promotion, no demotion, no move into an empty seat, and no Defense attached. A seated courtier cannot be removed, stripped or mutated. The outer circle plays on. |
+| <img src="cards/41-quarantine.jpg" alt="Quarantine" width="132"> | **Quarantine**<br><sub>Card 41</sub> | Event · Minor | The seats are sealed until just before your next turn. No promotion, no demotion, no move into an empty seat. A seated courtier cannot be removed, stripped or mutated. The outer circle plays on. |
 | <img src="cards/43-poisoning-at-the-feast.jpg" alt="Poisoning at the Feast" width="132"> | **Poisoning at the Feast**<br><sub>Card 43</sub> | Event · Minor | Every player secretly names one courtier in play, and all are revealed at once. Each named courtier rolls a d6: it survives on an even, and dies on an odd. One named twice rolls once. |
 | <img src="cards/45-caravan.jpg" alt="Caravan" width="132"> | **Caravan**<br><sub>Card 45</sub> | Event · Minor | Every player draws a card, starting with you and going clockwise. |
 | <img src="cards/47-debasement-of-the-coinage.jpg" alt="Debasement of the Coinage" width="132"> | **Debasement of the Coinage**<br><sub>Card 47</sub> | Event · Minor | Every player chooses a card from their hand, and all of them are discarded at once. |

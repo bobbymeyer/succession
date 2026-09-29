@@ -103,18 +103,18 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Blade for Any Banner", _E, _MC, _NF, _BAR, People.SCYTHIAN),
     CourtierDef("Warlord of the Iron Grove", _E, _OG, _NF, _BAR, People.GERMAN),
     CourtierDef("Master Swordsmith", _K, _OG, _NF, _BAR, People.GERMAN),
-)
-
-#: Courtiers added after the first table, dealt when Config.added_courtiers
-#: names them (a game recorded before one arrived replays without it).
-#: The Seeress lifts Barbarian Conquest, the weakest agenda without her
-#: (24.2% of its games against 30.2% for the strongest): the only barbarian
-#: the Church can seat.
-ADDED_COURTIERS: tuple[CourtierDef, ...] = (
+    # --- Added after the first forty ---------------------------------------
+    # The Seeress lifts Barbarian Conquest, the weakest agenda without her
+    # (24.2% of its games against 30.2% for the strongest): the only
+    # barbarian the Church can seat.
     CourtierDef("Seeress of the Sacred Grove", _C, _OG, _NF, _BAR, People.GERMAN),
 )
 
-COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS + ADDED_COURTIERS}
+#: Courtiers added after the first forty. Their art is numbered after the
+#: seats (tools/make_art_prompts.py), since the first numbers were taken.
+LATE_ARRIVALS: tuple[str, ...] = ("Seeress of the Sacred Grove",)
+
+COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS}
 
 #: Each house's affiliated estate, from the source document. House Rising asks
 #: for one of its three seats here. Every family fields two courtiers in each

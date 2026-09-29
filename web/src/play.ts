@@ -23,7 +23,7 @@ export interface Offer {
 }
 
 /** What the player is choosing now, for the instruction line. */
-export type Step = "start" | "card" | "mover" | "courtier" | "seat" | "sacrifice" | "target_player" | "value" | "done";
+export type Step = "start" | "card" | "mover" | "courtier" | "seat" | "target_player" | "value" | "done";
 
 export interface Stage {
   step: Step;
@@ -119,7 +119,7 @@ export function stage(actions: Action[], selection: Selection): Stage {
   const field = b.field;
   for (const value of b.choices) {
     const next = { ...selection, [field!]: value };
-    if (field === "courtier" || field === "sacrifice") cards.set(value as number, next);
+    if (field === "courtier") cards.set(value as number, next);
     else if (field === "seat") seats.set(value as string, next);
     else if (field === "target_player") players.set(value as number, next);
     else offers.push({ label: String(value), selection: next });
