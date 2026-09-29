@@ -5,10 +5,13 @@ import { expect, playFromList, random, setSeed, settle, test } from "./helpers";
 
 test.use({ viewport: { width: 390, height: 664 }, isMobile: true, hasTouch: true });
 
-async function deal(page: Page, errors: string[], seed = "3") {
+/** You move first with courtiers in hand (succession/deal.py), whatever the seed. */
+const COURTIERS_IN_HAND = { first: 0, hands: { "0": ["Golden Thumb", "Crosser of Rivers", "Horse Breaker", "Promotion", "Demotion"] } };
+
+async function deal(page: Page, errors: string[], seed = "3", stacked?: Record<string, unknown>) {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
-  await page.goto("./");
+  await page.goto(stacked ? `./?deal=${encodeURIComponent(JSON.stringify(stacked))}` : "./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
   await setSeed(page, seed);
   await page.getByTestId("deal").tap();
@@ -123,7 +126,7 @@ test("holding a card opens it to read, without picking it up", async ({ page }) 
 
 test("a quick swipe across a card never drags it", async ({ page }) => {
   const errors: string[] = [];
-  await deal(page, errors, "4");
+  await deal(page, errors, "4", COURTIERS_IN_HAND);
   const card = page.locator(".dock .mine .card.grab").first();
   const [x, y] = await centre(card.locator("> button.face"));
   const f = await finger(page);
@@ -138,7 +141,7 @@ test("a quick swipe across a card never drags it", async ({ page }) => {
 
 test("a courtier held, then dragged to the outer circle, is played there", async ({ page }) => {
   const errors: string[] = [];
-  await deal(page, errors, "4");
+  await deal(page, errors, "4", COURTIERS_IN_HAND);
   const outer = page.locator("section.outer");
   const f = await finger(page);
   for (const card of await page.locator(".dock .mine .card.grab").all()) {

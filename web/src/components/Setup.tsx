@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FIRST_GAME_TABLE, dealSeed } from "../firstGame";
+import { FIRST_GAME_DEAL, FIRST_GAME_TABLE, isFirstGame, urlDeal } from "../firstGame";
 import type { GameRecord, TableOptions } from "../protocol";
 import { tierName } from "../names";
 import { useUi } from "../art";
@@ -8,7 +8,7 @@ import { FrameControls } from "./Frame";
 interface Props {
   options: TableOptions;
   saved: number | null; // finished games kept in this browser; null if storage is off
-  onDeal(players: string[], seed?: number): void;
+  onDeal(players: string[], seed?: number, deal?: string | Record<string, unknown>): void;
   onLoad(record: GameRecord): void;
   onExport(): void;
   onClear(): void;
@@ -30,7 +30,9 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
 
   const deal = () => {
     const n = seed.trim() === "" ? undefined : Number(seed);
-    onDeal(["human", ...table], dealSeed(Number.isInteger(n) ? n : undefined, saved, table));
+    const typed = Number.isInteger(n) ? n : undefined;
+    const given = urlDeal();
+    onDeal(["human", ...table], typed, given ?? (isFirstGame(typed, saved, table) ? FIRST_GAME_DEAL : undefined));
   };
 
   const load = () => {
@@ -63,7 +65,7 @@ export function Setup({ options, saved, onDeal, onLoad, onExport, onClear, onInt
       <p className="hint table-line">
         You against {table.length} {table.length === 1 ? "rival" : "rivals"}
         {seed.trim() ? `, deal ${seed.trim()}` : ""}.
-        {seed.trim() === "" && dealSeed(undefined, saved, table) !== undefined && (
+        {seed.trim() === "" && !urlDeal() && isFirstGame(undefined, saved, table) && (
           <span data-testid="first-deal"> Your first game is dealt kindly, to learn on.</span>
         )}
       </p>

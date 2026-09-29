@@ -58,12 +58,6 @@ _EVAL_RNG = EvalRng()
 
 
 # --- zone plumbing ----------------------------------------------------------
-def _detach_defense(state: GameState, uid: int) -> None:
-    card = state.defenses.pop(uid, None)
-    if card is not None:
-        state.discard.append(card)
-
-
 def _reset(state: GameState, uid: int) -> None:
     """Back to printed attributes: whoever returns bearing this epithet is new."""
 
@@ -76,7 +70,6 @@ def _pull_from_play(state: GameState, uid: int) -> None:
         state.seats[seat] = None
     elif uid in state.outer:
         state.outer.remove(uid)
-    _detach_defense(state, uid)
 
 
 def demote(state: GameState, uid: int) -> bool:
@@ -124,36 +117,18 @@ def _enforce_seat_estate(state: GameState, uid: int) -> None:
         demote(state, uid)
 
 
-def defense_absorbs(state: GameState, uid: int, kind: CardKind) -> bool:
-    """Consume an attached defense if it covers this kind of attack."""
-
-    if kind not in DEFENDABLE:
-        return False
-    card = state.defenses.get(uid)
-    if card is None:
-        return False
-    del state.defenses[uid]
-    state.discard.append(card)
-    state.bump("defenses_triggered")
-    state.note(f"{state.name(card)} protects {state.name(uid)}")
-    return True
-
-
 def blocked(state: GameState, player: int, action, card, target: int, rng, deciders) -> bool:
     """Whether the attack on `target` is stopped by a Defense.
 
-    An attached one first (the older rule). Then, with reactive defense, each
-    other player in turn from the attacker's left may play a Defense from hand
-    that covers the target: Patron Protection anyone, the others a courtier of
+    Each other player in turn from the attacker's left may play a Defense from
+    hand that covers the target: Patron Protection anyone, the others a courtier of
     their estate. Only a seated courtier can be shielded. Both cards are
     discarded and the attack does nothing. A bot's lookahead (no deciders)
     assumes nobody blocks.
     """
 
     kind = card.kind
-    if defense_absorbs(state, target, kind):
-        return True
-    if not state.config.reactive_defense or kind not in DEFENDABLE or deciders is None:
+    if kind not in DEFENDABLE or deciders is None:
         return False
     if state.seat_of(target) is None:
         return False
@@ -193,12 +168,9 @@ def save_roll(state: GameState, rng) -> bool:
 
 # --- drawing ----------------------------------------------------------------
 def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, dealing: bool = False) -> None:
-    capped = not state.config.hand_limit_at_end_of_turn
     set_aside: list[int] = []
     left = count
     while left > 0:
-        if capped and len(state.hands[player]) >= state.config.hand_limit:
-            break
         if not state.deck:
             if not state.discard:
                 return
@@ -208,7 +180,7 @@ def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, d
             state.reshuffles += 1
             state.bump("reshuffles")
         uid = state.deck.pop()
-        if _plays_when_drawn(state, uid):
+        if state.card(uid).kind is CardKind.EVENT:
             if dealing:
                 set_aside.append(uid)  # no event in a starting hand
             else:
@@ -221,18 +193,8 @@ def draw(state: GameState, player: int, rng, count: int = 1, deciders=None, *, d
         rng.shuffle(state.deck)
 
 
-def _plays_when_drawn(state: GameState, uid: int) -> bool:
-    config = state.config
-    if not config.events_on_draw:
-        return False
-    card = state.card(uid)
-    if card.kind is not CardKind.EVENT:
-        return False
-    return card.tier == "minor" or not config.events_on_draw_minor_only
-
-
 def _play_drawn_event(state: GameState, player: int, uid: int, rng, deciders) -> None:
-    """`events_on_draw`: the event plays for whoever drew it, then is discarded."""
+    """A drawn event plays for whoever drew it, then is discarded."""
 
     card = state.card(uid)
     state.bump("events_on_draw")
@@ -281,7 +243,7 @@ def apply_action(state: GameState, player: int, action: Action, rng, deciders=No
         # not draw: the replacement is unknown, and drawing it in a clone would
         # show the bot the top of the deck.
         drew = False
-        if state.config.discard_draws and not getattr(rng, "lookahead", False):
+        if not getattr(rng, "lookahead", False):
             before = len(hand)
             draw(state, player, rng, deciders=deciders)
             drew = len(hand) > before
@@ -296,11 +258,6 @@ def apply_action(state: GameState, player: int, action: Action, rng, deciders=No
         # The one place a card from hand lands: the outer circle.
         state.outer.append(action.card)
         return
-
-    if action.sacrifice >= 0:
-        hand.remove(action.sacrifice)
-        state.discard.append(action.sacrifice)
-        state.bump("courtiers_sacrificed")
 
     if _resolve(state, player, action, card, rng, deciders):
         state.discard.append(action.card)
@@ -335,15 +292,9 @@ def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=
         kill(state, target)
         return True
 
-    if kind is CardKind.DEFENSE:
-        # The defense stays attached face-up; it is discarded when it triggers.
-        state.defenses[target] = action.card
-        state.note(f"{card.name} attached to {state.name(target)}")
-        return False
-
     if kind is CardKind.STRIP:
         if not blocked(state, player, action, card, target, rng, deciders):
-            value = Family.NONE if card.attribute == "family" else _no_faith(state)
+            value = Family.NONE if card.attribute == "family" else Faith.GODLESS
             # A strip does not consume the once-per-courtier mutation allowance.
             state.cstate[target] = state.cstate[target].with_attribute(
                 card.attribute, value, is_mutation=False
@@ -642,12 +593,10 @@ def start_turn(state: GameState, rng, deciders=None) -> bool:
 def enforce_hand_limit(state: GameState, player: int, deciders) -> None:
     """End of a turn: a hand over the limit discards down to it, by choice.
 
-    Draws are never capped (`hand_limit_at_end_of_turn`), so an event can
-    leave a hand overfull; it is only trimmed as its owner's own turn ends.
+    Draws are never capped, so an event can leave a hand overfull; it is
+    only trimmed as its owner's own turn ends.
     """
 
-    if not state.config.hand_limit_at_end_of_turn:
-        return
     hand = state.hands[player]
     chooser = _chooser(deciders, player)
     pick = (
@@ -682,7 +631,7 @@ def resolve_turn(state: GameState, player: int, action: Action, rng, deciders) -
 
     # A win is the board alone, so it is declared before any hand-limit
     # discard: the winning turn never stops to trim a hand.
-    winners = check_winners(state) if state.config.win_before_hand_limit else []
+    winners = check_winners(state)
     if not winners:
         enforce_hand_limit(state, player, deciders)
         winners = check_winners(state)
@@ -756,8 +705,3 @@ def play_game(
         state, tiers, game_id=game_id, seed=seed, timeout=timeout, keep_state=keep_state
     )
 
-
-def _no_faith(state: GameState) -> Faith:
-    """What an Excommunication leaves: godlessness, or the old empty slot."""
-
-    return Faith.GODLESS if state.config.excommunication_godless else Faith.NONE

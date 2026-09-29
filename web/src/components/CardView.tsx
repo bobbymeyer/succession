@@ -253,14 +253,6 @@ export function CardView({
           </svg>
         </button>
       )}
-      {card.defense && (
-        <button type="button" className="shield" onClick={() => inspect(card.defense!)} title="Look at the defense">
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M8 1.5 2.5 3.5v4c0 3.3 2.4 5.9 5.5 7 3.1-1.1 5.5-3.7 5.5-7v-4Z" fill="currentColor" />
-          </svg>
-          {card.defense.name}
-        </button>
-      )}
       {caption && courtier && <Attributes card={card} />}
       {label && !courtier && ACTION_LABEL(card) && <span className="action-label">{ACTION_LABEL(card)}</span>}
     </div>

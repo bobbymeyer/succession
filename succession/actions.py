@@ -49,8 +49,7 @@ class Action:
     courtier: int = -1        # target courtier uid
     seat: Optional[Seat] = None
     player: int = -1          # target player (Outmaneuver)
-    sacrifice: int = -1       # courtier card uid in hand paid as a cost
-    value: str = ""           # chosen attribute value (Conversion / Adoption)
+    value: str = ""           # chosen attribute value (Conversion)
 
     def describe(self, state: GameState) -> str:
         if self.kind == PASS:
@@ -58,9 +57,7 @@ class Action:
         if self.kind == MOVE:
             return f"move {state.name(self.courtier)} -> {self.seat.value}"
         if self.kind == DISCARD:
-            if state.config.discard_draws:
-                return f"discard & draw: {state.name(self.card)}"
-            return f"discard {state.name(self.card)}"
+            return f"discard & draw: {state.name(self.card)}"
         bits = [f"play {state.name(self.card)}"]
         if self.courtier >= 0:
             bits.append(f"on {state.name(self.courtier)}")
@@ -68,8 +65,6 @@ class Action:
             bits.append(f"into {self.seat.value}")
         if self.player >= 0:
             bits.append(f"vs P{self.player}")
-        if self.sacrifice >= 0:
-            bits.append(f"sacrificing {state.name(self.sacrifice)}")
         if self.value:
             bits.append(f"-> {self.value}")
         return " ".join(bits)
@@ -165,41 +160,11 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return out
 
     if kind is CardKind.DEFENSE:
-        if state.config.reactive_defense:
-            return out  # held for someone else's attack (engine.blocked)
-        paid = state.config.courtier_costs
-        costs = (
-            [
-                h
-                for h in hand
-                if h != uid
-                and state.card(h).is_courtier
-                and _estate_matches(card.estate, state.cstate[h].estate)
-            ]
-            if paid
-            else [-1]
-        )
-        if not costs:
-            return out
-        # Without a cost, the card's estate is whom it can shield.
-        matching = state.config.defense_requires_matching_target or not paid
-        for cand in state.inner_uids():
-            if cand in state.defenses:
-                continue
-            if matching and not _estate_matches(card.estate, state.cstate[cand].estate):
-                continue
-            for cost in costs:
-                out.append(Action(PLAY, card=uid, courtier=cand, sacrifice=cost))
-        return out
+        return out  # held for someone else's attack (engine.blocked)
 
     if kind is CardKind.STRIP:
         attribute = card.attribute
-        if attribute == "family":
-            stripped = {Family.NONE}
-        elif state.config.excommunication_godless:
-            stripped = {Faith.GODLESS, Faith.NONE}  # nothing left to take
-        else:
-            stripped = {Faith.NONE}
+        stripped = {Family.NONE} if attribute == "family" else {Faith.GODLESS}  # nothing left to take
         for cand in _touchable(state):
             if getattr(state.cstate[cand], attribute) not in stripped:
                 out.append(Action(PLAY, card=uid, courtier=cand))
@@ -243,38 +208,6 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
             for faith in FAITHS:
                 if faith is not cs.faith:
                     out.append(Action(PLAY, card=uid, courtier=cand, value=faith.value))
-        return out
-
-    if attribute == "family" and not state.config.courtier_costs:  # Adoption, free
-        # Any house but the one they hold, as Conversion does for faith.
-        for cand in _touchable(state):
-            cs = state.cstate[cand]
-            if cs.mutated_family:
-                continue
-            for family in FAMILIES:
-                if family is not cs.family:
-                    out.append(Action(PLAY, card=uid, courtier=cand, value=family.value))
-        return out
-
-    if attribute == "family":  # Adoption, paid for with a family courtier
-        costs = [
-            h
-            for h in hand
-            if h != uid
-            and state.card(h).is_courtier
-            and state.cstate[h].family is not Family.NONE
-        ]
-        for cand in _touchable(state):
-            cs = state.cstate[cand]
-            if cs.mutated_family:
-                continue
-            for cost in costs:
-                family = state.cstate[cost].family
-                if family is cs.family:
-                    continue
-                out.append(
-                    Action(PLAY, card=uid, courtier=cand, sacrifice=cost, value=family.value)
-                )
         return out
 
     # Estate and origin mutations have a fixed destination value.

@@ -146,28 +146,13 @@ class Records(unittest.TestCase):
         self.assertEqual(again.prompt, session.prompt)
         self.assertEqual(fingerprint(again.state), fingerprint(session.state))
 
-    def test_a_record_from_before_discard_and_draw_replays_without_it(self):
-        # Played under the old rule, then saved as version 1 had it: no
-        # discard_draws key. It must replay the game it recorded.
-        config = Config(players=(HUMAN, "naive", "greedy"), discard_draws=False)
-        session = GameSession(config, 6)
+    def test_a_record_from_older_rules_is_refused_not_replayed_wrongly(self):
+        session = GameSession(Config(players=(HUMAN, "naive", "greedy")), 6)
         random_human(session, random.Random(6), stop_after=12)
         old = session.record()
-        old["version"] = 1
-        del old["config"]["discard_draws"]
-        again = GameSession.replay(json.loads(json.dumps(old)))
-        self.assertFalse(again.config.discard_draws)
-        self.assertEqual(fingerprint(again.state), fingerprint(session.state))
-
-    def test_a_record_from_before_the_round_limit_replays_without_it(self):
-        config = Config(players=(HUMAN, "naive", "greedy"), max_rounds=None)
-        session = GameSession(config, 6)
-        random_human(session, random.Random(6), stop_after=12)
-        old = session.record()
-        del old["config"]["max_rounds"]
-        again = GameSession.replay(json.loads(json.dumps(old)))
-        self.assertIsNone(again.config.max_rounds)
-        self.assertEqual(fingerprint(again.state), fingerprint(session.state))
+        old["version"] = 4
+        with self.assertRaisesRegex(ValueError, "older rules"):
+            GameSession.replay(json.loads(json.dumps(old)))
 
     def test_the_record_keeps_the_rules_variant(self):
         config = Config(players=(HUMAN, "naive"), faith_seats=5, house_preferred_estates=(("Mitreas", "Church"),))
@@ -404,7 +389,7 @@ class Terminal(unittest.TestCase):
             path = Path(tmp) / "game.json"
             stdin = sys.stdin
             try:
-                sys.stdin = io.StringIO("1\n2\n1\nq\n")
+                sys.stdin = io.StringIO("1\n1\n1\nq\n")  # the first choice is always a valid one
                 with redirect_stdout(io.StringIO()) as first:
                     main(["play", "--seed", "1", "--record", str(path)])
                 record = json.loads(path.read_text())

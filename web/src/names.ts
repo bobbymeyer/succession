@@ -50,7 +50,6 @@ export function visibleCards(view: View): Map<number, Card> {
   const add = (card: Card | null | undefined) => {
     if (!card) return;
     cards.set(card.uid, card);
-    add(card.defense);
   };
   view.hand.forEach(add);
   view.outer.forEach(add);

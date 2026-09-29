@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .courtiers import ADDED_COURTIERS, COURTIERS
+from .courtiers import COURTIERS
 from .enums import CardKind, Estate, Faith, Family, Origin
 
 # --- Event effects ----------------------------------------------------------
@@ -58,14 +58,10 @@ class CardDef:
         return self.kind is CardKind.COURTIER
 
 
-#: Every added courtier: what a new game deals.
-ALL_ADDED_COURTIERS: tuple[str, ...] = tuple(c.name for c in ADDED_COURTIERS)
-
-
-def _courtier_cards(added: tuple[str, ...] = ALL_ADDED_COURTIERS) -> list[CardDef]:
+def _courtier_cards() -> list[CardDef]:
     return [
         CardDef(c.name, CardKind.COURTIER, estate=c.estate, courtier=c.name)
-        for c in COURTIERS + tuple(c for c in ADDED_COURTIERS if c.name in added)
+        for c in COURTIERS
     ]
 
 
@@ -147,11 +143,6 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
 )
 
-#: Out of the deck (Config.adoption brings it back, for old records): any
-#: house you choose, or, with Config.courtier_costs, the house of a family
-#: courtier sacrificed from hand.
-ADOPTION_CARD = CardDef("Adoption", CardKind.MUTATION, attribute="family")
-
 PIVOT_CARDS: tuple[CardDef, ...] = (
     CardDef("Schismatic Event", CardKind.PIVOT),
 )
@@ -160,10 +151,7 @@ OUTMANEUVER_CARD = CardDef("Outmaneuver", CardKind.OUTMANEUVER)
 
 
 def build_cards(
-    outmaneuver_copies: int = 1,
-    event_tiers: tuple[str, ...] = ("minor", "major"),
-    adoption: bool = False,
-    added_courtiers: tuple[str, ...] = ALL_ADDED_COURTIERS,
+    outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("minor", "major")
 ) -> tuple[CardDef, ...]:
     """Return every card in the play deck, indexed by position (its uid).
 
@@ -172,7 +160,7 @@ def build_cards(
     """
 
     cards: list[CardDef] = []
-    cards.extend(_courtier_cards(tuple(added_courtiers)))
+    cards.extend(_courtier_cards())
     cards.extend(c for c in EVENT_CARDS if c.tier in event_tiers)
     cards.extend(PROMOTION_CARDS)
     cards.extend(DEMOTION_CARDS)
@@ -180,8 +168,6 @@ def build_cards(
     cards.extend(DEFENSE_CARDS)
     cards.extend(STRIP_CARDS)
     cards.extend(MUTATION_CARDS)
-    if adoption:
-        cards.append(ADOPTION_CARD)
     cards.extend(PIVOT_CARDS)
     cards.extend(OUTMANEUVER_CARD for _ in range(outmaneuver_copies))
     return tuple(cards)

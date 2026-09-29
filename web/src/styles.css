@@ -111,13 +111,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   color: var(--gold-bright);
 }
 .look svg { width: 100%; height: 100%; }
-.shield {
-  display: flex; align-items: center; gap: 4px;
-  padding: 1px 6px; font-size: 0.7rem; border-radius: 999px;
-  background: rgba(201, 162, 78, 0.18); border-color: var(--gold); color: var(--gold-bright);
-  width: fit-content; max-width: var(--w);
-}
-.shield svg { width: 11px; height: 11px; flex: none; }
 /* Changed in play: red and underlined, no wider than the printed word. */
 .attr.changed { color: var(--pick); text-decoration: underline dotted; text-underline-offset: 2px; }
 
@@ -267,7 +260,6 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 .live-attrs dd { margin: 0; font-family: var(--serif); font-size: 1.05rem; }
 .live-attrs dd small { font-family: system-ui, sans-serif; font-size: 0.72rem; color: var(--muted); }
 .live-attrs .changed dd { color: var(--pick); }
-.defense-note { color: var(--gold-bright); margin: 8px 0 0; }
 
 /* The side preview is for a mouse; touch uses the inspector. */
 .preview { display: none; }
@@ -412,7 +404,7 @@ a.button:hover { border-color: var(--gold); }
 .status .turn { color: var(--muted); }
 .status .seal { padding: 1px 8px; font-size: 0.75rem; }
 .card.size-xxs .face { border-radius: 2px; box-shadow: none; }
-.card.size-xxs .shield, .card.size-xxs .attrs, .card.size-xxs .changed-flag, .card.size-xxs .look { display: none; }
+.card.size-xxs .attrs, .card.size-xxs .changed-flag, .card.size-xxs .look { display: none; }
 .card.size-xxs.empty-slot { height: calc(var(--w-xxs) * 692 / 496); border: 1px dashed var(--line); border-radius: 2px; }
 
 /* -- a courtier's details, always in the same four places --------------- */
@@ -780,7 +772,6 @@ a.button:hover { border-color: var(--gold); }
    face, and a tap on the magnifier reads them out. */
 .game.phone .attrs { display: none; }
 .game.phone .look { width: 20px; height: 20px; padding: 3px; top: 2px; right: 2px; }
-.game.phone .shield { font-size: 0.6rem; padding: 0 4px; }
 
 .game.phone .outer .row { gap: 6px; }
 .game.phone .outer .card { --w: calc(var(--w-md) * 0.85); }

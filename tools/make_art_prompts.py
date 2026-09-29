@@ -31,7 +31,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from succession.cards import ALL_ADDED_COURTIERS, build_cards  # noqa: E402
+from succession.cards import CardDef, build_cards  # noqa: E402
+from succession.courtiers import LATE_ARRIVALS  # noqa: E402
 from succession.enums import SEAT_ESTATE, CardKind  # noqa: E402
 from tools import card_text  # noqa: E402
 
@@ -809,6 +810,26 @@ def slug(name: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
+#: Cards since taken out of the deck. Their art keeps its number, so the
+#: cards after them keep theirs: each is put back where it was first drawn,
+#: after the card named.
+RETIRED: tuple[tuple[str, CardDef], ...] = (
+    ("Assimilate", CardDef("Adoption", CardKind.MUTATION, attribute="family")),
+)
+
+
+def art_catalogue() -> list[CardDef]:
+    """Every card that has art, in the order it was first numbered: the deck
+    as first drawn, with the retired cards in their places and the late
+    arrivals left for after the seats."""
+
+    cards = [c for c in build_cards() if c.name not in LATE_ARRIVALS]
+    for after, card in RETIRED:
+        at = next(i for i, c in enumerate(cards) if c.name == after)
+        cards.insert(at + 1, card)
+    return cards
+
+
 def build_lines() -> tuple[list[str], list[str]]:
     prompts: list[str] = []
     filenames: list[str] = []
@@ -817,7 +838,7 @@ def build_lines() -> tuple[list[str], list[str]]:
     # Art for every card ever drawn, numbered as it was first drawn: Adoption
     # left the deck and its number stays. Courtiers added since are numbered
     # after the seats, below.
-    for card in build_cards(adoption=True, added_courtiers=()):
+    for card in art_catalogue():
         if card.name in seen:
             continue  # extra Outmaneuver copies share one illustration
         seen.add(card.name)
@@ -841,7 +862,7 @@ def build_lines() -> tuple[list[str], list[str]]:
 
     # Courtiers added since are numbered after the seats, but listed before
     # them, so the seats stay last (they take their own negative).
-    for offset, name in enumerate(ALL_ADDED_COURTIERS):
+    for offset, name in enumerate(LATE_ARRIVALS):
         historical, fantastic, surreal = DETAILS[name]
         prompts.append(f"{FRAMING[KIND_FRAMING[CardKind.COURTIER]]}. {historical}. {fantastic}. {surreal}. {STYLE}")
         filenames.append(f"{start + len(SEAT_ESTATE) + offset:02d}_courtier_{slug(name)}")

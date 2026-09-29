@@ -23,9 +23,6 @@ class Faith(str, Enum):
     #: Actively godless. A real faith value a courtier can be born with, or be
     #: pushed into by Apostasy or an Excommunication.
     GODLESS = "Godless"
-    #: The empty faith an Excommunication used to leave
-    #: (`Config.excommunication_godless=False`, and older game records).
-    NONE = "None"
 
 
 class Family(str, Enum):

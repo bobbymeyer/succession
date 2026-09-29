@@ -52,6 +52,7 @@ from .cards import (
 )
 from .engine import EvalRng, GameResult, apply_action, game_result, resolve_turn, setup_game, start_turn
 from .enums import DEFENDABLE, FAITHS, FAMILIES, SEAT_ESTATE, SEATS, CardKind
+from . import deal as deal_module
 from . import tutorial
 from .state import Config, GameState
 
@@ -66,12 +67,11 @@ OVER = "over"            # nothing left to decide
 #: The answer to a BLOCK that lets the attack land.
 LET_IT_LAND = -1
 
-#: 2: Discard & Draw. A version-1 record was played before it, without the draw.
-#: 3: the hand limit is checked at the end of the turn; earlier records capped
-#: draws instead.
-#: 4: events play when drawn, and the five majors are out of the deck; earlier
-#: records held and played all ten.
-RECORD_VERSION = 4
+#: A record replays only under the rules it was played by, and only the
+#: current rules are kept: a record from before the last change of rules is
+#: refused rather than replayed wrongly. Bump this with every change of rules
+#: that would play a recorded game differently.
+RECORD_VERSION = 5
 
 
 class NeedChoice(Exception):
@@ -155,11 +155,14 @@ class GameSession:
         bot_factory: Callable = make_bot,
         trace: bool = True,
         scenario: Optional[str] = None,
+        deal=None,
     ) -> None:
         self.config = config
         self.seed = seed
         #: A set game rather than a deal ("tutorial"), or None.
         self.scenario = scenario
+        #: A stacked deal (succession.deal), by name or in full, or None.
+        self.deal = deal_module.resolve(deal)
         # The same setup as play_game, draw for draw, so the same seed deals
         # the same game.
         self.rng = random.Random(seed)
@@ -169,6 +172,9 @@ class GameSession:
             bot_factory = tutorial.make_seat
         elif scenario is not None:
             raise ValueError(f"unknown scenario {scenario!r}")
+        elif self.deal is not None:
+            # A deal names seats by their place in `players`: no shuffle.
+            self.state = deal_module.setup(config, self.rng, self.deal, trace=trace)
         else:
             if config.shuffle_seats:
                 self.rng.shuffle(self.tiers)
@@ -415,6 +421,8 @@ class GameSession:
         }
         if self.scenario:
             record["scenario"] = self.scenario
+        if self.deal is not None:
+            record["deal"] = self.deal
         return record
 
     def coach(self) -> Optional[dict]:
@@ -430,36 +438,18 @@ class GameSession:
         """Rebuild a game from `record()`, stopped where the record ends."""
 
         version = record.get("version")
-        if version not in (1, 2, 3, RECORD_VERSION):
-            raise ValueError(f"unsupported record version {version!r}")
-        config = dict(record["config"])
-        # Records from before the round limit played to the turn cap alone.
-        config.setdefault("max_rounds", None)
-        # ...and before an Excommunication left a courtier godless.
-        config.setdefault("excommunication_godless", False)
-        # ...and before Defenses and Adoption stopped costing a courtier.
-        config.setdefault("courtier_costs", True)
-        # ...and before a Defense was played in answer to an attack.
-        config.setdefault("reactive_defense", False)
-        # ...and before Adoption left the deck.
-        config.setdefault("adoption", True)
-        # ...and before the Seeress joined the court.
-        config.setdefault("added_courtiers", [])
-        # ...and before a winning turn skipped the hand-limit discard.
-        config.setdefault("win_before_hand_limit", False)
-        if version == 1:
-            config.setdefault("discard_draws", False)
-        if version in (1, 2):
-            config.setdefault("hand_limit_at_end_of_turn", False)
-        if version in (1, 2, 3):
-            config.setdefault("events_on_draw", False)
-            config.setdefault("event_tiers", ["minor", "major"])
+        if version != RECORD_VERSION:
+            raise ValueError(
+                f"This game was recorded under older rules (record version {version}), "
+                "and the game has changed since: it can no longer be replayed."
+            )
         session = cls(
-            config_from_json(config),
+            config_from_json(record["config"]),
             record["seed"],
             bot_factory=bot_factory,
             trace=trace,
             scenario=record.get("scenario"),
+            deal=record.get("deal"),
         )
         session.advance()
         for choice in record["decisions"]:
@@ -479,8 +469,7 @@ class GameSession:
                 option["wins"] = wins(state, prompt.player, action)
                 #: An attack on a seated courtier: a rival may block it.
                 option["blockable"] = (
-                    state.config.reactive_defense
-                    and action.kind == PLAY
+                    action.kind == PLAY
                     and state.card(action.card).kind in DEFENDABLE
                     and action.courtier >= 0
                     and state.seat_of(action.courtier) is not None
@@ -612,16 +601,10 @@ def event_report(before: _Table, state: GameState, *, drawn: bool = False) -> di
     elif effect == EFFECT_DRAW_ALL:
         for p in order:
             got = len(state.hands[p]) - before.hands[p]
-            full = (
-                not state.config.hand_limit_at_end_of_turn
-                and len(state.hands[p]) >= state.config.hand_limit
-                and got < card.amount
-            )
-            note = " (hand full)" if full else ""
             if got > 0:
-                say(f"P{p} draws {got}{note}", "gain")
+                say(f"P{p} draws {got}", "gain")
             else:
-                say(f"P{p} draws nothing{note}", "neutral")
+                say(f"P{p} draws nothing", "neutral")
     elif effect == EFFECT_DISCARD_ALL:
         for p in order:
             lost = before.hands[p] - len(state.hands[p])
@@ -667,8 +650,6 @@ def card_json(state: GameState, uid: int) -> dict:
         data["changed"] = [a for a in attributes if getattr(live, a) != getattr(printed, a)]
         #: Attributes whose one mutation has been spent.
         data["mutated"] = [a for a in attributes if live.mutated(a)]
-        defense = state.defenses.get(uid)
-        data["defense"] = card_json(state, defense) if defense is not None else None
     return data
 
 
@@ -703,7 +684,6 @@ def action_json(state: GameState, action: Action, index: int) -> dict:
         "courtier": uid(action.courtier),
         "seat": action.seat.value if action.seat is not None else None,
         "target_player": uid(action.player),
-        "sacrifice": uid(action.sacrifice),
         "value": action.value or None,
         "text": action.describe(state),
     }

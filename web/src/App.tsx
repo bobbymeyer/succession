@@ -90,8 +90,6 @@ function hintFor(s: Stage, view: View, cards: Map<number, Card>): string {
       return "Click the courtier it targets.";
     case "seat":
       return "Click the seat it takes.";
-    case "sacrifice":
-      return "Click a courtier in your hand to pay for it.";
     case "target_player":
       return "Click the player it targets.";
     default:
@@ -346,7 +344,7 @@ export function App() {
           <Setup
             options={options}
             saved={saved}
-            onDeal={(players, seed) => send({ type: "new", players, seed }, true)}
+            onDeal={(players, seed, deal) => send({ type: "new", players, seed, deal }, true)}
             onTutorial={() => send({ type: "tutorial" }, true)}
             onLoad={(record: GameRecord) => send({ type: "load", record }, true)}
             onExport={exportCsv}
@@ -528,7 +526,7 @@ export function App() {
   if (turnPrompt && now) {
     act = {
       cardLive: (uid) => now.cards.has(uid),
-      cardSelected: (uid) => now.active === uid || selection.sacrifice === uid,
+      cardSelected: (uid) => now.active === uid,
       onCard: (uid) => {
         if (justDragged.current) return;
         const next = now.cards.get(uid);

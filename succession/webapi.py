@@ -46,7 +46,7 @@ class Table:
 
     # -- calls from the page ------------------------------------------------
     def new_game(self, request: str) -> str:
-        """Deal a game. `{"players": ["human", "naive", ...], "seed": 7}`."""
+        """Deal a game. `{"players": ["human", "naive", ...], "seed": 7, "deal": ...}`."""
 
         data = json.loads(request)
         players = tuple(data.get("players") or (HUMAN, "naive", "greedy", "strategic"))
@@ -58,7 +58,9 @@ class Table:
         seed = data.get("seed")
         if seed is None:
             seed = random.randrange(2**31)
-        self.session = GameSession(Config(players=players), int(seed))
+        # A stacked deal, by name ("first_game") or in full: the first game,
+        # and tests that need a particular situation rather than a seed.
+        self.session = GameSession(Config(players=players), int(seed), deal=data.get("deal"))
         self._sent = 0
         # The table as dealt comes first, before anyone has moved: the page
         # shows each person their agenda there and waits for them to begin.
@@ -172,7 +174,7 @@ def options() -> str:
     config = Config()
     empty = BoardCounts({}, {}, {}, {}, {}, 0, 0, 0)
     rules = rules_for_config(config)
-    deck = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption, config.added_courtiers)
+    deck = build_cards(config.outmaneuver_copies, config.event_tiers)
     return json.dumps({
         "player_types": list(PLAYER_TYPES),
         "min_players": MIN_PLAYERS,
