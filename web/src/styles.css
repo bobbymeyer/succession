@@ -1105,7 +1105,13 @@ a.button:hover { border-color: var(--gold); }
   font-size: 0.68rem; line-height: 1.2; text-align: center; color: var(--ink);
   background: rgba(28, 40, 64, 0.85); border: 1px solid var(--line);
 }
-.game.phone .action-label { display: none; }
+/* On a phone the hand has no room below a card, so the label lies across the
+   bottom of the face, over printed text too small to read there anyway. */
+.game.phone .action-label {
+  position: absolute; left: 3px; right: 3px; bottom: 3px; z-index: 2; max-width: none;
+  padding: 3px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 600; line-height: 1.15;
+  background: rgba(13, 20, 34, 0.9); border-color: var(--gold); pointer-events: none;
+}
 /* Whoever plays next. */
 .opponent.next { border-style: dashed; border-color: color-mix(in srgb, var(--seat) 70%, transparent); }
 .next-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--seat); font-weight: 700; }
