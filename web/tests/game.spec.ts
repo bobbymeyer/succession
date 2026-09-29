@@ -59,7 +59,9 @@ test("an event stops play and says what it did", async ({ page }) => {
   await page.waitForTimeout(800);
   await expect(page.locator(".status .turn")).toHaveText(turn);
   await page.getByTestId("event-continue").click();
-  await expect(event).toBeHidden();
+  // Caravan closes. (Your own first draw here is another event, which may
+  // already be up behind it.)
+  await expect(page.getByTestId("event").filter({ hasText: "Caravan" })).toHaveCount(0);
   await settle(page);
   expect(errors).toEqual([]);
 });
@@ -355,5 +357,35 @@ test("every courtier wears a sigil of their attributes as they stand", async ({ 
   // The rules say how to read one.
   await fromMenu(page, page.getByTestId("show-rules"));
   await expect(page.getByTestId("rules")).toContainText("Faith is the shape");
+  expect(errors).toEqual([]);
+});
+
+test("the table warns of a near win, offers yours, and shows every agenda at the end", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("tutorial").click({ timeout: 90_000 });
+  await settle(page);
+  // The tutorial's board: the rival's three Old Gods, and your two Mitreas.
+  const tally = page.getByTestId("court-tally");
+  await expect(tally.getByTitle("Old Gods: 3")).toBeVisible();
+  await expect(page.getByTestId("close-danger")).toContainText("Faith Ascendant: Old Gods");
+  await expect(page.getByTestId("close-yours")).toContainText("House Rising: Mitreas");
+  // Your courtiers are marked.
+  await expect(page.locator(".card.helps").first()).toBeVisible();
+  // Thwart, play Buyer of Cities, and the seat is offered as a win.
+  await playFromList(page);
+  await settle(page);
+  await playFromList(page);
+  await settle(page);
+  const win = page.getByTestId("win-now");
+  await expect(win).toContainText("You can win now");
+  await expect(win.getByRole("button")).toContainText("Buyer of Cities into Master of the Market");
+  await win.getByRole("button").first().click();
+  const over = page.getByTestId("game-over");
+  await expect(over).toContainText("You win");
+  await expect(over.getByTestId("all-agendas")).toContainText("Faith Ascendant: Old Gods");
+  await expect(page.getByTestId("close-danger")).toHaveCount(0);
   expect(errors).toEqual([]);
 });

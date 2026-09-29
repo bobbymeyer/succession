@@ -9,7 +9,7 @@ import { drops, settled, stage, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
-import { Board, Hand, NO_INTERACTION, type Interaction } from "./components/Board";
+import { Board, Hand, marksFor, NO_INTERACTION, type Interaction } from "./components/Board";
 import { usePhone } from "./usePhone";
 import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
@@ -367,6 +367,12 @@ export function App() {
   const actions = turnPrompt?.options ?? [];
   const now: Stage | null = turnPrompt ? stage(actions, selection) : null;
   const answer = (action: Action) => send({ type: "answer", choice: action.index });
+  // Moves that win you the game now, and the cards in them, lit on the table.
+  const winning = actions.filter((a) => a.wins);
+  const marks = marksFor(
+    view,
+    new Set(winning.flatMap((a) => [a.card, a.courtier].filter((u): u is number => u !== null))),
+  );
   /** Take a selection: play it if it pins one move down, else wait for more. */
   const apply = (next: Selection) => {
     const action = settled(actions, next);
@@ -623,7 +629,14 @@ export function App() {
           onExport={exportCsv}
         />
       ) : turnPrompt || pickPrompt ? (
-        <StatusPanel hint={phone ? tapped(hint) : hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
+        <StatusPanel
+          hint={phone ? tapped(hint) : hint}
+          prompt={turnPrompt ?? pickPrompt}
+          onAction={answer}
+          onPick={pick}
+          pass={pass}
+          winning={winning}
+        />
       ) : (
         <div className="prompt" aria-live="polite">
           {latest && <p className="latest">{latest}</p>}
@@ -701,6 +714,7 @@ export function App() {
             playing={playing}
             won={result && !waiting ? winningCourt(view) : undefined}
             hand={false}
+            marks={marks}
           />
           {(menuOpen || sheet) && (
             <div
@@ -758,7 +772,7 @@ export function App() {
               </div>
             )}
             {error && <p className="error">{error}</p>}
-            {view.you >= 0 && <Hand view={view} act={phoneAct} />}
+            {view.you >= 0 && <Hand view={view} act={phoneAct} marks={marks} />}
             <nav className="dock-tabs" aria-label="Agenda, log and discard pile">
               {myAgenda &&
                 sheetTab(
@@ -785,7 +799,13 @@ export function App() {
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
-        <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} />
+        <Board
+          view={view}
+          act={act}
+          playing={playing}
+          won={result && !waiting ? winningCourt(view) : undefined}
+          marks={marks}
+        />
         <div className="rail">
           <aside className="side">
             <div className="controls">
@@ -803,9 +823,10 @@ export function App() {
 
             {shown.coach && <CoachPanel coach={shown.coach} />}
             {question}
-            <DiscardPile view={view} dropLive={dropping.has("discard")} />
+            {/* Once the game is over the pile says nothing; the reveal takes its room. */}
+            {!(result && !waiting) && <DiscardPile view={view} dropLive={dropping.has("discard")} />}
             {error && <p className="error">{error}</p>}
-            {hovered && (
+            {hovered && !result && (
               <div className="preview" aria-hidden="true">
                 <CardDetail card={hovered} />
               </div>

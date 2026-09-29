@@ -77,6 +77,10 @@ export async function showPanel(page: Page, which: "agenda" | "log") {
   if (await dock.isVisible()) {
     if ((await dock.getAttribute("aria-expanded")) !== "true") await dock.click();
   } else {
-    await page.getByRole("tab", { name: which === "log" ? "Log" : /Agenda/ }).click();
+    const tab = page.getByRole("tab", { name: which === "log" ? "Log" : /Agenda/ });
+    // The rail is sticky and scrolls on its own; Playwright's scrolling lands
+    // the click beside it, where a person would simply scroll the rail.
+    await tab.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await tab.click();
   }
 }

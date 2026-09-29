@@ -928,3 +928,60 @@ a.button:hover { border-color: var(--gold); }
   .event-modal { max-height: calc(100dvh - 16px); overflow-y: auto; }
   .event-art { width: min(260px, 38vw, calc((100dvh - 64px) * 496 / 692)); }
 }
+
+/* -- the court at a glance ----------------------------------------------------- */
+.tally { margin: -2px 0 8px; }
+.tally ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-variant-numeric: tabular-nums; }
+.tally li { display: inline-flex; align-items: center; gap: 4px; font-size: 0.86rem; color: var(--ink); }
+.tally li.none { opacity: 0.4; }
+.tally li.seats { gap: 0; color: var(--muted); padding-right: 8px; border-right: 1px solid var(--line); }
+.tally li.seats .n { color: var(--ink); }
+.tally .n { font-weight: 700; }
+.tally-icon { width: 15px; height: 15px; flex: none; color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tally-alert { margin: 6px 0 0; padding: 4px 10px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; }
+.tally-alert.danger { color: #ffd9d2; background: rgba(226, 91, 69, 0.18); border: 1px solid var(--pick); animation: alert-pulse 1.8s ease-in-out infinite; }
+.tally-alert.yours { color: var(--gold-bright); background: rgba(240, 200, 101, 0.12); border: 1px solid var(--gold); }
+@keyframes alert-pulse { 50% { box-shadow: 0 0 14px rgba(226, 91, 69, 0.45); } }
+@media (prefers-reduced-motion: reduce) { .tally-alert.danger { animation: none; } }
+.game.phone .tally { margin: 0 0 4px; }
+.game.phone .tally ul { gap: 2px 8px; }
+.game.phone .tally li { font-size: 0.74rem; }
+.game.phone .tally-icon { width: 12px; height: 12px; }
+.game.phone .tally-alert { font-size: 0.72rem; padding: 3px 8px; margin-top: 4px; }
+
+/* -- your agenda on the table ------------------------------------------------ */
+.helps-mark {
+  position: absolute; top: 3%; left: 4%; z-index: 2;
+  width: max(14px, 16%); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: max(9px, calc(var(--w) * 0.1)); line-height: 1; color: var(--cloth-deep);
+  background: var(--gold-bright); box-shadow: 0 0 0 1.5px var(--cloth-deep), 0 0 8px rgba(240, 200, 101, 0.7);
+  pointer-events: none;
+}
+.card.helps:not(.live):not(.selected) .face { box-shadow: 0 0 0 1.5px rgba(240, 200, 101, 0.55), 0 2px 6px rgba(0, 0, 0, 0.45); }
+/* A card in a move that wins: it glows until you take it. */
+.card.wins .face { animation: wins-glow 1.4s ease-in-out infinite; }
+@keyframes wins-glow {
+  0%, 100% { box-shadow: 0 0 0 3px var(--gold-bright), 0 0 12px rgba(240, 200, 101, 0.5); }
+  50% { box-shadow: 0 0 0 4px #fff3c4, 0 0 26px rgba(240, 200, 101, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) { .card.wins .face { animation: none; box-shadow: 0 0 0 4px #fff3c4; } }
+.win-now { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(240, 200, 101, 0.14); border: 1px solid var(--gold-bright); }
+.win-now strong { color: var(--gold-bright); font-family: var(--serif); font-size: 1.05rem; }
+.win-now .buttons { margin: 6px 0 0; }
+.win-now button.primary { white-space: normal; text-align: left; }
+
+/* -- every agenda, at the end ------------------------------------------------ */
+.all-agendas { margin: 4px 0 12px; }
+.all-agendas h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-family: inherit; margin: 0 0 6px; }
+.all-agendas ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.all-agendas li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; padding-left: 8px; border-left: 3px solid var(--seat); }
+.all-agendas .who { color: var(--seat); font-size: 0.78rem; font-weight: 700; }
+.all-agendas strong { font-family: var(--serif); font-size: 0.95rem; }
+.all-agendas .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.all-agendas .bar span { display: block; height: 100%; background: var(--seat); }
+.all-agendas small { grid-column: 1 / -1; font-size: 0.76rem; }
+/* The rail scrolls when its panels outgrow the screen (a game over, a long
+   question); they keep their height rather than squeezing over each other. */
+.rail > * { flex-shrink: 0; }

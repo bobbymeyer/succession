@@ -421,3 +421,30 @@ class Terminal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WinningMoves(unittest.TestCase):
+    def test_a_move_marked_as_winning_completes_your_agenda(self):
+        from succession.agendas import AGENDAS_BY_KEY, satisfied
+
+        taken = 0
+        for seed in range(40):
+            session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), seed)
+            me, rng = session.humans[0], random.Random(seed)
+            prompt = session.advance()
+            while prompt.kind != OVER:
+                if prompt.kind == TURN:
+                    options = session.prompt_json()["options"]
+                    winning = [o for o in options if o["wins"]]
+                    if winning:
+                        taken += 1
+                        prompt = session.answer(winning[0]["index"])
+                        # Met at once; the game may still ask for a hand-limit
+                        # discard before it is declared.
+                        agenda = AGENDAS_BY_KEY[session.state.agendas[me]]
+                        self.assertTrue(satisfied(session.state, agenda) or me in session.state.winners, seed)
+                        break
+                    prompt = session.answer(rng.randrange(len(options)))
+                else:
+                    prompt = session.answer(rng.choice(prompt.options))
+        self.assertGreater(taken, 3)

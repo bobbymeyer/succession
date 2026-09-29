@@ -22,6 +22,10 @@ interface Props {
   onPress?: (event: ReactPointerEvent<HTMLElement>) => void;
   /** Buttons over the card while it is picked up. */
   popover?: ReactNode;
+  /** A courtier who counts, or would, toward your agenda. */
+  helps?: boolean;
+  /** Part of a move that wins you the game now. */
+  wins?: boolean;
 }
 
 /** The grid every courtier's details keep, in play or in the inspector. */
@@ -144,6 +148,8 @@ export function CardView({
   draggable = false,
   onPress,
   popover,
+  helps = false,
+  wins = false,
 }: Props) {
   const { inspect, hover } = useUi();
   const long = useLongPress(() => inspect(card));
@@ -154,6 +160,8 @@ export function CardView({
   if (selected) classes.push("selected");
   if (draggable) classes.push("grab");
   if (dropLive) classes.push("drop-live");
+  if (helps) classes.push("helps");
+  if (wins) classes.push("wins");
 
   return (
     <div
@@ -185,6 +193,11 @@ export function CardView({
         <Face card={card} />
         {courtier && <Sigil card={card} />}
         {changed && <span className="changed-flag">Changed</span>}
+        {helps && (
+          <span className="helps-mark" title="Counts toward your agenda" aria-label="Counts toward your agenda">
+            ★
+          </span>
+        )}
       </button>
       {popover && <div className="popover">{popover}</div>}
       {live && (

@@ -39,7 +39,7 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Callable, Optional
 
 from .actions import PLAY, Action, legal_actions
-from .agendas import AGENDAS_BY_KEY, conditions, contributors, count_board, rules_for
+from .agendas import AGENDAS, AGENDAS_BY_KEY, conditions, contributors, count_board, distance, helps, rules_for, satisfied
 from .bots import make_bot
 from .cards import (
     EFFECT_DISCARD_ALL,
@@ -50,8 +50,8 @@ from .cards import (
     EFFECT_REDEAL,
     EFFECT_RESHUFFLE,
 )
-from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
-from .enums import SEAT_ESTATE, SEATS, CardKind
+from .engine import EvalRng, GameResult, apply_action, game_result, resolve_turn, setup_game, start_turn
+from .enums import FAITHS, FAMILIES, SEAT_ESTATE, SEATS, CardKind
 from . import tutorial
 from .state import Config, GameState
 
@@ -454,6 +454,8 @@ class GameSession:
         state = self.state
         if prompt.kind == TURN:
             options = [action_json(state, a, i) for i, a in enumerate(prompt.options)]
+            for option, action in zip(options, prompt.options):
+                option["wins"] = wins(state, prompt.player, action)
         else:
             options = [card_json(state, uid) for uid in prompt.options]
         return {
@@ -637,6 +639,21 @@ def card_json(state: GameState, uid: int) -> dict:
     return data
 
 
+def wins(state: GameState, player: int, action: Action) -> bool:
+    """Whether the move completes the player's own agenda, played out on a copy.
+
+    Played the way the bots look ahead (EvalRng): a save roll fails and
+    nothing hidden is drawn, so a move that leans on luck is not promised.
+    """
+
+    after = state.clone()
+    try:
+        apply_action(after, player, action, EvalRng())
+    except Exception:  # pragma: no cover - a lookahead must never cost the game
+        return False
+    return satisfied(after, AGENDAS_BY_KEY[after.agendas[player]])
+
+
 def action_json(state: GameState, action: Action, index: int) -> dict:
     def uid(value: int) -> Optional[int]:
         return value if value >= 0 else None
@@ -679,6 +696,13 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
             ],
             #: The seated courtiers that count toward it.
             "seated": contributors(state, a),
+            #: Yours only: courtiers in the outer circle or your hand who
+            #: would count if seated.
+            "helpers": (
+                [uid for uid in (*state.outer, *state.hands[p]) if state.card(uid).is_courtier and helps(state, a, uid, counts)]
+                if p == player
+                else []
+            ),
         }
 
     seats = []
@@ -714,6 +738,16 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
         "discard_top": card_json(state, state.discard[-1]) if state.discard else None,
         "removed": len(state.removed),
         "frozen": {"inner": state.inner_frozen, "board": state.board_frozen},
+        #: The court in the terms agendas read it, for everyone to see.
+        "court": {
+            "filled": counts.inner_filled,
+            "houses": {f.value: counts.inner_family.get(f.value, 0) for f in FAMILIES},
+            "faiths": {f.value: counts.inner_faith.get(f.value, 0) for f in FAITHS},
+            "barbarians": counts.inner_barbarians,
+            "barbarians_outside": counts.barbarians_in_play - counts.inner_barbarians,
+            #: Agendas one courtier from complete -- whoever holds them.
+            "close": [{"key": a.key, "name": a.name} for a in AGENDAS if distance(counts, a, rules) == 1],
+        },
     }
 
 

@@ -1400,3 +1400,46 @@ class TestGames(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class Closeness(unittest.TestCase):
+    """How near the board stands to each agenda, for the table's warnings."""
+
+    def test_three_of_a_faith_seated_is_one_away(self):
+        from succession.agendas import count_board, distance, rules_for
+
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["faith_old_gods"]
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 2)
+        seat(state, "Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 1)
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 0)
+
+    def test_one_courtier_can_answer_two_clauses_at_once(self):
+        # House Rising wants three seats, one in the house's own estate: two
+        # seated elsewhere, and a third into that estate, is one move.
+        from succession.agendas import count_board, distance, rules_for
+
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["house_mitreas"]
+        seat(state, "Charioteer of the Seven Turns", Seat.VOICE_OF_THE_PEOPLE)  # Mitreas, Commons
+        seat(state, "Crosser of Rivers", Seat.LORD_GENERAL)  # Mitreas, Military
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 1)
+
+    def test_the_view_shows_the_court_and_what_is_close(self):
+        from succession.session import view
+
+        state = fresh()
+        for name, where in (
+            ("Beloved of the Gods", Seat.ARCHPRIEST),
+            ("Keeper of the Long Peace", Seat.LORD_GENERAL),
+            ("Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD),
+        ):
+            seat(state, name, where)
+        court = view(state, 0, list(state.config.players))["court"]
+        self.assertEqual(court["filled"], 3)
+        self.assertEqual(court["faiths"]["Old Gods"], 3)
+        self.assertIn("faith_old_gods", {a["key"] for a in court["close"]})

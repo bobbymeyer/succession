@@ -40,6 +40,18 @@ export interface Agenda {
   met: boolean;
   status: Clause[];
   seated: number[]; // uids of the seated courtiers that count toward it
+  helpers: number[]; // yours only: courtiers outside or in hand who would count, seated
+}
+
+/** The court in the terms agendas read it (succession/session.py `view`). */
+export interface Court {
+  filled: number;
+  houses: Record<string, number>;
+  faiths: Record<string, number>;
+  barbarians: number;
+  barbarians_outside: number;
+  /** Agendas one courtier from complete, whoever holds them. */
+  close: { key: string; name: string }[];
 }
 
 export interface Player {
@@ -65,6 +77,7 @@ export interface View {
   discard_top: Card | null;
   removed: number;
   frozen: { inner: boolean; board: boolean };
+  court: Court;
 }
 
 export interface Action {
@@ -77,6 +90,7 @@ export interface Action {
   sacrifice: number | null;
   value: string | null;
   text: string;
+  wins?: boolean; // completes your agenda, played out on a copy of the game
 }
 
 export type Prompt =

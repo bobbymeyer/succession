@@ -9,15 +9,30 @@ export function StatusPanel({
   onAction,
   onPick,
   pass,
+  winning = [],
 }: {
   hint: string;
   prompt: Prompt | null;
   onAction(action: Action): void;
   onPick(uid: number): void;
   pass: Action | null;
+  /** Moves that complete your agenda now. */
+  winning?: Action[];
 }) {
   return (
     <div className="prompt" aria-live="polite">
+      {winning.length > 0 && (
+        <div className="win-now" data-testid="win-now">
+          <strong>★ You can win now.</strong>
+          <div className="buttons">
+            {winning.map((a) => (
+              <button key={a.index} type="button" className="primary" onClick={() => onAction(a)}>
+                {sentence(a.text)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <p>{hint}</p>
       {pass && (
         <div className="buttons">
@@ -79,4 +94,10 @@ export function DiscardPile({ view, dropLive }: { view: View; dropLive: boolean 
       </div>
     </section>
   );
+}
+
+/** "move X -> Y" as a line a person would write. */
+function sentence(text: string): string {
+  const out = text.replace(/ -> /g, " into ");
+  return out.charAt(0).toUpperCase() + out.slice(1);
 }
