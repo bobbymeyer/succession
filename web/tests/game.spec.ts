@@ -87,16 +87,20 @@ test("an event that asks you something is announced first", async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
+// A saved game stopped at the hand limit: seed 1, three moves in, with more
+// than seven cards in hand. The record carries its own rules, so later
+// rule changes leave it where it is.
+const AT_THE_HAND_LIMIT = {"version": 4, "seed": 1, "config": {"players": ["human", "naive", "greedy", "strategic"], "starting_hand": 5, "hand_limit": 7, "max_turns": 600, "max_rounds": 50, "shuffle_seats": true, "outmaneuver_copies": 1, "save_on_even": true, "removed_courtiers_return_to_deck": true, "discard_draws": true, "hand_limit_at_end_of_turn": true, "events_on_draw": true, "events_on_draw_minor_only": false, "event_tiers": ["minor"], "caster_edge": false, "defense_requires_matching_target": false, "courtier_costs": false, "reactive_defense": true, "excommunication_godless": true, "house_rising_requires_preferred_seat": true, "faith_seats": 4, "balance_seats": 7, "balance_barbarians": 1, "conquest_barbarians": 3, "conquest_military_seats": 0, "conquest_outer_barbarians": 1, "excluded_agendas": [], "house_preferred_estates": []}, "decisions": [4, 18, 24]};
+
 test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
-  // Seed 1390: taking the first move each time, your hand passes 7 on the
-  // eighth decision.
   const errors: string[] = [];
-  await start(page, errors, 1390);
-  for (let i = 0; i < 30; i++) {
-    await settle(page);
-    if (await page.locator(".prompt", { hasText: "over the limit" }).count()) break;
-    await playFromList(page);
-  }
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  await page.getByText("Load a saved game").click();
+  await page.getByLabel("Game record").fill(JSON.stringify(AT_THE_HAND_LIMIT));
+  await page.getByRole("button", { name: "Load", exact: true }).click();
   await settle(page);
   await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
   expect(await page.locator(".mine .card").count()).toBeGreaterThan(7);
@@ -130,6 +134,12 @@ test("a game played by clicking the board", async ({ page }) => {
   for (let i = 0; i < 3000; i++) {
     await settle(page);
     if (await page.getByTestId("game-over").isVisible()) break;
+    // A rival's attack you could block: block it or let it land.
+    const block = page.getByTestId("block");
+    if (await block.isVisible()) {
+      await random(await block.getByRole("button").all()).click();
+      continue;
+    }
     const buttons = await offers.all();
     if (buttons.length && Math.random() < 0.8) {
       await random(buttons).click();
@@ -424,5 +434,24 @@ test("the table shows the round, who plays next, and names each bot's move", asy
   // A bot's move is captioned where it lands.
   await page.locator(".hand-caption").first().waitFor({ state: "attached", timeout: 30_000 });
   await settle(page);
+  expect(errors).toEqual([]);
+});
+
+test("a rival's attack on a courtier your Defense covers can be blocked", async ({ page }) => {
+  // Seed 1: taking the first move each time, a bot plays Take Vows on Master
+  // Swordsmith on your ninth decision, and your hand holds his shield.
+  const errors: string[] = [];
+  await start(page, errors, 1);
+  const block = page.getByTestId("block");
+  for (let i = 0; i < 30 && !(await block.isVisible()); i++) {
+    await playFromList(page);
+    await settle(page);
+  }
+  await expect(block).toContainText("plays Take Vows on Master Swordsmith");
+  await expect(page.locator(".card.attacked")).toHaveCount(1);
+  await block.getByTestId("block-with").first().click();
+  await settle(page);
+  await showPanel(page, "log");
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Master Swordsmith is untouched");
   expect(errors).toEqual([]);
 });

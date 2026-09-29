@@ -343,7 +343,7 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         self.assertIsNone(state.seats[Seat.ARCHPRIEST])  # second one lands
 
     def test_a_defense_costs_nothing_and_its_estate_is_whom_it_shields(self):
-        state = fresh()
+        state = fresh(reactive_defense=False)
         church = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         soldier = seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
         bodyguard = give(state, 0, "Bodyguard")[0]  # Military
@@ -353,7 +353,7 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         self.assertEqual({a.courtier for a in card_actions(state, 0, patron)}, {church, soldier})
 
     def test_old_rules_defense_costs_a_matching_estate_courtier(self):
-        state = fresh(courtier_costs=True)
+        state = fresh(courtier_costs=True, reactive_defense=False)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Bodyguard")[0]  # Military
         give(state, 0, "Beloved of the Gods")  # Church: cannot pay
@@ -362,7 +362,7 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         self.assertTrue(card_actions(state, 0, shield))
 
     def test_old_rules_patron_protection_accepts_any_estate(self):
-        state = fresh(courtier_costs=True)
+        state = fresh(courtier_costs=True, reactive_defense=False)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Patron Protection")[0]
         give(state, 0, "Golden Thumb")
@@ -1464,3 +1464,55 @@ class Closeness(unittest.TestCase):
         self.assertEqual(court["filled"], 3)
         self.assertEqual(court["faiths"]["Old Gods"], 3)
         self.assertIn("faith_old_gods", {a["key"] for a in court["close"]})
+
+
+class ReactiveDefense(unittest.TestCase):
+    """A Defense is played from hand against an attack on a seated courtier."""
+
+    class Always:
+        def block(self, state, player, options, target, preview):
+            return options[0]
+
+    class Never:
+        def block(self, state, player, options, target, preview):
+            return None
+
+    def attack(self, deciders, where=Seat.LORD_GENERAL, defense="Bodyguard", courtier="Keeper of the Long Peace"):
+        state = fresh()
+        target = seat(state, courtier, where) if where else outer(state, courtier)[0]
+        shield = give(state, 1, defense)[0]
+        demote = give(state, 0, "Demotion")[0]
+        apply_action(state, 0, Action(PLAY, card=demote, courtier=target), FixedRng(), deciders)
+        return state, target, shield
+
+    def test_a_rival_blocks_and_both_cards_go(self):
+        state, target, shield = self.attack([self.Never(), self.Always(), self.Never(), self.Never()])
+        self.assertEqual(state.seats[Seat.LORD_GENERAL], target)  # still seated
+        self.assertIn(shield, state.discard)
+        self.assertNotIn(shield, state.hands[1])
+
+    def test_letting_it_land(self):
+        state, target, shield = self.attack([self.Never()] * 4)
+        self.assertIsNone(state.seats[Seat.LORD_GENERAL])
+        self.assertIn(shield, state.hands[1])
+
+    def test_a_defense_covers_only_its_estate(self):
+        # Bodyguard is Military; the Archpriest's courtier is Church.
+        state, target, shield = self.attack(
+            [self.Never(), self.Always(), self.Never(), self.Never()], where=Seat.ARCHPRIEST, courtier="Beloved of the Gods"
+        )
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
+        self.assertIn(shield, state.hands[1])
+
+    def test_patron_protection_covers_anyone(self):
+        state, target, shield = self.attack(
+            [self.Never(), self.Always(), self.Never(), self.Never()],
+            where=Seat.ARCHPRIEST, courtier="Beloved of the Gods", defense="Patron Protection",
+        )
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], target)
+
+    def test_a_defense_is_not_played_on_your_own_turn(self):
+        state = fresh()
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        shield = give(state, 0, "Bodyguard")[0]
+        self.assertEqual(card_actions(state, 0, shield), [])

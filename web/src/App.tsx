@@ -23,7 +23,7 @@ import { CoachPanel } from "./components/Coach";
 import { FIRST_GAME_TABLE } from "./firstGame";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
-import { DiscardPile, StatusPanel } from "./components/Status";
+import { BlockPanel, DiscardPile, StatusPanel } from "./components/Status";
 import { Setup } from "./components/Setup";
 
 // The pause after each bot move. Long enough to watch the card leave the
@@ -196,7 +196,7 @@ export function App() {
         return; // the bots wait for Begin
       }
     }
-    const asking = next.prompt && next.prompt.kind !== "turn" ? next.prompt : null;
+    const asking = next.prompt && next.prompt.kind !== "turn" && next.prompt.kind !== "block" ? next.prompt : null;
     if (asking?.card) {
       const key = `${asking.card.uid}:${next.view.turn}`;
       if (announced.current !== key) {
@@ -367,7 +367,8 @@ export function App() {
   const waiting = pending > 0 || busy || events !== null;
   const cards = visibleCards(view);
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
-  const pickPrompt = !waiting && prompt && prompt.kind !== "turn" ? prompt : null;
+  const pickPrompt = !waiting && prompt && prompt.kind !== "turn" && prompt.kind !== "block" ? prompt : null;
+  const blockPrompt = !waiting && prompt?.kind === "block" ? prompt : null;
   const latest = log.length ? readableLog(log[log.length - 1].view, log[log.length - 1].text) : null;
 
   // -- playing by hand: click to pick up, or drag -----------------------------
@@ -390,6 +391,7 @@ export function App() {
   const marks = marksFor(
     view,
     new Set(winning.flatMap((a) => [a.card, a.courtier].filter((u): u is number => u !== null))),
+    blockPrompt ? new Set([blockPrompt.about.uid]) : new Set(),
   );
   /** Take a selection: play it if it pins one move down, else wait for more. */
   const apply = (next: Selection) => {
@@ -647,6 +649,8 @@ export function App() {
           onExport={exportCsv}
           guesses={guesses}
         />
+      ) : blockPrompt ? (
+        <BlockPanel view={view} prompt={blockPrompt} onChoose={pick} />
       ) : turnPrompt || pickPrompt ? (
         <StatusPanel
           hint={phone ? tapped(hint) : hint}
@@ -672,7 +676,7 @@ export function App() {
       <Inspect card={inspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
-      {announce?.prompt && announce.prompt.kind !== "turn" && (
+      {announce?.prompt && (announce.prompt.kind === "courtier" || announce.prompt.kind === "discard") && (
         <EventAnnouncement
           key={announced.current}
           prompt={announce.prompt}

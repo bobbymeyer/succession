@@ -101,6 +101,7 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         defense_requires_matching_target=args.defense_matches_target,
         excommunication_godless=not args.excommunication_none,
         courtier_costs=args.courtier_costs,
+        reactive_defense=not args.attached_defense,
         house_rising_requires_preferred_seat=not args.house_any_three,
         house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
         faith_seats=args.faith_seats,
@@ -220,6 +221,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--events-held", action="store_true", help="events are held and played from hand (default: an event plays the moment it is drawn, and the drawer draws again)")
     parser.add_argument("--minor-events-on-draw", action="store_true", help="with --events all: only the minor events play when drawn; the majors are held")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
+    parser.add_argument("--attached-defense", action="store_true", help="variant: a Defense is attached to a courtier in advance, on your own turn (the old rules)")
     parser.add_argument("--courtier-costs", action="store_true", help="variant: Defenses and Adoption cost a courtier from your hand (the old rules)")
     parser.add_argument("--excommunication-none", action="store_true", help="variant: Excommunication leaves an empty faith (None) rather than Godless")
     parser.add_argument("--defense-matches-target", action="store_true", help="an estate Defense may only protect a courtier of that estate")

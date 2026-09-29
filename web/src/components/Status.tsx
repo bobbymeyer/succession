@@ -1,5 +1,6 @@
 import type { Action, Card, Prompt, View } from "../protocol";
 import { CardView } from "./CardView";
+import { playerName } from "../names";
 
 // The line that says what is being asked, and the whole list of legal moves
 // under it, folded away, for anyone who would rather pick from a list.
@@ -24,6 +25,7 @@ export function StatusPanel({
       {winning.length > 0 && (
         <div className="win-now" data-testid="win-now">
           <strong>★ You can win now.</strong>
+          {winning.every((a) => a.blockable) && <small className="muted"> Unless a rival blocks it.</small>}
           <div className="buttons">
             {winning.map((a) => (
               <button key={a.index} type="button" className="primary" onClick={() => onAction(a)}>
@@ -100,4 +102,36 @@ export function DiscardPile({ view, dropLive }: { view: View; dropLive: boolean 
 function sentence(text: string): string {
   const out = text.replace(/ -> /g, " into ");
   return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
+// Someone attacks a seated courtier one of your Defenses covers: block it
+// (both cards are thrown away and nothing happens), or let it land.
+export function BlockPanel({
+  view,
+  prompt,
+  onChoose,
+}: {
+  view: View;
+  prompt: Prompt & { kind: "block" };
+  onChoose(uid: number): void;
+}) {
+  return (
+    <div className="prompt block-prompt" data-testid="block" aria-live="assertive">
+      <p>
+        <strong>{playerName(view, prompt.attacker)}</strong> plays <strong>{prompt.card.name}</strong> on{" "}
+        <strong>{prompt.about.name}</strong>.
+      </p>
+      <p className="muted">You can block it: both cards are thrown away and nothing happens.</p>
+      <div className="buttons">
+        {prompt.options.map((c) => (
+          <button key={c.uid} type="button" className="primary" data-testid="block-with" onClick={() => onChoose(c.uid)}>
+            Block with {c.name}
+          </button>
+        ))}
+        <button type="button" data-testid="let-it-land" onClick={() => onChoose(-1)}>
+          Let it happen
+        </button>
+      </div>
+    </div>
+  );
 }

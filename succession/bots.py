@@ -105,6 +105,13 @@ class Bot:
 
         return self.rng.choice(list(hand))
 
+    def block(self, state: GameState, player: int, options: Sequence[int], target: int, preview) -> Optional[int]:
+        """Someone attacks a seated courtier we could shield: a Defense from
+        `options` to stop it, or None to let it land. `preview()` is the board
+        as it would be if it lands. A naive bot flips a coin."""
+
+        return self.rng.choice(list(options)) if self.rng.random() < 0.5 else None
+
     def pick_from_discard(self, state: GameState, player: int, pile: Sequence[int]) -> int:
         """Choose a card to keep from the discard pile (`caster_edge` Eclipse)."""
 
@@ -124,6 +131,13 @@ class ThinkingBot(Bot):
     """Shared machinery for the two tiers that actually evaluate the board."""
 
     tier = "thinking"
+
+    def block(self, state: GameState, player: int, options: Sequence[int], target: int, preview) -> Optional[int]:
+        """Block when the attack would leave the board worse for us."""
+
+        now = self.score(state, state, player, Action(PASS))
+        after = self.score(preview(), state, player, Action(PASS))
+        return options[0] if after < now - 1e-6 else None
 
     def candidates(self, state: GameState, actions: Sequence[Action]) -> list[Action]:
         """Prune to a manageable, representative set of candidate actions."""

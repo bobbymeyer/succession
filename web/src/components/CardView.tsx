@@ -28,6 +28,8 @@ interface Props {
   helps?: boolean;
   /** Part of a move that wins you the game now. */
   wins?: boolean;
+  /** Under an attack you may block. */
+  attacked?: boolean;
 }
 
 /** The grid every courtier's details keep, in play or in the inspector. */
@@ -189,6 +191,7 @@ export function CardView({
   popover,
   helps = false,
   wins = false,
+  attacked = false,
   label = false,
 }: Props) {
   const { inspect, hover } = useUi();
@@ -203,6 +206,7 @@ export function CardView({
   if (helps) classes.push("helps");
   if (changed) classes.push("changed");
   if (wins) classes.push("wins");
+  if (attacked) classes.push("attacked");
 
   return (
     <div

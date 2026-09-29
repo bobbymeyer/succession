@@ -91,7 +91,7 @@ courtier is bumped to the outer circle.
 | Promotion (5) | Outer courtier → an *occupied* matching seat; occupant bumped to outer. Wildcard `Promotion` works on any estate. |
 | Demotion (5) | Inner courtier → outer; seat left empty. |
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
-| Defense (5) | Attached preemptively to an inner-circle courtier of the card's estate, at no cost (`Patron Protection`: any courtier). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
+| Defense (5) | Kept in hand, **never played on your own turn**. When another player plays a Removal / Demotion / Strip / Mutation on a seated courtier of the card's estate (`Patron Protection`: any), each other player in turn from the attacker's left may discard a Defense to block it: both cards go and the attack does nothing. **Does not stop Events.** (`--attached-defense`: the older rule, attached to a courtier in advance on your turn.) |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → Godless. The courtier stays where they are. |
 | Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
 | Event (10) | Hits the whole table, not one courtier. Five minor/major pairs -- see below. No Defense covers an event. |

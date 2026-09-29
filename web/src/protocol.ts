@@ -93,13 +93,26 @@ export interface Action {
   value: string | null;
   text: string;
   wins?: boolean; // completes your agenda, played out on a copy of the game
+  blockable?: boolean; // an attack on a seated courtier: a rival's Defense may stop it
 }
 
 export type Prompt =
   | { kind: "turn"; player: number; options: Action[]; card: null; summary: ""; over: 0 }
   // `card` is the event asking; null for a discard down to the hand limit as
   // your turn ends, with `over` the cards still to go.
-  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card | null; summary: string; over: number };
+  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card | null; summary: string; over: number }
+  // Someone attacks a seated courtier your Defense covers: block with one of
+  // `options` (answer its uid), or let it land (answer -1).
+  | {
+      kind: "block";
+      player: number;
+      options: Card[];
+      card: Card; // the attack
+      about: Card; // the courtier under it
+      attacker: number;
+      summary: string;
+      over: number;
+    };
 
 export interface GameRecord {
   version: number;

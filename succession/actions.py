@@ -165,6 +165,8 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return out
 
     if kind is CardKind.DEFENSE:
+        if state.config.reactive_defense:
+            return out  # held for someone else's attack (engine.blocked)
         paid = state.config.courtier_costs
         costs = (
             [

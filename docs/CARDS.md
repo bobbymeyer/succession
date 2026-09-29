@@ -124,11 +124,11 @@ Attached to an inner-circle courtier ahead of time, paid for by sacrificing a co
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | Attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | Attach this to an inner-circle Church courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | Attach this to an inner-circle Military courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | Attach this to an inner-circle Merchant courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | Attach this to an inner-circle Commons courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | When another player plays a Removal, Demotion, Strip or Mutation on any inner-circle courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Church courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Military courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Merchant courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Commons courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
 
 ## Strip
 

@@ -51,7 +51,7 @@ from .cards import (
     EFFECT_RESHUFFLE,
 )
 from .engine import EvalRng, GameResult, apply_action, game_result, resolve_turn, setup_game, start_turn
-from .enums import FAITHS, FAMILIES, SEAT_ESTATE, SEATS, CardKind
+from .enums import DEFENDABLE, FAITHS, FAMILIES, SEAT_ESTATE, SEATS, CardKind
 from . import tutorial
 from .state import Config, GameState
 
@@ -61,7 +61,10 @@ HUMAN = "human"
 TURN = "turn"            # pick one of `options`, the legal actions
 COURTIER = "courtier"    # a purge: name one of `options`, courtier uids
 DISCARD = "discard"      # a forced discard: throw away one of `options`, hand uids
+BLOCK = "block"          # someone attacks a courtier: block with one of `options`, or -1
 OVER = "over"            # nothing left to decide
+#: The answer to a BLOCK that lets the attack land.
+LET_IT_LAND = -1
 
 #: 2: Discard & Draw. A version-1 record was played before it, without the draw.
 #: 3: the hand limit is checked at the end of the turn; earlier records capped
@@ -74,11 +77,13 @@ RECORD_VERSION = 4
 class NeedChoice(Exception):
     """Raised by a human seat asked to decide mid-card with no answer ready."""
 
-    def __init__(self, kind: str, player: int, options: list[int], *, limit: bool = False) -> None:
+    def __init__(self, kind: str, player: int, options: list[int], *, limit: bool = False, about: int = -1) -> None:
         super().__init__(f"P{player} must choose a {kind}")
         self.kind = kind
         self.player = player
         self.options = options
+        #: For a BLOCK, the courtier under attack.
+        self.about = about
         #: A discard down to the hand limit, rather than one a card asks for.
         self.limit = limit
 
@@ -106,10 +111,14 @@ class HumanSeat:
     def pick_limit_discard(self, state: GameState, player: int, hand) -> int:
         return self._next(DISCARD, player, hand, limit=True)
 
-    def _next(self, kind: str, player: int, options, *, limit: bool = False) -> int:
+    def block(self, state: GameState, player: int, options, target: int, preview) -> Optional[int]:
+        choice = self._next(BLOCK, player, [*options, LET_IT_LAND], about=target)
+        return None if choice == LET_IT_LAND else choice
+
+    def _next(self, kind: str, player: int, options, *, limit: bool = False, about: int = -1) -> int:
         if self.answers:
             return self.answers.pop(0)
-        raise NeedChoice(kind, player, list(options), limit=limit)
+        raise NeedChoice(kind, player, list(options), limit=limit, about=about)
 
 
 @dataclass
@@ -124,6 +133,8 @@ class Prompt:
     card: int = -1
     #: A DISCARD down to the hand limit as the turn ends (`card` is then -1).
     limit: bool = False
+    #: For a BLOCK, the courtier under attack (`card` is the attacking card).
+    about: int = -1
 
 
 def seat_controllers(
@@ -314,7 +325,7 @@ class GameSession:
         if self.state.resolving_event >= 0:
             card = self.state.resolving_event
         card = -1 if need.limit else card
-        self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
+        self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit, about=need.about)
         # Only events that have finished are reported, and each once; the one
         # asking is reported when the answer lets it finish.
         finished = [e for e in self.last_events if e]
@@ -428,6 +439,8 @@ class GameSession:
         config.setdefault("excommunication_godless", False)
         # ...and before Defenses and Adoption stopped costing a courtier.
         config.setdefault("courtier_costs", True)
+        # ...and before a Defense was played in answer to an attack.
+        config.setdefault("reactive_defense", False)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):
@@ -458,13 +471,25 @@ class GameSession:
             options = [action_json(state, a, i) for i, a in enumerate(prompt.options)]
             for option, action in zip(options, prompt.options):
                 option["wins"] = wins(state, prompt.player, action)
+                #: An attack on a seated courtier: a rival may block it.
+                option["blockable"] = (
+                    state.config.reactive_defense
+                    and action.kind == PLAY
+                    and state.card(action.card).kind in DEFENDABLE
+                    and action.courtier >= 0
+                    and state.seat_of(action.courtier) is not None
+                )
         else:
-            options = [card_json(state, uid) for uid in prompt.options]
+            # A BLOCK's "let it land" (-1) is not a card: the page offers it as a button.
+            options = [card_json(state, uid) for uid in prompt.options if uid >= 0]
         return {
             "kind": prompt.kind,
             "player": prompt.player,
             "options": options,
             "card": card_json(state, prompt.card) if prompt.card >= 0 else None,
+            #: For a block: the courtier under attack, and who is attacking.
+            "about": card_json(state, prompt.about) if prompt.about >= 0 else None,
+            "attacker": state.current if prompt.kind == BLOCK else None,
             #: The asking event's one-line summary, to announce it by.
             "summary": EVENT_SUMMARY.get(state.card(prompt.card).name, "") if prompt.card >= 0 else "",
             #: Cards still to go, when discarding down to the hand limit.
@@ -648,6 +673,11 @@ def wins(state: GameState, player: int, action: Action) -> bool:
     nothing hidden is drawn, so a move that leans on luck is not promised.
     """
 
+    if action.kind == PLAY:
+        card = state.card(action.card)
+        # Luck decides these: a new agenda drawn at random, a save rolled.
+        if card.kind is CardKind.PIVOT or card.save:
+            return False
     after = state.clone()
     try:
         apply_action(after, player, action, EvalRng())
@@ -757,7 +787,9 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
 
 
 __all__ = [
+    "BLOCK",
     "COURTIER",
+    "LET_IT_LAND",
     "DISCARD",
     "GameSession",
     "HUMAN",

@@ -75,6 +75,10 @@ class Config:
     #: now): a Defense's estate says whom it can shield instead of what it
     #: costs, and Adoption picks the new house freely, like Conversion.
     courtier_costs: bool = False
+    #: A Defense is played from hand when a seated courtier of its estate is
+    #: attacked, by any player but the attacker, and the attack fails. Off:
+    #: the older rule, attached to a courtier in advance on your own turn.
+    reactive_defense: bool = True
     #: Excommunication leaves a courtier Godless. False: it leaves the old
     #: empty faith (None), which a godless courtier could still be stripped to.
     excommunication_godless: bool = True

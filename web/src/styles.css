@@ -1045,3 +1045,14 @@ a.button:hover { border-color: var(--gold); }
 .game.phone .status { order: -1; }
 .game.phone .suspect-face { max-width: 5.5rem; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: calc(var(--w-xxs) * 692 / 496); }
 .tally li.seats .n { font-weight: 700; }
+
+/* -- a Defense in answer to an attack ----------------------------------------- */
+.card.attacked .face { animation: attacked 1s ease-in-out infinite; }
+@keyframes attacked {
+  0%, 100% { box-shadow: 0 0 0 3px var(--pick), 0 0 10px rgba(226, 91, 69, 0.5); }
+  50% { box-shadow: 0 0 0 4px #ffb3a6, 0 0 24px rgba(226, 91, 69, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) { .card.attacked .face { animation: none; box-shadow: 0 0 0 4px var(--pick); } }
+.block-prompt { border-color: var(--pick); box-shadow: 0 0 0 1px var(--pick), 0 6px 24px rgba(226, 91, 69, 0.25); }
+.block-prompt p { margin: 0 0 4px; }
+.block-prompt .buttons { margin-top: 6px; }

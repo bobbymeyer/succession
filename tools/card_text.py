@@ -140,32 +140,33 @@ RULES: dict[str, str] = {
         "return later as a new person with their printed attributes."
     ),
     # --- Defenses -----------------------------------------------------------
-    # The estate on a defense is whom it can shield: Patron Protection, any
-    # inner-circle courtier; the others, one of their estate.
+    # A defense is kept in hand and played in answer to someone else's attack.
+    # Its estate is whom it can shield: Patron Protection, any inner-circle
+    # courtier; the others, one of their estate.
     "Patron Protection": (
-        "Attach this to any inner-circle courtier. It negates the first Removal, Demotion, "
-        "Strip or Mutation aimed at them, then is discarded. It does not stop "
-        "an Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "any inner-circle courtier, you may discard this to block it: the "
+        "attack does nothing. It does not stop an Event."
     ),
     "Sanctuary": (
-        "Attach this to an inner-circle Church courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Church courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Bodyguard": (
-        "Attach this to an inner-circle Military courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Military courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Deep Pockets": (
-        "Attach this to an inner-circle Merchant courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Merchant courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Popularity": (
-        "Attach this to an inner-circle Commons courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Commons courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     # --- Strips -------------------------------------------------------------
     # A strip empties the slot without spending the courtier's one mutation,
@@ -226,7 +227,7 @@ REMINDERS: dict[CardKind, str] = {
     CardKind.EVENT: "Plays the moment it is drawn; then draw again. Hits every player.",
     CardKind.MUTATION: "Each attribute may be mutated once per courtier.",
     CardKind.STRIP: "A strip does not spend a mutation.",
-    CardKind.DEFENSE: "Attaches to an inner-circle courtier only.",
+    CardKind.DEFENSE: "Played only in answer to an attack, never on your own turn.",
 }
 
 #: The eight agendas, for the optional text-only agenda cards. The numbers are

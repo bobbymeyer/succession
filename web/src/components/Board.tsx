@@ -170,13 +170,14 @@ function Opponent({
 export interface Marks {
   helps: Set<number>;
   wins: Set<number>;
+  attacked: Set<number>; // under an attack you may block
 }
-const NO_MARKS: Marks = { helps: new Set(), wins: new Set() };
+const NO_MARKS: Marks = { helps: new Set(), wins: new Set(), attacked: new Set() };
 
 /** Your agenda's courtiers: seated for it, or able to be. */
-export function marksFor(view: View, winning: Set<number> = new Set()): Marks {
+export function marksFor(view: View, winning: Set<number> = new Set(), attacked: Set<number> = new Set()): Marks {
   const agenda = view.you >= 0 && !view.over ? view.players[view.you].agenda : null;
-  return { helps: new Set([...(agenda?.seated ?? []), ...(agenda?.helpers ?? [])]), wins: winning };
+  return { helps: new Set([...(agenda?.seated ?? []), ...(agenda?.helpers ?? [])]), wins: winning, attacked };
 }
 
 function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = true, marks: Marks = NO_MARKS) {
@@ -185,6 +186,7 @@ function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = 
       key={c.uid}
       helps={marks.helps.has(c.uid)}
       wins={marks.wins.has(c.uid)}
+      attacked={marks.attacked.has(c.uid)}
       card={c}
       size={size}
       caption={onBoard}
