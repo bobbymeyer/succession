@@ -426,6 +426,8 @@ class GameSession:
         config.setdefault("max_rounds", None)
         # ...and before an Excommunication left a courtier godless.
         config.setdefault("excommunication_godless", False)
+        # ...and before Defenses and Adoption stopped costing a courtier.
+        config.setdefault("courtier_costs", True)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):

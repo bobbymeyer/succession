@@ -23,7 +23,7 @@ from .cards import (
     EFFECT_REDEAL,
     EFFECT_RESHUFFLE,
 )
-from .enums import FAITHS, SEAT_ESTATE, CardKind, Estate, Faith, Family, Seat
+from .enums import FAITHS, FAMILIES, SEAT_ESTATE, CardKind, Estate, Faith, Family, Seat
 from .state import GameState
 
 #: Kinds a Siege stops outright -- anything that moves a courtier or changes one.
@@ -165,21 +165,26 @@ def card_actions(state: GameState, player: int, uid: int) -> list[Action]:
         return out
 
     if kind is CardKind.DEFENSE:
-        costs = [
-            h
-            for h in hand
-            if h != uid
-            and state.card(h).is_courtier
-            and _estate_matches(card.estate, state.cstate[h].estate)
-        ]
+        paid = state.config.courtier_costs
+        costs = (
+            [
+                h
+                for h in hand
+                if h != uid
+                and state.card(h).is_courtier
+                and _estate_matches(card.estate, state.cstate[h].estate)
+            ]
+            if paid
+            else [-1]
+        )
         if not costs:
             return out
+        # Without a cost, the card's estate is whom it can shield.
+        matching = state.config.defense_requires_matching_target or not paid
         for cand in state.inner_uids():
             if cand in state.defenses:
                 continue
-            if state.config.defense_requires_matching_target and not _estate_matches(
-                card.estate, state.cstate[cand].estate
-            ):
+            if matching and not _estate_matches(card.estate, state.cstate[cand].estate):
                 continue
             for cost in costs:
                 out.append(Action(PLAY, card=uid, courtier=cand, sacrifice=cost))
@@ -238,7 +243,18 @@ def _mutation_actions(state: GameState, player: int, uid: int) -> list[Action]:
                     out.append(Action(PLAY, card=uid, courtier=cand, value=faith.value))
         return out
 
-    if attribute == "family":  # Adoption
+    if attribute == "family" and not state.config.courtier_costs:  # Adoption, free
+        # Any house but the one they hold, as Conversion does for faith.
+        for cand in _touchable(state):
+            cs = state.cstate[cand]
+            if cs.mutated_family:
+                continue
+            for family in FAMILIES:
+                if family is not cs.family:
+                    out.append(Action(PLAY, card=uid, courtier=cand, value=family.value))
+        return out
+
+    if attribute == "family":  # Adoption, paid for with a family courtier
         costs = [
             h
             for h in hand

@@ -39,7 +39,7 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
   await setSeed(page, "");
   await page.getByTestId("deal").click();
   // You move first, with House Rising: Mitreas.
-  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
+  await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Argaian");
   await expect(page.getByTestId("briefing")).toContainText("You move first.");
 });
 

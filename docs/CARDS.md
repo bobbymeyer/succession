@@ -124,11 +124,11 @@ Attached to an inner-circle courtier ahead of time, paid for by sacrificing a co
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | Sacrifice a courtier of any estate from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | Sacrifice a Church courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | Sacrifice a Military courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | Sacrifice a Merchant courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | Sacrifice a Commons courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | Attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | Attach this to an inner-circle Church courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | Attach this to an inner-circle Military courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | Attach this to an inner-circle Merchant courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | Attach this to an inner-circle Commons courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
 
 ## Strip
 
@@ -153,7 +153,7 @@ Changes one attribute. Each attribute may be mutated at most once per courtier.
 | <img src="cards/79-apostasy.jpg" alt="Apostasy" width="132"> | **Apostasy**<br><sub>Card 79</sub> | Mutation · Faith | A courtier's Faith becomes Godless. Godlessness has no agenda, so their seat is one no faith can count. |
 | <img src="cards/80-go-native.jpg" alt="Go Native" width="132"> | **Go Native**<br><sub>Card 80</sub> | Mutation · Origin | A courtier's Origin becomes Barbarian. |
 | <img src="cards/81-assimilate.jpg" alt="Assimilate" width="132"> | **Assimilate**<br><sub>Card 81</sub> | Mutation · Origin | A courtier's Origin becomes Imperial. |
-| <img src="cards/82-adoption.jpg" alt="Adoption" width="132"> | **Adoption**<br><sub>Card 82</sub> | Mutation · Family | Sacrifice a courtier of a family from your hand. The target takes that family as their own. |
+| <img src="cards/82-adoption.jpg" alt="Adoption" width="132"> | **Adoption**<br><sub>Card 82</sub> | Mutation · Family | A courtier's House becomes any house but their own; you choose it. A courtier of no house may be brought into any of the three. |
 
 ## Pivot
 

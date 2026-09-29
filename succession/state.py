@@ -71,6 +71,10 @@ class Config:
     #: Require an estate-specific Defense to protect a courtier of that estate
     #: (the text only requires the *sacrificed* courtier to match).
     defense_requires_matching_target: bool = False
+    #: Defenses and Adoption cost a courtier from your hand. Off (the rules
+    #: now): a Defense's estate says whom it can shield instead of what it
+    #: costs, and Adoption picks the new house freely, like Conversion.
+    courtier_costs: bool = False
     #: Excommunication leaves a courtier Godless. False: it leaves the old
     #: empty faith (None), which a godless courtier could still be stripped to.
     excommunication_godless: bool = True

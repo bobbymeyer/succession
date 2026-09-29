@@ -140,7 +140,8 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.GODLESS.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
-    # Adoption takes its value from the family courtier sacrificed from hand.
+    # Adoption: any house you choose (or, with Config.courtier_costs, the
+    # house of a family courtier sacrificed from hand).
     CardDef("Adoption", CardKind.MUTATION, attribute="family"),
 )
 

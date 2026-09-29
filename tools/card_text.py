@@ -140,35 +140,30 @@ RULES: dict[str, str] = {
         "return later as a new person with their printed attributes."
     ),
     # --- Defenses -----------------------------------------------------------
-    # The estate on a defense is the estate of the courtier it costs, not of
-    # the courtier it guards: any inner-circle courtier may be shielded.
+    # The estate on a defense is whom it can shield: Patron Protection, any
+    # inner-circle courtier; the others, one of their estate.
     "Patron Protection": (
-        "Sacrifice a courtier of any estate from your hand and attach this to "
-        "any inner-circle courtier. It negates the first Removal, Demotion, "
+        "Attach this to any inner-circle courtier. It negates the first Removal, Demotion, "
         "Strip or Mutation aimed at them, then is discarded. It does not stop "
         "an Event."
     ),
     "Sanctuary": (
-        "Sacrifice a Church courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
+        "Attach this to an inner-circle Church courtier. It negates the first Removal, Demotion, Strip "
         "or Mutation aimed at them, then is discarded. It does not stop an "
         "Event."
     ),
     "Bodyguard": (
-        "Sacrifice a Military courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
+        "Attach this to an inner-circle Military courtier. It negates the first Removal, Demotion, Strip "
         "or Mutation aimed at them, then is discarded. It does not stop an "
         "Event."
     ),
     "Deep Pockets": (
-        "Sacrifice a Merchant courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
+        "Attach this to an inner-circle Merchant courtier. It negates the first Removal, Demotion, Strip "
         "or Mutation aimed at them, then is discarded. It does not stop an "
         "Event."
     ),
     "Popularity": (
-        "Sacrifice a Commons courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
+        "Attach this to an inner-circle Commons courtier. It negates the first Removal, Demotion, Strip "
         "or Mutation aimed at them, then is discarded. It does not stop an "
         "Event."
     ),
@@ -213,8 +208,8 @@ RULES: dict[str, str] = {
     "Go Native": "A courtier's Origin becomes Barbarian.",
     "Assimilate": "A courtier's Origin becomes Imperial.",
     "Adoption": (
-        "Sacrifice a courtier of a family from your hand. The target takes "
-        "that family as their own."
+        "A courtier's House becomes any house but their own; you choose it. A "
+        "courtier of no house may be brought into any of the three."
     ),
     # --- Pivot and Outmaneuver ----------------------------------------------
     "Schismatic Event": (

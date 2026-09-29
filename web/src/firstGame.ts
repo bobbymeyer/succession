@@ -5,7 +5,7 @@
 // choosing at random wins 10 games in 60 (about one in fifteen on a random
 // deal). tests/test_friendly_seed.py keeps the engine from quietly changing it.
 
-export const FIRST_GAME_SEED = 1205;
+export const FIRST_GAME_SEED = 2791;
 
 /** The table the seed was chosen for: you and one of each bot, in this order. */
 export const FIRST_GAME_TABLE = ["naive", "greedy", "strategic"];

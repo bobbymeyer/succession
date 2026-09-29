@@ -342,8 +342,18 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=kill2, courtier=defended), FixedRng())
         self.assertIsNone(state.seats[Seat.ARCHPRIEST])  # second one lands
 
-    def test_defense_costs_a_matching_estate_courtier(self):
+    def test_a_defense_costs_nothing_and_its_estate_is_whom_it_shields(self):
         state = fresh()
+        church = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
+        soldier = seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        bodyguard = give(state, 0, "Bodyguard")[0]  # Military
+        self.assertEqual({a.courtier for a in card_actions(state, 0, bodyguard)}, {soldier})
+        self.assertTrue(all(a.sacrifice < 0 for a in card_actions(state, 0, bodyguard)))
+        patron = give(state, 0, "Patron Protection")[0]  # anyone
+        self.assertEqual({a.courtier for a in card_actions(state, 0, patron)}, {church, soldier})
+
+    def test_old_rules_defense_costs_a_matching_estate_courtier(self):
+        state = fresh(courtier_costs=True)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Bodyguard")[0]  # Military
         give(state, 0, "Beloved of the Gods")  # Church: cannot pay
@@ -351,8 +361,8 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         give(state, 0, "Crosser of Rivers")  # Military: can pay
         self.assertTrue(card_actions(state, 0, shield))
 
-    def test_patron_protection_accepts_any_estate(self):
-        state = fresh()
+    def test_old_rules_patron_protection_accepts_any_estate(self):
+        state = fresh(courtier_costs=True)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Patron Protection")[0]
         give(state, 0, "Golden Thumb")
@@ -428,8 +438,19 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
         self.assertIs(state.cstate[target].faith, Faith.NONE)
 
-    def test_adoption_sacrifices_a_family_courtier(self):
+    def test_adoption_gives_any_house_but_their_own(self):
         state = fresh()
+        adopt = give(state, 0, "Adoption")[0]
+        target = outer(state, "Crosser of Rivers")[0]  # Mitreas
+        options = {a.value for a in card_actions(state, 0, adopt) if a.courtier == target}
+        self.assertEqual(options, {"Amonides", "Argaian"})
+        action = next(a for a in card_actions(state, 0, adopt) if a.courtier == target and a.value == "Argaian")
+        apply_action(state, 0, action, FixedRng())
+        self.assertIs(state.cstate[target].family, Family.ARGAIAN)
+        self.assertTrue(state.cstate[target].mutated_family)
+
+    def test_old_rules_adoption_sacrifices_a_family_courtier(self):
+        state = fresh(courtier_costs=True)
         adopt, donor = give(state, 0, "Adoption", "Beloved of the Gods")
         target = outer(state, "Silver Tongue")[0]  # no family
         action = next(

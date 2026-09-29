@@ -91,7 +91,7 @@ courtier is bumped to the outer circle.
 | Promotion (5) | Outer courtier → an *occupied* matching seat; occupant bumped to outer. Wildcard `Promotion` works on any estate. |
 | Demotion (5) | Inner courtier → outer; seat left empty. |
 | Removal (6) | Courtier leaves play. `Targeted Poisoning` allows a d6 save (even = saved); the rest do not. |
-| Defense (5) | Attached preemptively to an inner-circle courtier by sacrificing a matching-estate courtier *from hand* (`Patron Protection`: any estate). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
+| Defense (5) | Attached preemptively to an inner-circle courtier of the card's estate, at no cost (`Patron Protection`: any courtier). Negates the first Removal / Demotion / Strip / Mutation aimed at that courtier, then is discarded. **Does not stop Events.** |
 | Strip (2) | `Castration` sets Family → None, `Excommunication` sets Faith → Godless. The courtier stays where they are. |
 | Mutation (9) | Changes one attribute. Each attribute may be mutated **at most once per courtier**. An estate mutation that un-matches an inner seat demotes its holder immediately. |
 | Event (10) | Hits the whole table, not one courtier. Five minor/major pairs -- see below. No Defense covers an event. |
@@ -100,7 +100,7 @@ courtier is bumped to the outer circle.
 
 Strips do **not** consume a courtier's mutation allowance, so a stripped
 attribute can be restored later by `Conversion` (the player picks the faith) or
-`Adoption`.
+`Adoption` (the player picks the house).
 
 ## Faith and godlessness
 
@@ -232,7 +232,7 @@ first; the flag flips it.
 | 2e | **Apostasy is a mutation**, so it spends the target's one faith change and a Defense stops it. | mutation | -- |
 | 2g | **Balance needs all seven seats filled.** It asked for six while it also wanted two barbarians. With one barbarian and six seats it won 34% of the time, the strongest agenda; with one barbarian and all seven seats it wins 24.5%, an even share. | 7 | `--balance-seats` |
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
-| 3 | **A Defense may protect any inner-circle courtier**; only the *sacrifice* must match the defense's estate (the brief only constrains the sacrifice). | any target | `--defense-matches-target` |
+| 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone), and Adoption gives any house but the target's own, as Conversion does for faith. The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. | no costs | `--courtier-costs` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
 | 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |

@@ -21,7 +21,7 @@ const CARDS: [string, string][] = [
   ["Promotion", "Moves an outer courtier into an occupied seat of their estate; the sitter is bumped to the outer circle."],
   ["Demotion", "Sends a seated courtier back to the outer circle, leaving the seat empty."],
   ["Removal", "A courtier leaves play. Targeted Poisoning allows a saving roll."],
-  ["Defense", "Paid for with a courtier of the same estate from your hand, it shields a seated courtier from the next removal, demotion, strip or mutation. It does not stop events."],
+  ["Defense", "Shields a seated courtier of its estate (Patron Protection: anyone) from the next removal, demotion, strip or mutation. It costs nothing, and does not stop events."],
   ["Strip", "Takes away a courtier's house (Castration), or their faith, leaving them godless (Excommunication)."],
   ["Mutation", "Changes one of a courtier's attributes. Each attribute can be changed only once."],
   ["Outmaneuver", "The player you name skips their next turn."],

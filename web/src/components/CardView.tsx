@@ -104,7 +104,7 @@ const BY_NAME: Record<string, string> = {
   Apostasy: "Faith → Godless",
   "Go Native": "Origin → Barbarian",
   Assimilate: "Origin → Imperial",
-  Adoption: "House → a sacrifice's",
+  Adoption: "House → another",
   Castration: "House → none",
   Excommunication: "Faith → Godless",
   "Targeted Poisoning": "Kill, if no save",
@@ -122,7 +122,7 @@ export function ACTION_LABEL(card: Card): string {
     case "Removal":
       return `Kill a ${estate}courtier`;
     case "Defense":
-      return card.estate ? `Shield · pay a ${card.estate}` : "Shield a courtier";
+      return `Shield a ${estate}courtier`;
     default:
       return "";
   }
