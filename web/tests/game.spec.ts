@@ -88,11 +88,15 @@ test("an event that asks you something is announced first", async ({ page }) => 
 });
 
 test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
-  // Seed 1683: taking the first move each time, your hand passes 7 on the
-  // sixteenth decision.
+  // Seed 1390: taking the first move each time, your hand passes 7 on the
+  // eighth decision.
   const errors: string[] = [];
-  await start(page, errors, 1683);
-  for (let i = 0; i < 15; i++) await playFromList(page);
+  await start(page, errors, 1390);
+  for (let i = 0; i < 30; i++) {
+    await settle(page);
+    if (await page.locator(".prompt", { hasText: "over the limit" }).count()) break;
+    await playFromList(page);
+  }
   await settle(page);
   await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
   expect(await page.locator(".mine .card").count()).toBeGreaterThan(7);
