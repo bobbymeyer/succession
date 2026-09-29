@@ -176,3 +176,50 @@ export function HandLimitNotice({ hand, over, onDone }: { hand: number; over: nu
     </dialog>
   );
 }
+
+// An event that asks the table something stays on screen until it has
+// resolved: after its announcement it settles into this banner, which says
+// what is in effect and what it is still waiting for, so the board never
+// looks like ordinary play in the middle of it.
+export function EventBanner({
+  prompt,
+  actor,
+  view,
+  yours,
+}: {
+  prompt: Prompt & { kind: "courtier" | "discard" };
+  actor: number;
+  view: View;
+  /** Whether the choice is still yours to make. */
+  yours: boolean;
+}) {
+  const { art } = useUi();
+  const card = prompt.card!;
+  const src = art.card(card.name);
+  const who = actor === view.you ? "You drew it" : actor >= 0 ? `${playerName(view, actor)} drew it` : "Event";
+  const ask = prompt.kind === "courtier" ? "name a courtier to die" : "choose a card to discard";
+  return (
+    <aside
+      className="event-banner"
+      data-testid="event-banner"
+      aria-live="polite"
+      style={{ "--seat": seatColour(Math.max(actor, 0)) } as React.CSSProperties}
+    >
+      {src && <img src={src} alt="" />}
+      <div>
+        <span className="kicker">Event in effect · {who}</span>
+        <strong>{card.name}</strong>
+        <p>{prompt.summary}</p>
+        <p className="event-banner-status">
+          {yours ? (
+            <>
+              <b>Your choice:</b> {ask}. Everyone chooses at once; the event resolves when all have.
+            </>
+          ) : (
+            <>Your choice is in. Waiting for the rest of the table…</>
+          )}
+        </p>
+      </div>
+    </aside>
+  );
+}
