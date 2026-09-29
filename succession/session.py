@@ -717,6 +717,9 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
     return {
         "you": player,
         "turn": state.turn,
+        #: Rounds, as the game's limit counts them: every player one turn.
+        "round": state.turn // state.config.num_players + 1,
+        "max_rounds": state.config.max_rounds,
         "current": state.current,
         "over": over,
         "winners": list(state.winners),

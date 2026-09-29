@@ -985,3 +985,63 @@ a.button:hover { border-color: var(--gold); }
 /* The rail scrolls when its panels outgrow the screen (a game over, a long
    question); they keep their height rather than squeezing over each other. */
 .rail > * { flex-shrink: 0; }
+
+/* -- the title screen ----------------------------------------------------- */
+.setup .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; margin: 2vh 0 22px; }
+.setup .hero img { width: min(150px, 34vw); border-radius: 10px; box-shadow: 0 0 0 1px rgba(240, 200, 101, 0.4), 0 0 50px rgba(240, 200, 101, 0.18), 0 16px 40px rgba(0, 0, 0, 0.6); }
+.setup .hero h1 {
+  font-size: clamp(2.2rem, 7vw, 3.4rem); letter-spacing: 0.2em; padding-left: 0.2em; text-transform: uppercase;
+  color: var(--gold-bright); text-shadow: 0 0 24px rgba(240, 200, 101, 0.3);
+}
+.setup .hero .lede { max-width: 26rem; margin: 0; font-family: var(--serif); font-size: 1.05rem; color: var(--ink); opacity: 0.85; }
+.main-actions { display: flex; flex-direction: column; gap: 10px; width: min(20rem, 100%); margin: 0 auto; }
+.main-actions button { padding: 0.7rem 1rem; font-size: 1.05rem; }
+.main-actions .play { font-size: 1.25rem; padding: 0.85rem 1rem; letter-spacing: 0.06em; }
+.setup .table-line { text-align: center; margin: 10px 0 4px; }
+.setup .title-links { justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0 18px; }
+.setup .title-links button:not(.link) { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+.setup .custom .seats-list { margin: 10px 0; }
+
+/* -- bigger cards, less print, clearer turns ------------------------------ */
+:root { --w-md: 116px; --w-lg: 128px; }
+@media (max-width: 1180px) { :root { --w-md: 104px; --w-lg: 118px; } }
+/* The sigil says a courtier's attributes; the caption stays only for one
+   changed in play, whose printed card no longer tells the truth. */
+.board .card:not(.changed) > .attrs { display: none; }
+/* What an action card in your hand does. */
+.action-label {
+  align-self: center; max-width: var(--w); padding: 2px 6px; border-radius: 999px;
+  font-size: 0.68rem; line-height: 1.2; text-align: center; color: var(--ink);
+  background: rgba(28, 40, 64, 0.85); border: 1px solid var(--line);
+}
+.game.phone .action-label { display: none; }
+/* Whoever plays next. */
+.opponent.next { border-style: dashed; border-color: color-mix(in srgb, var(--seat) 70%, transparent); }
+.next-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--seat); font-weight: 700; }
+.game.phone .next-tag { display: none; }
+.status .turn small { color: var(--muted); }
+/* A bot's move, named where it lands. */
+.hand-caption {
+  position: fixed; z-index: 42; pointer-events: none; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  color: var(--cloth-deep); background: var(--hand); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+/* Your guess at a rival's agenda: private, on their chip. */
+.suspect { position: relative; display: inline-grid; }
+.suspect select {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; padding: 0; border: none;
+}
+.suspect-face {
+  display: inline-grid; place-items: center; min-width: calc(var(--w-xxs) + 2px); height: calc(var(--w-xxs) * 692 / 496);
+  padding: 0 4px; border: 1px dashed var(--muted); border-radius: 3px;
+  color: var(--muted); font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+.suspect.guessed .suspect-face { border-style: solid; border-color: var(--seat); color: var(--ink); font-style: italic; font-weight: 600; }
+.suspect:focus-within .suspect-face { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
+.guesses { margin: 8px 0 0; font-size: 0.8rem; color: var(--muted); }
+.guesses .right { color: #8fd49a; }
+.guesses .wrong { color: var(--muted); }
+/* On a phone the round comes first in the strip, and a guess stays short. */
+.game.phone .status { order: -1; }
+.game.phone .suspect-face { max-width: 5.5rem; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: calc(var(--w-xxs) * 692 / 496); }
+.tally li.seats .n { font-weight: 700; }

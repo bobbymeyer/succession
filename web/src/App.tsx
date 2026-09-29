@@ -2,14 +2,14 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
-import { FADE, HOLD, showHand } from "./hand";
+import { captionFor, FADE, HOLD, showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
 import { drops, settled, stage, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
-import { Board, Hand, marksFor, NO_INTERACTION, type Interaction } from "./components/Board";
+import { Board, Hand, marksFor, NO_INTERACTION, type Interaction, type Suspicions } from "./components/Board";
 import { usePhone } from "./usePhone";
 import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
@@ -109,6 +109,8 @@ export function App() {
   const phone = usePhone();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Your private guesses at rivals' agendas; a new deal forgets them.
+  const [guesses, setGuesses] = useState<Record<number, string>>({});
   // The game whose fall into chaos has been watched.
   const [chaosSeen, setChaosSeen] = useState<Update["result"]>(null);
   const [fatal, setFatal] = useState<string | null>(null);
@@ -224,7 +226,9 @@ export function App() {
     if (bot) playingTimer.current = window.setTimeout(() => setPlaying(null), duration + HOLD + FADE);
     // A bot's hand first, measured before the cards set off.
     if (from.action && from.actor >= 0 && from.actor !== shown.view.you && from.snapshot.cards.size) {
-      showHand(from.actor, from.action, seatColour(from.actor), duration);
+      const names = visibleCards(shown.view);
+      const name = (uid: number | null) => (uid !== null ? names.get(uid)?.name ?? "" : "");
+      showHand(from.actor, from.action, seatColour(from.actor), duration, captionFor(from.action, name));
     }
     play(from.snapshot, from.actor, shown.view.you, duration);
   }, [shown]);
@@ -239,7 +243,10 @@ export function App() {
 
   const send = useCallback(
     async (request: GameRequest, restart = false) => {
-      if (restart) preload(art);
+      if (restart) {
+        preload(art);
+        setGuesses({});
+      }
       setBusy(true);
       setError(null);
       try {
@@ -369,6 +376,17 @@ export function App() {
   const answer = (action: Action) => send({ type: "answer", choice: action.index });
   // Moves that win you the game now, and the cards in them, lit on the table.
   const winning = actions.filter((a) => a.wins);
+  const suspicions: Suspicions = {
+    agendas: options.rules.agendas.map((a) => a.name),
+    guess: guesses,
+    onGuess: (seat, agenda) =>
+      setGuesses((g) => {
+        const next = { ...g };
+        if (agenda) next[seat] = agenda;
+        else delete next[seat];
+        return next;
+      }),
+  };
   const marks = marksFor(
     view,
     new Set(winning.flatMap((a) => [a.card, a.courtier].filter((u): u is number => u !== null))),
@@ -627,6 +645,7 @@ export function App() {
             download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
           }
           onExport={exportCsv}
+          guesses={guesses}
         />
       ) : turnPrompt || pickPrompt ? (
         <StatusPanel
@@ -715,6 +734,7 @@ export function App() {
             won={result && !waiting ? winningCourt(view) : undefined}
             hand={false}
             marks={marks}
+            suspicions={suspicions}
           />
           {(menuOpen || sheet) && (
             <div
@@ -805,6 +825,7 @@ export function App() {
           playing={playing}
           won={result && !waiting ? winningCourt(view) : undefined}
           marks={marks}
+          suspicions={suspicions}
         />
         <div className="rail">
           <aside className="side">

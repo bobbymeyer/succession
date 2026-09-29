@@ -65,6 +65,8 @@ export interface Player {
 export interface View {
   you: number; // -1 for a spectator
   turn: number;
+  round: number; // every player one turn
+  max_rounds: number | null;
   current: number;
   over: boolean;
   winners: number[];

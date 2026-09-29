@@ -13,6 +13,8 @@ interface Props {
   onCopy(): void;
   onDownloadRecord(): void;
   onExport(): void;
+  /** Your guesses at rivals' agendas, to mark right or wrong. */
+  guesses?: Record<number, string>;
 }
 
 export function headline(view: View, result: Result): string {
@@ -84,7 +86,7 @@ export function GameOver(props: Props) {
         );
       })}
 
-      <AllAgendas view={view} result={result} />
+      <AllAgendas view={view} result={result} guesses={props.guesses ?? {}} />
 
       <div className="buttons">
         <button type="button" className="primary" onClick={props.onPlayAgain} data-testid="play-again">
@@ -130,9 +132,10 @@ export function GameOver(props: Props) {
 // Every agenda at the table, turned over: what each player was after, and how
 // near the board came to giving it them. The part of a hidden-agenda game
 // worth seeing twice.
-function AllAgendas({ view, result }: { view: View; result: Result }) {
+function AllAgendas({ view, result, guesses }: { view: View; result: Result; guesses: Record<number, string> }) {
   const others = view.players.filter((p) => !result.winners.includes(p.seat) && p.agenda);
-  if (!others.length) return null;
+  const called = view.players.filter((p) => guesses[p.seat] && p.agenda);
+  if (!others.length && !called.length) return null;
   return (
     <section className="all-agendas" data-testid="all-agendas" aria-label="Every agenda at the table">
       <h3>{result.winners.length ? "What everyone else wanted" : "What everyone wanted"}</h3>
@@ -158,6 +161,20 @@ function AllAgendas({ view, result }: { view: View; result: Result }) {
           );
         })}
       </ul>
+      {called.length > 0 && (
+        <p className="guesses" data-testid="guesses">
+          Your reads:{" "}
+          {called.map((p, i) => {
+            const right = guesses[p.seat] === p.agenda!.name;
+            return (
+              <span key={p.seat} className={right ? "right" : "wrong"}>
+                {i > 0 && ", "}
+                {playerName(view, p.seat)} {right ? "✓" : `✗ (you guessed ${guesses[p.seat]})`}
+              </span>
+            );
+          })}
+        </p>
+      )}
     </section>
   );
 }

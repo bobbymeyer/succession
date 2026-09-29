@@ -41,7 +41,7 @@ export function CourtTally({ view }: { view: View }) {
     <div className="tally" data-testid="court-tally">
       <ul aria-label="The court at a glance">
         <li className="seats" title="Seats filled">
-          <span className="n">{court.filled}</span>/7
+          <span className="n">{`${court.filled}/7`}</span>
         </li>
         {Object.entries(court.houses).map(([house, n]) =>
           item(`h-${house}`, <Icon fill={HOUSE_COLOUR[house]} stroke="none"><circle cx="10" cy="10" r="7" /></Icon>, n, `House ${house}: ${n}`),

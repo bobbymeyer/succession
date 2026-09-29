@@ -1,7 +1,7 @@
 // Whole games in a real browser: Pyodide boots, the engine deals, and a
 // player gets from the first move to the end.
 import type { Page } from "@playwright/test";
-import { expect, fromMenu, openMenu, playFromList, random, settle, showPanel, test } from "./helpers";
+import { expect, fromMenu, openMenu, playFromList, random, setSeed, settle, showPanel, test } from "./helpers";
 
 async function start(page: Page, errors: string[], seed?: number) {
   page.on("pageerror", (e) => errors.push(e.message));
@@ -9,7 +9,7 @@ async function start(page: Page, errors: string[], seed?: number) {
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 }); // Pyodide boot
-  if (seed !== undefined) await page.fill("input[placeholder=random]", String(seed));
+  if (seed !== undefined) await setSeed(page, seed);
   await page.getByTestId("deal").click();
 }
 
@@ -21,7 +21,7 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   const mine = await briefing.locator("h2").innerText();
   // Nobody has moved: the bots wait until you begin.
   await page.waitForTimeout(1500);
-  await expect(page.locator(".status .turn")).toHaveText("Turn 0");
+  await expect(page.locator(".status .turn")).toHaveText("Round 1 of 50");
   await page.getByTestId("begin").click();
   await expect(briefing).toBeHidden();
   await settle(page);
@@ -34,9 +34,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
   await expect(page.getByTestId("first-deal")).toBeVisible();
-  await page.fill("input[placeholder=random]", "7");
+  await setSeed(page, "7");
   await expect(page.getByTestId("first-deal")).toBeHidden();
-  await page.fill("input[placeholder=random]", "");
+  await setSeed(page, "");
   await page.getByTestId("deal").click();
   // You move first, with House Rising: Mitreas.
   await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
@@ -374,6 +374,11 @@ test("the table warns of a near win, offers yours, and shows every agenda at the
   await expect(page.getByTestId("close-yours")).toContainText("House Rising: Mitreas");
   // Your courtiers are marked.
   await expect(page.locator(".card.helps").first()).toBeVisible();
+  // A private guess at the rival's agenda, shown on their chip.
+  await page.getByTestId("suspect-1").selectOption("Faith Ascendant: Old Gods");
+  await expect(page.locator(".opponent .suspect-face")).toHaveText("Old Gods?");
+  // An action card in hand says what it does (the dock hides it on a phone).
+  await expect(page.locator(".mine .action-label").first()).toHaveText(/Godless|→|Shield|Kill|Unseat|Seat/);
   // Thwart, play Buyer of Cities, and the seat is offered as a win.
   await playFromList(page);
   await settle(page);
@@ -386,6 +391,34 @@ test("the table warns of a near win, offers yours, and shows every agenda at the
   const over = page.getByTestId("game-over");
   await expect(over).toContainText("You win");
   await expect(over.getByTestId("all-agendas")).toContainText("Faith Ascendant: Old Gods");
+  await expect(over.getByTestId("guesses")).toContainText("✓");
   await expect(page.getByTestId("close-danger")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the title screen leads with Play; the table's knobs are tucked away", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.getByTestId("deal")).toHaveText("Play", { timeout: 90_000 });
+  await expect(page.getByTestId("tutorial")).toBeVisible();
+  await expect(page.getByTestId("show-rules")).toBeVisible();
+  await expect(page.locator("input[placeholder=random]")).toBeHidden();
+  await page.getByTestId("custom-table").locator("summary").click();
+  await expect(page.locator("input[placeholder=random]")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add a bot" })).toBeVisible();
+});
+
+test("the table shows the round, who plays next, and names each bot's move", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Fast"));
+  await page.goto("./");
+  await setSeed(page, 3);
+  await page.getByTestId("deal").click();
+  await page.getByTestId("begin").click();
+  await expect(page.locator(".status .turn")).toContainText("Round");
+  await expect(page.locator(".opponent.next")).toHaveCount(1);
+  // A bot's move is captioned where it lands.
+  await page.locator(".hand-caption").first().waitFor({ state: "attached", timeout: 30_000 });
+  await settle(page);
   expect(errors).toEqual([]);
 });

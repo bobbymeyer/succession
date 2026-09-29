@@ -84,3 +84,10 @@ export async function showPanel(page: Page, which: "agenda" | "log") {
     await tab.click();
   }
 }
+
+/** Type a seed on the title screen: the field sits under "Custom table". */
+export async function setSeed(page: Page, seed: string | number) {
+  const custom = page.getByTestId("custom-table");
+  if (!(await custom.evaluate((d) => (d as HTMLDetailsElement).open))) await custom.locator("summary").click();
+  await page.fill("input[placeholder=random]", String(seed));
+}

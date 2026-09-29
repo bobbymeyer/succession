@@ -1,7 +1,7 @@
 // The table on a phone held upright: one screen, the hand in a dock at the
 // bottom, everything else a tap away.
 import type { Page } from "@playwright/test";
-import { expect, playFromList, random, settle, test } from "./helpers";
+import { expect, playFromList, random, setSeed, settle, test } from "./helpers";
 
 test.use({ viewport: { width: 390, height: 664 }, isMobile: true, hasTouch: true });
 
@@ -10,7 +10,7 @@ async function deal(page: Page, errors: string[], seed = "3") {
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
-  await page.fill("input[placeholder=random]", seed);
+  await setSeed(page, seed);
   await page.getByTestId("deal").tap();
   await settle(page);
 }
