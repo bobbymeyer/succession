@@ -38,7 +38,7 @@ export const FADE = 220;
  * before the cards start moving, so the landing is measured where the cards
  * end up rather than where they set off from.
  */
-export function showHand(actor: number, action: Action, colour: string, duration: number) {
+export function showHand(actor: number, action: Action, colour: string, duration: number, caption = "") {
   if (duration <= 0 || reducedMotion()) return;
   const chip = document.querySelector(`[data-player="${actor}"]`);
   const from = chip?.querySelector("[data-hand]") ?? chip;
@@ -70,6 +70,29 @@ export function showHand(actor: number, action: Action, colour: string, duration
   dot.style.top = `${a.y}px`;
 
   document.body.append(svg, dot);
+  // What the move was, where it landed, long enough to read.
+  if (caption) {
+    const label = document.createElement("div");
+    label.className = "hand-caption";
+    label.setAttribute("aria-hidden", "true");
+    label.style.setProperty("--hand", colour);
+    label.textContent = caption;
+    label.style.left = `${b.x}px`;
+    label.style.top = `${b.y}px`;
+    document.body.append(label);
+    const read = Math.max(1100, duration * 1.4);
+    label
+      .animate(
+        [
+          { opacity: 0, transform: "translate(-50%, -30%) scale(0.9)" },
+          { opacity: 1, transform: "translate(-50%, -120%) scale(1)", offset: 0.15 },
+          { opacity: 1, transform: "translate(-50%, -120%) scale(1)", offset: 0.85 },
+          { opacity: 0, transform: "translate(-50%, -150%) scale(1)" },
+        ],
+        { delay: duration * 0.7, duration: read, fill: "both" },
+      )
+      .finished.finally(() => label.remove());
+  }
   const easing = "cubic-bezier(0.2, 0.7, 0.2, 1)";
   line.animate([{ strokeDashoffset: length }, { strokeDashoffset: 0 }], { duration, easing, fill: "forwards" });
   dot.animate(
@@ -91,4 +114,18 @@ export function showHand(actor: number, action: Action, colour: string, duration
     svg.remove();
     dot.remove();
   });
+}
+
+/** A move in a few words, for the caption where it lands. */
+export function captionFor(action: Action, name: (uid: number | null) => string): string {
+  switch (action.kind) {
+    case "move":
+      return action.seat ? `into ${action.seat}` : "moves";
+    case "discard":
+      return "Discard & Draw";
+    case "play":
+      return name(action.card);
+    default:
+      return "";
+  }
 }

@@ -172,7 +172,7 @@ def options() -> str:
     config = Config()
     empty = BoardCounts({}, {}, {}, {}, {}, 0, 0, 0)
     rules = rules_for_config(config)
-    deck = build_cards(config.outmaneuver_copies, config.event_tiers)
+    deck = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption, config.added_courtiers)
     return json.dumps({
         "player_types": list(PLAYER_TYPES),
         "min_players": MIN_PLAYERS,

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Engine } from "./engine";
 import { loadArt, NO_ART, preload, UiContext, type Art, type Ui } from "./art";
 import { EMPTY, measure, play, type Snapshot } from "./flip";
-import { FADE, HOLD, showHand } from "./hand";
+import { captionFor, FADE, HOLD, showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
 import { discarding, drops, settled, stage, untargeted, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
-import { Board, Hand, NO_INTERACTION, type Interaction } from "./components/Board";
+import { Board, Hand, marksFor, NO_INTERACTION, type Interaction, type Suspicions } from "./components/Board";
 import { usePhone } from "./usePhone";
 import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
@@ -23,7 +23,7 @@ import { CoachPanel } from "./components/Coach";
 import { FIRST_GAME_TABLE } from "./firstGame";
 import { FrameControls } from "./components/Frame";
 import { CardDetail, Inspect } from "./components/Inspect";
-import { DiscardPile, StatusPanel } from "./components/Status";
+import { BlockPanel, DiscardPile, StatusPanel } from "./components/Status";
 import { Setup } from "./components/Setup";
 
 // The pause after each bot move. Long enough to watch the card leave the
@@ -109,6 +109,8 @@ export function App() {
   const phone = usePhone();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Your private guesses at rivals' agendas; a new deal forgets them.
+  const [guesses, setGuesses] = useState<Record<number, string>>({});
   // The game whose fall into chaos has been watched.
   const [chaosSeen, setChaosSeen] = useState<Update["result"]>(null);
   const [fatal, setFatal] = useState<string | null>(null);
@@ -195,7 +197,7 @@ export function App() {
         return; // the bots wait for Begin
       }
     }
-    const asking = next.prompt && next.prompt.kind !== "turn" ? next.prompt : null;
+    const asking = next.prompt && next.prompt.kind !== "turn" && next.prompt.kind !== "block" ? next.prompt : null;
     if (asking?.card) {
       const key = `${asking.card.uid}:${next.view.turn}`;
       if (announced.current !== key) {
@@ -225,7 +227,9 @@ export function App() {
     if (bot) playingTimer.current = window.setTimeout(() => setPlaying(null), duration + HOLD + FADE);
     // A bot's hand first, measured before the cards set off.
     if (from.action && from.actor >= 0 && from.actor !== shown.view.you && from.snapshot.cards.size) {
-      showHand(from.actor, from.action, seatColour(from.actor), duration);
+      const names = visibleCards(shown.view);
+      const name = (uid: number | null) => (uid !== null ? names.get(uid)?.name ?? "" : "");
+      showHand(from.actor, from.action, seatColour(from.actor), duration, captionFor(from.action, name));
     }
     play(from.snapshot, from.actor, shown.view.you, duration);
   }, [shown]);
@@ -240,7 +244,10 @@ export function App() {
 
   const send = useCallback(
     async (request: GameRequest, restart = false) => {
-      if (restart) preload(art);
+      if (restart) {
+        preload(art);
+        setGuesses({});
+      }
       setBusy(true);
       setError(null);
       try {
@@ -361,13 +368,32 @@ export function App() {
   const waiting = pending > 0 || busy || events !== null;
   const cards = visibleCards(view);
   const turnPrompt = !waiting && prompt?.kind === "turn" ? prompt : null;
-  const pickPrompt = !waiting && prompt && prompt.kind !== "turn" ? prompt : null;
+  const pickPrompt = !waiting && prompt && prompt.kind !== "turn" && prompt.kind !== "block" ? prompt : null;
+  const blockPrompt = !waiting && prompt?.kind === "block" ? prompt : null;
   const latest = log.length ? readableLog(log[log.length - 1].view, log[log.length - 1].text) : null;
 
   // -- playing by hand: click to pick up, or drag -----------------------------
   const actions = turnPrompt?.options ?? [];
   const now: Stage | null = turnPrompt ? stage(actions, selection) : null;
   const answer = (action: Action) => send({ type: "answer", choice: action.index });
+  // Moves that win you the game now, and the cards in them, lit on the table.
+  const winning = actions.filter((a) => a.wins);
+  const suspicions: Suspicions = {
+    agendas: options.rules.agendas.map((a) => a.name),
+    guess: guesses,
+    onGuess: (seat, agenda) =>
+      setGuesses((g) => {
+        const next = { ...g };
+        if (agenda) next[seat] = agenda;
+        else delete next[seat];
+        return next;
+      }),
+  };
+  const marks = marksFor(
+    view,
+    new Set(winning.flatMap((a) => [a.card, a.courtier].filter((u): u is number => u !== null))),
+    blockPrompt ? new Set([blockPrompt.about.uid]) : new Set(),
+  );
   /** Take a selection: play it if it pins one move down, else wait for more. */
   const apply = (next: Selection) => {
     const action = settled(actions, next);
@@ -640,9 +666,19 @@ export function App() {
             download(`succession-game-${result.record.seed}.json`, JSON.stringify(result.record, null, 1), "application/json")
           }
           onExport={exportCsv}
+          guesses={guesses}
         />
+      ) : blockPrompt ? (
+        <BlockPanel view={view} prompt={blockPrompt} onChoose={pick} />
       ) : turnPrompt || pickPrompt ? (
-        <StatusPanel hint={phone ? tapped(hint) : hint} prompt={turnPrompt ?? pickPrompt} onAction={answer} onPick={pick} pass={pass} />
+        <StatusPanel
+          hint={phone ? tapped(hint) : hint}
+          prompt={turnPrompt ?? pickPrompt}
+          onAction={answer}
+          onPick={pick}
+          pass={pass}
+          winning={winning}
+        />
       ) : (
         <div className="prompt" aria-live="polite">
           {latest && <p className="latest">{latest}</p>}
@@ -659,7 +695,7 @@ export function App() {
       <Inspect card={inspecting} hand={view.hand} moves={movesFor} onPick={setInspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
-      {announce?.prompt && announce.prompt.kind !== "turn" && (
+      {announce?.prompt && (announce.prompt.kind === "courtier" || announce.prompt.kind === "discard") && (
         <EventAnnouncement
           key={announced.current}
           prompt={announce.prompt}
@@ -720,6 +756,8 @@ export function App() {
             playing={playing}
             won={result && !waiting ? winningCourt(view) : undefined}
             hand={false}
+            marks={marks}
+            suspicions={suspicions}
           />
           {(menuOpen || sheet) && (
             <div
@@ -777,7 +815,7 @@ export function App() {
               </div>
             )}
             {error && <p className="error">{error}</p>}
-            {view.you >= 0 && <Hand view={view} act={phoneAct} />}
+            {view.you >= 0 && <Hand view={view} act={phoneAct} marks={marks} />}
             <nav className="dock-tabs" aria-label="Agenda, log and discard pile">
               {myAgenda &&
                 sheetTab(
@@ -804,7 +842,14 @@ export function App() {
   return (
     <UiContext.Provider value={ui}>
       <main className="app game">
-        <Board view={view} act={act} playing={playing} won={result && !waiting ? winningCourt(view) : undefined} />
+        <Board
+          view={view}
+          act={act}
+          playing={playing}
+          won={result && !waiting ? winningCourt(view) : undefined}
+          marks={marks}
+          suspicions={suspicions}
+        />
         <div className="rail">
           <aside className="side">
             <div className="controls">
@@ -822,9 +867,10 @@ export function App() {
 
             {shown.coach && <CoachPanel coach={shown.coach} />}
             {question}
-            <DiscardPile view={view} dropLive={dropping.has("discard")} />
+            {/* Once the game is over the pile says nothing; the reveal takes its room. */}
+            {!(result && !waiting) && <DiscardPile view={view} dropLive={dropping.has("discard")} />}
             {error && <p className="error">{error}</p>}
-            {hovered && (
+            {hovered && !result && (
               <div className="preview" aria-hidden="true">
                 <CardDetail card={hovered} />
               </div>

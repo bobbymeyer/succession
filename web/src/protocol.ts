@@ -40,6 +40,18 @@ export interface Agenda {
   met: boolean;
   status: Clause[];
   seated: number[]; // uids of the seated courtiers that count toward it
+  helpers: number[]; // yours only: courtiers outside or in hand who would count, seated
+}
+
+/** The court in the terms agendas read it (succession/session.py `view`). */
+export interface Court {
+  filled: number;
+  houses: Record<string, number>;
+  faiths: Record<string, number>;
+  barbarians: number;
+  barbarians_outside: number;
+  /** Agendas one courtier from complete, whoever holds them. */
+  close: { key: string; name: string }[];
 }
 
 export interface Player {
@@ -53,6 +65,8 @@ export interface Player {
 export interface View {
   you: number; // -1 for a spectator
   turn: number;
+  round: number; // every player one turn
+  max_rounds: number | null;
   current: number;
   over: boolean;
   winners: number[];
@@ -65,6 +79,7 @@ export interface View {
   discard_top: Card | null;
   removed: number;
   frozen: { inner: boolean; board: boolean };
+  court: Court;
 }
 
 export interface Action {
@@ -77,13 +92,27 @@ export interface Action {
   sacrifice: number | null;
   value: string | null;
   text: string;
+  wins?: boolean; // completes your agenda, played out on a copy of the game
+  blockable?: boolean; // an attack on a seated courtier: a rival's Defense may stop it
 }
 
 export type Prompt =
   | { kind: "turn"; player: number; options: Action[]; card: null; summary: ""; over: 0 }
   // `card` is the event asking; null for a discard down to the hand limit as
   // your turn ends, with `over` the cards still to go.
-  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card | null; summary: string; over: number };
+  | { kind: "courtier" | "discard"; player: number; options: Card[]; card: Card | null; summary: string; over: number }
+  // Someone attacks a seated courtier your Defense covers: block with one of
+  // `options` (answer its uid), or let it land (answer -1).
+  | {
+      kind: "block";
+      player: number;
+      options: Card[];
+      card: Card; // the attack
+      about: Card; // the courtier under it
+      attacker: number;
+      summary: string;
+      over: number;
+    };
 
 export interface GameRecord {
   version: number;

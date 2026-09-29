@@ -54,8 +54,8 @@ docs/
 
 87 cards: the 79-card play deck plus the eight agendas, and the seven seat
 cards of the board beside them. `--no-agendas` drops the agendas. The five
-major events are out of the deck, so the numbering has gaps at 42, 44, 46, 48
-and 50: every card keeps the number its art was drawn under.
+major events and Adoption are out of the deck, so the numbering has gaps at 42,
+44, 46, 48, 50 and 82: every card keeps the number its art was drawn under.
 
 The print cards are 2.72 x 3.70 in with bleed at 600 DPI. The web cards are the
 trimmed 2.48 x 3.46 in card at 744 px wide -- no bleed, because the bleed is

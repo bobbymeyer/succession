@@ -996,3 +996,131 @@ a.button:hover { border-color: var(--gold); }
   .event-modal { max-height: calc(100dvh - 16px); overflow-y: auto; }
   .event-art { width: min(260px, 38vw, calc((100dvh - 64px) * 496 / 692)); }
 }
+
+/* -- the court at a glance ----------------------------------------------------- */
+.tally { margin: -2px 0 8px; }
+.tally ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; font-variant-numeric: tabular-nums; }
+.tally li { display: inline-flex; align-items: center; gap: 4px; font-size: 0.86rem; color: var(--ink); }
+.tally li.none { opacity: 0.4; }
+.tally li.seats { gap: 0; color: var(--muted); padding-right: 8px; border-right: 1px solid var(--line); }
+.tally li.seats .n { color: var(--ink); }
+.tally .n { font-weight: 700; }
+.tally-icon { width: 15px; height: 15px; flex: none; color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tally-alert { margin: 6px 0 0; padding: 4px 10px; border-radius: 8px; font-size: 0.86rem; font-weight: 600; }
+.tally-alert.danger { color: #ffd9d2; background: rgba(226, 91, 69, 0.18); border: 1px solid var(--pick); animation: alert-pulse 1.8s ease-in-out infinite; }
+.tally-alert.yours { color: var(--gold-bright); background: rgba(240, 200, 101, 0.12); border: 1px solid var(--gold); }
+@keyframes alert-pulse { 50% { box-shadow: 0 0 14px rgba(226, 91, 69, 0.45); } }
+@media (prefers-reduced-motion: reduce) { .tally-alert.danger { animation: none; } }
+.game.phone .tally { margin: 0 0 4px; }
+.game.phone .tally ul { gap: 2px 8px; }
+.game.phone .tally li { font-size: 0.74rem; }
+.game.phone .tally-icon { width: 12px; height: 12px; }
+.game.phone .tally-alert { font-size: 0.72rem; padding: 3px 8px; margin-top: 4px; }
+
+/* -- your agenda on the table ------------------------------------------------ */
+.helps-mark {
+  position: absolute; top: 3%; left: 4%; z-index: 2;
+  width: max(14px, 16%); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: max(9px, calc(var(--w) * 0.1)); line-height: 1; color: var(--cloth-deep);
+  background: var(--gold-bright); box-shadow: 0 0 0 1.5px var(--cloth-deep), 0 0 8px rgba(240, 200, 101, 0.7);
+  pointer-events: none;
+}
+.card.helps:not(.live):not(.selected) .face { box-shadow: 0 0 0 1.5px rgba(240, 200, 101, 0.55), 0 2px 6px rgba(0, 0, 0, 0.45); }
+/* A card in a move that wins: it glows until you take it. */
+.card.wins .face { animation: wins-glow 1.4s ease-in-out infinite; }
+@keyframes wins-glow {
+  0%, 100% { box-shadow: 0 0 0 3px var(--gold-bright), 0 0 12px rgba(240, 200, 101, 0.5); }
+  50% { box-shadow: 0 0 0 4px #fff3c4, 0 0 26px rgba(240, 200, 101, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) { .card.wins .face { animation: none; box-shadow: 0 0 0 4px #fff3c4; } }
+.win-now { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: rgba(240, 200, 101, 0.14); border: 1px solid var(--gold-bright); }
+.win-now strong { color: var(--gold-bright); font-family: var(--serif); font-size: 1.05rem; }
+.win-now .buttons { margin: 6px 0 0; }
+.win-now button.primary { white-space: normal; text-align: left; }
+
+/* -- every agenda, at the end ------------------------------------------------ */
+.all-agendas { margin: 4px 0 12px; }
+.all-agendas h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); font-family: inherit; margin: 0 0 6px; }
+.all-agendas ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.all-agendas li { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: baseline; padding-left: 8px; border-left: 3px solid var(--seat); }
+.all-agendas .who { color: var(--seat); font-size: 0.78rem; font-weight: 700; }
+.all-agendas strong { font-family: var(--serif); font-size: 0.95rem; }
+.all-agendas .bar { grid-column: 1 / -1; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.all-agendas .bar span { display: block; height: 100%; background: var(--seat); }
+.all-agendas small { grid-column: 1 / -1; font-size: 0.76rem; }
+/* The rail scrolls when its panels outgrow the screen (a game over, a long
+   question); they keep their height rather than squeezing over each other. */
+.rail > * { flex-shrink: 0; }
+
+/* -- the title screen ----------------------------------------------------- */
+.setup .hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px; margin: 2vh 0 22px; }
+.setup .hero img { width: min(150px, 34vw); border-radius: 10px; box-shadow: 0 0 0 1px rgba(240, 200, 101, 0.4), 0 0 50px rgba(240, 200, 101, 0.18), 0 16px 40px rgba(0, 0, 0, 0.6); }
+.setup .hero h1 {
+  font-size: clamp(2.2rem, 7vw, 3.4rem); letter-spacing: 0.2em; padding-left: 0.2em; text-transform: uppercase;
+  color: var(--gold-bright); text-shadow: 0 0 24px rgba(240, 200, 101, 0.3);
+}
+.setup .hero .lede { max-width: 26rem; margin: 0; font-family: var(--serif); font-size: 1.05rem; color: var(--ink); opacity: 0.85; }
+.main-actions { display: flex; flex-direction: column; gap: 10px; width: min(20rem, 100%); margin: 0 auto; }
+.main-actions button { padding: 0.7rem 1rem; font-size: 1.05rem; }
+.main-actions .play { font-size: 1.25rem; padding: 0.85rem 1rem; letter-spacing: 0.06em; }
+.setup .table-line { text-align: center; margin: 10px 0 4px; }
+.setup .title-links { justify-content: center; align-items: center; flex-wrap: wrap; margin: 4px 0 18px; }
+.setup .title-links button:not(.link) { font-size: 0.85rem; padding: 0.25rem 0.6rem; }
+.setup .custom .seats-list { margin: 10px 0; }
+
+/* -- bigger cards, less print, clearer turns ------------------------------ */
+:root { --w-md: 116px; --w-lg: 128px; }
+@media (max-width: 1180px) { :root { --w-md: 104px; --w-lg: 118px; } }
+/* The sigil says a courtier's attributes; the caption stays only for one
+   changed in play, whose printed card no longer tells the truth. */
+.board .card:not(.changed) > .attrs { display: none; }
+/* What an action card in your hand does. */
+.action-label {
+  align-self: center; max-width: var(--w); padding: 2px 6px; border-radius: 999px;
+  font-size: 0.68rem; line-height: 1.2; text-align: center; color: var(--ink);
+  background: rgba(28, 40, 64, 0.85); border: 1px solid var(--line);
+}
+.game.phone .action-label { display: none; }
+/* Whoever plays next. */
+.opponent.next { border-style: dashed; border-color: color-mix(in srgb, var(--seat) 70%, transparent); }
+.next-tag { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--seat); font-weight: 700; }
+.game.phone .next-tag { display: none; }
+.status .turn small { color: var(--muted); }
+/* A bot's move, named where it lands. */
+.hand-caption {
+  position: fixed; z-index: 42; pointer-events: none; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; font-size: 0.8rem; font-weight: 700;
+  color: var(--cloth-deep); background: var(--hand); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+/* Your guess at a rival's agenda: private, on their chip. */
+.suspect { position: relative; display: inline-grid; }
+.suspect select {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; padding: 0; border: none;
+}
+.suspect-face {
+  display: inline-grid; place-items: center; min-width: calc(var(--w-xxs) + 2px); height: calc(var(--w-xxs) * 692 / 496);
+  padding: 0 4px; border: 1px dashed var(--muted); border-radius: 3px;
+  color: var(--muted); font-size: 0.7rem; font-weight: 700; white-space: nowrap;
+}
+.suspect.guessed .suspect-face { border-style: solid; border-color: var(--seat); color: var(--ink); font-style: italic; font-weight: 600; }
+.suspect:focus-within .suspect-face { outline: 2px solid var(--gold-bright); outline-offset: 1px; }
+.guesses { margin: 8px 0 0; font-size: 0.8rem; color: var(--muted); }
+.guesses .right { color: #8fd49a; }
+.guesses .wrong { color: var(--muted); }
+/* On a phone the round comes first in the strip, and a guess stays short. */
+.game.phone .status { order: -1; }
+.game.phone .suspect-face { max-width: 5.5rem; overflow: hidden; text-overflow: ellipsis; display: inline-block; line-height: calc(var(--w-xxs) * 692 / 496); }
+.tally li.seats .n { font-weight: 700; }
+
+/* -- a Defense in answer to an attack ----------------------------------------- */
+.card.attacked .face { animation: attacked 1s ease-in-out infinite; }
+@keyframes attacked {
+  0%, 100% { box-shadow: 0 0 0 3px var(--pick), 0 0 10px rgba(226, 91, 69, 0.5); }
+  50% { box-shadow: 0 0 0 4px #ffb3a6, 0 0 24px rgba(226, 91, 69, 0.95); }
+}
+@media (prefers-reduced-motion: reduce) { .card.attacked .face { animation: none; box-shadow: 0 0 0 4px var(--pick); } }
+.block-prompt { border-color: var(--pick); box-shadow: 0 0 0 1px var(--pick), 0 6px 24px rgba(226, 91, 69, 0.25); }
+.block-prompt p { margin: 0 0 4px; }
+.block-prompt .buttons { margin-top: 6px; }

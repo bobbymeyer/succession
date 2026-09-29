@@ -13,6 +13,8 @@ interface Props {
   onCopy(): void;
   onDownloadRecord(): void;
   onExport(): void;
+  /** Your guesses at rivals' agendas, to mark right or wrong. */
+  guesses?: Record<number, string>;
 }
 
 export function headline(view: View, result: Result): string {
@@ -84,6 +86,8 @@ export function GameOver(props: Props) {
         );
       })}
 
+      <AllAgendas view={view} result={result} guesses={props.guesses ?? {}} />
+
       <div className="buttons">
         <button type="button" className="primary" onClick={props.onPlayAgain} data-testid="play-again">
           Play again
@@ -121,6 +125,56 @@ export function GameOver(props: Props) {
           </>
         )}
       </details>
+    </section>
+  );
+}
+
+// Every agenda at the table, turned over: what each player was after, and how
+// near the board came to giving it them. The part of a hidden-agenda game
+// worth seeing twice.
+function AllAgendas({ view, result, guesses }: { view: View; result: Result; guesses: Record<number, string> }) {
+  const others = view.players.filter((p) => !result.winners.includes(p.seat) && p.agenda);
+  const called = view.players.filter((p) => guesses[p.seat] && p.agenda);
+  if (!others.length && !called.length) return null;
+  return (
+    <section className="all-agendas" data-testid="all-agendas" aria-label="Every agenda at the table">
+      <h3>{result.winners.length ? "What everyone else wanted" : "What everyone wanted"}</h3>
+      <ul>
+        {others.map((p) => {
+          const agenda = p.agenda!;
+          const met = agenda.status.filter((c) => c.met).length;
+          const need = agenda.status.reduce((n, c) => n + c.need, 0);
+          const have = agenda.status.reduce((n, c) => n + Math.min(c.have, c.need), 0);
+          const nearest = agenda.status.find((c) => !c.met);
+          return (
+            <li key={p.seat} style={{ "--seat": seatColour(p.seat) } as CSSProperties}>
+              <span className="who">{p.seat === view.you ? "You" : playerName(view, p.seat)}</span>
+              <strong>{agenda.name}</strong>
+              <span className="bar" aria-hidden="true">
+                <span style={{ width: `${(have / need) * 100}%` }} />
+              </span>
+              <small className="muted">
+                {met} of {agenda.status.length} met
+                {nearest ? ` \u00b7 short: ${nearest.label.toLowerCase()} (${nearest.have}/${nearest.need})` : ""}
+              </small>
+            </li>
+          );
+        })}
+      </ul>
+      {called.length > 0 && (
+        <p className="guesses" data-testid="guesses">
+          Your reads:{" "}
+          {called.map((p, i) => {
+            const right = guesses[p.seat] === p.agenda!.name;
+            return (
+              <span key={p.seat} className={right ? "right" : "wrong"}>
+                {i > 0 && ", "}
+                {playerName(view, p.seat)} {right ? "✓" : `✗ (you guessed ${guesses[p.seat]})`}
+              </span>
+            );
+          })}
+        </p>
+      )}
     </section>
   );
 }

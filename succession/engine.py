@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from .actions import DISCARD, MOVE, PASS, Action, free_moves, legal_actions, purge_targets
+from .actions import _estate_matches as estate_matches
 from .agendas import (
     AGENDAS,
     AGENDAS_BY_KEY,
@@ -136,6 +137,51 @@ def defense_absorbs(state: GameState, uid: int, kind: CardKind) -> bool:
     state.bump("defenses_triggered")
     state.note(f"{state.name(card)} protects {state.name(uid)}")
     return True
+
+
+def blocked(state: GameState, player: int, action, card, target: int, rng, deciders) -> bool:
+    """Whether the attack on `target` is stopped by a Defense.
+
+    An attached one first (the older rule). Then, with reactive defense, each
+    other player in turn from the attacker's left may play a Defense from hand
+    that covers the target: Patron Protection anyone, the others a courtier of
+    their estate. Only a seated courtier can be shielded. Both cards are
+    discarded and the attack does nothing. A bot's lookahead (no deciders)
+    assumes nobody blocks.
+    """
+
+    kind = card.kind
+    if defense_absorbs(state, target, kind):
+        return True
+    if not state.config.reactive_defense or kind not in DEFENDABLE or deciders is None:
+        return False
+    if state.seat_of(target) is None:
+        return False
+    estate = state.cstate[target].estate
+    n = state.config.num_players
+
+    def preview() -> GameState:
+        after = state.clone()
+        _resolve(after, player, action, card, EvalRng(), None)
+        return after
+
+    for step in range(1, n):
+        p = (player + step) % n
+        options = [
+            u
+            for u in state.hands[p]
+            if state.card(u).kind is CardKind.DEFENSE and estate_matches(state.card(u).estate, estate)
+        ]
+        if not options:
+            continue
+        choice = deciders[p].block(state, p, options, target, preview)
+        if choice in options:
+            state.hands[p].remove(choice)
+            state.discard.append(choice)
+            state.bump("defenses_triggered")
+            state.note(f"P{p} blocks with {state.name(choice)}: {state.name(target)} is untouched")
+            return True
+    return False
 
 
 def save_roll(state: GameState, rng) -> bool:
@@ -275,12 +321,12 @@ def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=
         return True
 
     if kind is CardKind.DEMOTION:
-        if not defense_absorbs(state, target, kind):
+        if not blocked(state, player, action, card, target, rng, deciders):
             demote(state, target)
         return True
 
     if kind is CardKind.REMOVAL:
-        if defense_absorbs(state, target, kind):
+        if blocked(state, player, action, card, target, rng, deciders):
             return True
         if card.save and save_roll(state, rng):
             state.bump("saves_made")
@@ -296,7 +342,7 @@ def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=
         return False
 
     if kind is CardKind.STRIP:
-        if not defense_absorbs(state, target, kind):
+        if not blocked(state, player, action, card, target, rng, deciders):
             value = Family.NONE if card.attribute == "family" else _no_faith(state)
             # A strip does not consume the once-per-courtier mutation allowance.
             state.cstate[target] = state.cstate[target].with_attribute(
@@ -305,7 +351,7 @@ def _resolve(state: GameState, player: int, action: Action, card, rng, deciders=
         return True
 
     if kind is CardKind.MUTATION:
-        if not defense_absorbs(state, target, kind):
+        if not blocked(state, player, action, card, target, rng, deciders):
             value = _mutation_value(card.attribute, action.value)
             state.cstate[target] = state.cstate[target].with_attribute(
                 card.attribute, value, is_mutation=True
@@ -357,6 +403,9 @@ class _FirstChoice:
 
     def pick_discard(self, state, player, hand):
         return hand[0]
+
+    def block(self, state, player, options, target, preview):
+        return None  # a lookahead assumes nobody blocks
 
 
 _DEFAULT_CHOICE = _FirstChoice()

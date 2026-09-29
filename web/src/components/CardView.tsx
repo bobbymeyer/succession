@@ -22,6 +22,14 @@ interface Props {
   onPress?: (event: ReactPointerEvent<HTMLElement>) => void;
   /** Buttons over the card while it is picked up. */
   popover?: ReactNode;
+  /** Action cards in your hand: what the card does, in a line. */
+  label?: boolean;
+  /** A courtier who counts, or would, toward your agenda. */
+  helps?: boolean;
+  /** Part of a move that wins you the game now. */
+  wins?: boolean;
+  /** Under an attack you may block. */
+  attacked?: boolean;
 }
 
 /** The grid every courtier's details keep, in play or in the inspector. */
@@ -85,6 +93,42 @@ function Face({ card }: { card: Card }) {
   );
 }
 
+/**
+ * What an action card does, in the fewest words: the printed rules are the
+ * whole story (hold or click the magnifier), this is the reminder.
+ */
+const BY_NAME: Record<string, string> = {
+  "Take Up the Sword": "Estate → Military",
+  "Take Vows": "Estate → Church",
+  "Enter Trade": "Estate → Merchant",
+  "Lose Status": "Estate → Commons",
+  Conversion: "Faith → another",
+  Apostasy: "Faith → Godless",
+  "Go Native": "Origin → Barbarian",
+  Assimilate: "Origin → Imperial",
+  Castration: "House → none",
+  Excommunication: "Faith → Godless",
+  "Targeted Poisoning": "Kill, if no save",
+  "Schismatic Event": "Swap your agenda",
+  Outmaneuver: "A player skips a turn",
+};
+export function ACTION_LABEL(card: Card): string {
+  if (BY_NAME[card.name]) return BY_NAME[card.name];
+  const estate = card.estate ? `${card.estate} ` : "";
+  switch (card.kind) {
+    case "Promotion":
+      return `Seat over a ${estate}sitter`;
+    case "Demotion":
+      return `Unseat a ${estate}courtier`;
+    case "Removal":
+      return `Kill a ${estate}courtier`;
+    case "Defense":
+      return `Shield a ${estate}courtier`;
+    default:
+      return "";
+  }
+}
+
 /** How long a finger rests on a card before it opens to be read. */
 export const LONG_PRESS_MS = 480;
 
@@ -144,6 +188,10 @@ export function CardView({
   draggable = false,
   onPress,
   popover,
+  helps = false,
+  wins = false,
+  attacked = false,
+  label = false,
 }: Props) {
   const { inspect, hover, looking } = useUi();
   const long = useLongPress(() => inspect(card));
@@ -155,6 +203,10 @@ export function CardView({
   if (selected) classes.push("selected");
   if (draggable) classes.push("grab");
   if (dropLive) classes.push("drop-live");
+  if (helps) classes.push("helps");
+  if (changed) classes.push("changed");
+  if (wins) classes.push("wins");
+  if (attacked) classes.push("attacked");
 
   return (
     <div
@@ -186,6 +238,11 @@ export function CardView({
         <Face card={card} />
         {courtier && <Sigil card={card} />}
         {changed && <span className="changed-flag">Changed</span>}
+        {helps && (
+          <span className="helps-mark" title="Counts toward your agenda" aria-label="Counts toward your agenda">
+            ★
+          </span>
+        )}
       </button>
       {popover && <div className="popover">{popover}</div>}
       {live && (
@@ -205,6 +262,7 @@ export function CardView({
         </button>
       )}
       {caption && courtier && <Attributes card={card} />}
+      {label && !courtier && ACTION_LABEL(card) && <span className="action-label">{ACTION_LABEL(card)}</span>}
     </div>
   );
 }

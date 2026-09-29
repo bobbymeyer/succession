@@ -1,6 +1,6 @@
 # The deck
 
-All 94 cards, in the order `succession/cards.py` builds them: the 79-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the five events taken out of the deck leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
+All 94 cards, in the order `succession/cards.py` builds them: the 79-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the cards taken out of the deck (five events and Adoption) leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
 
 **[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)** -- the card images plus the MPC Autofill order file, ready to order. [docs/PRINTING.md](PRINTING.md) has the steps.
 
@@ -8,14 +8,14 @@ Rebuild any of this with `python tools/mpcfill.py` -- see [docs/PRINTING.md](PRI
 
 ## Contents
 
-- [Courtier](#courtier) (40)
+- [Courtier](#courtier) (41)
 - [Event](#event) (5)
 - [Promotion](#promotion) (5)
 - [Demotion](#demotion) (5)
 - [Removal](#removal) (6)
 - [Defense](#defense) (5)
 - [Strip](#strip) (2)
-- [Mutation](#mutation) (9)
+- [Mutation](#mutation) (8)
 - [Pivot](#pivot) (1)
 - [Outmaneuver](#outmaneuver) (1)
 - [Agenda](#agenda) (8)
@@ -68,6 +68,7 @@ Forty courtiers. These four printed attributes are the whole of what an agenda r
 | <img src="cards/38-blade-for-any-banner.jpg" alt="Blade for Any Banner" width="132"> | **Blade for Any Banner**<br><sub>Card 38</sub> | Courtier · Military | Military · Mystery Cults · None · Barbarian |
 | <img src="cards/39-warlord-of-the-iron-grove.jpg" alt="Warlord of the Iron Grove" width="132"> | **Warlord of the Iron Grove**<br><sub>Card 39</sub> | Courtier · Military | Military · Old Gods · None · Barbarian |
 | <img src="cards/40-master-swordsmith.jpg" alt="Master Swordsmith" width="132"> | **Master Swordsmith**<br><sub>Card 40</sub> | Courtier · Commons | Commons · Old Gods · None · Barbarian |
+| <img src="cards/100-seeress-of-the-sacred-grove.jpg" alt="Seeress of the Sacred Grove" width="132"> | **Seeress of the Sacred Grove**<br><sub>Card 100</sub> | Courtier · Church | Church · Old Gods · None · Barbarian |
 
 ## Event
 
@@ -124,11 +125,11 @@ Attached to an inner-circle courtier ahead of time, paid for by sacrificing a co
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | Sacrifice a courtier of any estate from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | Sacrifice a Church courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | Sacrifice a Military courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | Sacrifice a Merchant courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
-| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | Sacrifice a Commons courtier from your hand and attach this to any inner-circle courtier. It negates the first Removal, Demotion, Strip or Mutation aimed at them, then is discarded. It does not stop an Event. |
+| <img src="cards/67-patron-protection.jpg" alt="Patron Protection" width="132"> | **Patron Protection**<br><sub>Card 67</sub> | Defense · Any Estate | When another player plays a Removal, Demotion, Strip or Mutation on any inner-circle courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/68-sanctuary.jpg" alt="Sanctuary" width="132"> | **Sanctuary**<br><sub>Card 68</sub> | Defense · Church | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Church courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/69-bodyguard.jpg" alt="Bodyguard" width="132"> | **Bodyguard**<br><sub>Card 69</sub> | Defense · Military | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Military courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/70-deep-pockets.jpg" alt="Deep Pockets" width="132"> | **Deep Pockets**<br><sub>Card 70</sub> | Defense · Merchant | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Merchant courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
+| <img src="cards/71-popularity.jpg" alt="Popularity" width="132"> | **Popularity**<br><sub>Card 71</sub> | Defense · Commons | When another player plays a Removal, Demotion, Strip or Mutation on an inner-circle Commons courtier, you may discard this to block it: the attack does nothing. It does not stop an Event. |
 
 ## Strip
 
@@ -136,7 +137,7 @@ Empties an attribute. A strip does not spend the courtier's one mutation, so the
 
 | | Card | Type | What it does |
 |---|---|---|---|
-| <img src="cards/72-castration.jpg" alt="Castration" width="132"> | **Castration**<br><sub>Card 72</sub> | Strip · Family | A courtier's Family becomes None. They keep their seat. A strip does not spend a mutation, so Adoption can give them a family again. |
+| <img src="cards/72-castration.jpg" alt="Castration" width="132"> | **Castration**<br><sub>Card 72</sub> | Strip · Family | A courtier's Family becomes None. They keep their seat, and no card gives them a house again. |
 | <img src="cards/73-excommunication.jpg" alt="Excommunication" width="132"> | **Excommunication**<br><sub>Card 73</sub> | Strip · Faith | A courtier's Faith becomes Godless. They keep their seat. A strip does not spend a mutation, so Conversion can bring them to a faith again. |
 
 ## Mutation
@@ -153,7 +154,6 @@ Changes one attribute. Each attribute may be mutated at most once per courtier.
 | <img src="cards/79-apostasy.jpg" alt="Apostasy" width="132"> | **Apostasy**<br><sub>Card 79</sub> | Mutation · Faith | A courtier's Faith becomes Godless. Godlessness has no agenda, so their seat is one no faith can count. |
 | <img src="cards/80-go-native.jpg" alt="Go Native" width="132"> | **Go Native**<br><sub>Card 80</sub> | Mutation · Origin | A courtier's Origin becomes Barbarian. |
 | <img src="cards/81-assimilate.jpg" alt="Assimilate" width="132"> | **Assimilate**<br><sub>Card 81</sub> | Mutation · Origin | A courtier's Origin becomes Imperial. |
-| <img src="cards/82-adoption.jpg" alt="Adoption" width="132"> | **Adoption**<br><sub>Card 82</sub> | Mutation · Family | Sacrifice a courtier of a family from your hand. The target takes that family as their own. |
 
 ## Pivot
 

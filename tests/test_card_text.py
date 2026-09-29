@@ -82,7 +82,7 @@ class TestArtMapping(unittest.TestCase):
     def setUp(self) -> None:
         if not ASSETS_DIR.is_dir():
             self.skipTest("no assets/ directory in this checkout")
-        self.cards = build_cards()
+        self.cards = build_cards(adoption=True)
         self.by_index = assets.scan(ASSETS_DIR)
 
     def test_every_deck_slot_has_art_matching_its_card(self) -> None:
@@ -193,7 +193,7 @@ class TestArtPrompts(unittest.TestCase):
         self.prompts, self.filenames = make_art_prompts.build_lines()
 
     def test_one_prompt_and_one_name_per_card_and_seat(self) -> None:
-        expected = len(build_cards()) + len(SEAT_ESTATE)
+        expected = len(build_cards(adoption=True)) + len(SEAT_ESTATE)
         self.assertEqual(len(self.prompts), expected)
         self.assertEqual(len(self.filenames), expected)
 

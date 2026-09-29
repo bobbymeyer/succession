@@ -140,44 +140,40 @@ RULES: dict[str, str] = {
         "return later as a new person with their printed attributes."
     ),
     # --- Defenses -----------------------------------------------------------
-    # The estate on a defense is the estate of the courtier it costs, not of
-    # the courtier it guards: any inner-circle courtier may be shielded.
+    # A defense is kept in hand and played in answer to someone else's attack.
+    # Its estate is whom it can shield: Patron Protection, any inner-circle
+    # courtier; the others, one of their estate.
     "Patron Protection": (
-        "Sacrifice a courtier of any estate from your hand and attach this to "
-        "any inner-circle courtier. It negates the first Removal, Demotion, "
-        "Strip or Mutation aimed at them, then is discarded. It does not stop "
-        "an Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "any inner-circle courtier, you may discard this to block it: the "
+        "attack does nothing. It does not stop an Event."
     ),
     "Sanctuary": (
-        "Sacrifice a Church courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Church courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Bodyguard": (
-        "Sacrifice a Military courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Military courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Deep Pockets": (
-        "Sacrifice a Merchant courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Merchant courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     "Popularity": (
-        "Sacrifice a Commons courtier from your hand and attach this to any "
-        "inner-circle courtier. It negates the first Removal, Demotion, Strip "
-        "or Mutation aimed at them, then is discarded. It does not stop an "
-        "Event."
+        "When another player plays a Removal, Demotion, Strip or Mutation on "
+        "an inner-circle Commons courtier, you may discard this to block it: "
+        "the attack does nothing. It does not stop an Event."
     ),
     # --- Strips -------------------------------------------------------------
     # A strip empties the slot without spending the courtier's one mutation,
     # so the attribute can be filled again later.
     "Castration": (
-        "A courtier's Family becomes None. They keep their seat. A strip does "
-        "not spend a mutation, so Adoption can give them a family again."
+        "A courtier's Family becomes None. They keep their seat, and no card "
+        "gives them a house again."
     ),
     "Excommunication": (
         "A courtier's Faith becomes Godless. They keep their seat. A strip "
@@ -212,10 +208,6 @@ RULES: dict[str, str] = {
     ),
     "Go Native": "A courtier's Origin becomes Barbarian.",
     "Assimilate": "A courtier's Origin becomes Imperial.",
-    "Adoption": (
-        "Sacrifice a courtier of a family from your hand. The target takes "
-        "that family as their own."
-    ),
     # --- Pivot and Outmaneuver ----------------------------------------------
     "Schismatic Event": (
         "Discard your agenda and draw a new one from the pool of agendas "
@@ -231,7 +223,7 @@ REMINDERS: dict[CardKind, str] = {
     CardKind.EVENT: "Plays the moment it is drawn; then draw again. Hits every player.",
     CardKind.MUTATION: "Each attribute may be mutated once per courtier.",
     CardKind.STRIP: "A strip does not spend a mutation.",
-    CardKind.DEFENSE: "Attaches to an inner-circle courtier only.",
+    CardKind.DEFENSE: "Played only in answer to an attack, never on your own turn.",
 }
 
 #: The eight agendas, for the optional text-only agenda cards. The numbers are

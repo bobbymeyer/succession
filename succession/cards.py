@@ -1,8 +1,9 @@
 """Card definitions and deck construction.
 
-The play deck is 84 cards: the 40 courtiers plus 44 action cards (10 events,
-5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 9 mutations,
-1 pivot, and N copies of Outmaneuver -- one by default).
+The full catalogue is 84 cards: the 41 courtiers plus 43 action cards (10
+events, 5 promotions, 5 demotions, 6 removals, 5 defenses, 2 strips, 8
+mutations, 1 pivot, and N copies of Outmaneuver -- one by default). A game
+deals the five minor events of the ten.
 
 Event effects are the one place where the source document could not be carried
 over 1:1 (its effects were written for a board-wide version of events, while
@@ -14,7 +15,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .courtiers import COURTIERS
+from .courtiers import ADDED_COURTIERS, COURTIERS
 from .enums import CardKind, Estate, Faith, Family, Origin
 
 # --- Event effects ----------------------------------------------------------
@@ -57,10 +58,14 @@ class CardDef:
         return self.kind is CardKind.COURTIER
 
 
-def _courtier_cards() -> list[CardDef]:
+#: Every added courtier: what a new game deals.
+ALL_ADDED_COURTIERS: tuple[str, ...] = tuple(c.name for c in ADDED_COURTIERS)
+
+
+def _courtier_cards(added: tuple[str, ...] = ALL_ADDED_COURTIERS) -> list[CardDef]:
     return [
         CardDef(c.name, CardKind.COURTIER, estate=c.estate, courtier=c.name)
-        for c in COURTIERS
+        for c in COURTIERS + tuple(c for c in ADDED_COURTIERS if c.name in added)
     ]
 
 
@@ -140,9 +145,12 @@ MUTATION_CARDS: tuple[CardDef, ...] = (
     CardDef("Apostasy", CardKind.MUTATION, attribute="faith", value=Faith.GODLESS.value),
     CardDef("Go Native", CardKind.MUTATION, attribute="origin", value=Origin.BARBARIAN.value),
     CardDef("Assimilate", CardKind.MUTATION, attribute="origin", value=Origin.IMPERIAL.value),
-    # Adoption takes its value from the family courtier sacrificed from hand.
-    CardDef("Adoption", CardKind.MUTATION, attribute="family"),
 )
+
+#: Out of the deck (Config.adoption brings it back, for old records): any
+#: house you choose, or, with Config.courtier_costs, the house of a family
+#: courtier sacrificed from hand.
+ADOPTION_CARD = CardDef("Adoption", CardKind.MUTATION, attribute="family")
 
 PIVOT_CARDS: tuple[CardDef, ...] = (
     CardDef("Schismatic Event", CardKind.PIVOT),
@@ -151,7 +159,12 @@ PIVOT_CARDS: tuple[CardDef, ...] = (
 OUTMANEUVER_CARD = CardDef("Outmaneuver", CardKind.OUTMANEUVER)
 
 
-def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("minor", "major")) -> tuple[CardDef, ...]:
+def build_cards(
+    outmaneuver_copies: int = 1,
+    event_tiers: tuple[str, ...] = ("minor", "major"),
+    adoption: bool = False,
+    added_courtiers: tuple[str, ...] = ALL_ADDED_COURTIERS,
+) -> tuple[CardDef, ...]:
     """Return every card in the play deck, indexed by position (its uid).
 
     `event_tiers` leaves out the minor or major half of the events -- a
@@ -159,7 +172,7 @@ def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("mi
     """
 
     cards: list[CardDef] = []
-    cards.extend(_courtier_cards())
+    cards.extend(_courtier_cards(tuple(added_courtiers)))
     cards.extend(c for c in EVENT_CARDS if c.tier in event_tiers)
     cards.extend(PROMOTION_CARDS)
     cards.extend(DEMOTION_CARDS)
@@ -167,6 +180,8 @@ def build_cards(outmaneuver_copies: int = 1, event_tiers: tuple[str, ...] = ("mi
     cards.extend(DEFENSE_CARDS)
     cards.extend(STRIP_CARDS)
     cards.extend(MUTATION_CARDS)
+    if adoption:
+        cards.append(ADOPTION_CARD)
     cards.extend(PIVOT_CARDS)
     cards.extend(OUTMANEUVER_CARD for _ in range(outmaneuver_copies))
     return tuple(cards)

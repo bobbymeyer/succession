@@ -414,6 +414,48 @@ def contributors(state: "GameState", agenda: Agenda) -> list[int]:
     return out
 
 
+def distance(counts: BoardCounts, agenda: Agenda, rules: AgendaRules = DEFAULT_RULES) -> int:
+    """At least how many courtiers must still move before the agenda holds.
+
+    0 is met. 1 is a warning worth shouting: one courtier seated (or, for
+    Conquest, one barbarian more in play) could complete it. A lower bound,
+    not a plan -- a single courtier can answer several clauses at once (a
+    Mitreas courtier into a Merchant seat, say, or for Balance a barbarian of
+    a missing house and a missing faith), so it counts that as one.
+    """
+
+    status = conditions(counts, agenda, rules)
+    short = [max(0, c.need - c.have) for c in status]
+    if not any(short):
+        return 0
+    if agenda.kind == BALANCE:
+        seats, variety = short[0], short[1:]
+        # One courtier brings at most a house, a faith and a barbarian.
+        return max(seats, max(variety), -(-sum(variety) // 3))
+    return max(short)
+
+
+def helps(state: "GameState", agenda: Agenda, uid: int, counts: BoardCounts) -> bool:
+    """Whether a courtier, seated, would count toward the agenda."""
+
+    c = state.cstate[uid]
+    kind = agenda.kind
+    if kind == HOUSE_RISING:
+        return c.family.value == agenda.param
+    if kind == FAITH_ASCENDANT:
+        return c.faith.value == agenda.param
+    if kind == CONQUEST:
+        return c.origin is Origin.BARBARIAN
+    if kind == BALANCE:
+        # Whatever the court still lacks: a house, a faith, a barbarian.
+        return (
+            (c.family is not Family.NONE and counts.inner_family.get(c.family.value, 0) == 0)
+            or (c.faith in FAITHS and counts.inner_faith.get(c.faith.value, 0) == 0)
+            or (c.origin is Origin.BARBARIAN and counts.inner_barbarians == 0)
+        )
+    return False  # pragma: no cover
+
+
 # --- state-level convenience wrappers --------------------------------------
 def satisfied(state: "GameState", agenda: Agenda) -> bool:
     return satisfied_counts(count_board(state), agenda, rules_for(state))

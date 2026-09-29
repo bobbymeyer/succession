@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from succession.cards import CardDef  # noqa: E402
 
-ASSET_RE = re.compile(r"^(?P<index>\d{2})_(?P<kind>[a-z]+)_(?P<slug>[a-z0-9-]+)_(?P<variant>\d+)_$")
+ASSET_RE = re.compile(r"^(?P<index>\d{2,3})_(?P<kind>[a-z]+)_(?P<slug>[a-z0-9-]+)_(?P<variant>\d+)_$")
 CARDBACK_STEM = "00_cardback"
 
 

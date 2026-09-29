@@ -16,7 +16,7 @@ from succession.actions import legal_actions
 from succession.bots import GreedyBot, make_bot
 from succession.engine import play_game
 from succession.runner import main
-from succession.session import COURTIER, DISCARD, HUMAN, OVER, TURN, GameSession
+from succession.session import BLOCK, COURTIER, DISCARD, HUMAN, LET_IT_LAND, OVER, TURN, GameSession
 from succession.state import Config
 from succession.terminal import play
 
@@ -35,6 +35,9 @@ class StandIn(GreedyBot):
 
     def pick_discard(self, state, player, hand):
         return hand[0]
+
+    def block(self, state, player, options, target, preview):
+        return None  # a scripted human lets every attack land
 
 
 def stand_in_factory(tier, seat, rng):
@@ -55,7 +58,7 @@ def fingerprint(state) -> tuple:
 def drive_as_stand_in(session: GameSession) -> dict:
     """Answer every human prompt the way StandIn would. Counts the prompts."""
 
-    seen = {TURN: 0, COURTIER: 0, DISCARD: 0}
+    seen = {TURN: 0, COURTIER: 0, DISCARD: 0, BLOCK: 0}
     bots = {h: StandIn(h, session.rng) for h in session.humans}
     prompt = session.advance()
     while prompt.kind != OVER:
@@ -63,6 +66,8 @@ def drive_as_stand_in(session: GameSession) -> dict:
         if prompt.kind == TURN:
             action = bots[prompt.player].choose(session.state, prompt.player, prompt.options)
             prompt = session.answer(prompt.options.index(action))
+        elif prompt.kind == BLOCK:
+            prompt = session.answer(LET_IT_LAND)
         else:
             prompt = session.answer(prompt.options[0])
     return seen
@@ -81,7 +86,7 @@ class SessionMatchesSimulator(unittest.TestCase):
     def test_human_seat_plays_the_same_game_as_a_bot(self):
         # Same seats in the same order, so the seat shuffle puts the human
         # where the stand-in sat.
-        seen = {TURN: 0, COURTIER: 0, DISCARD: 0}
+        seen = {TURN: 0, COURTIER: 0, DISCARD: 0, BLOCK: 0}
         for seed in SEEDS:
             reference = play_game(
                 Config(players=("stand_in", "naive", "greedy", "strategic")),
@@ -401,7 +406,7 @@ class Terminal(unittest.TestCase):
             try:
                 sys.stdin = io.StringIO("1\n2\n1\nq\n")
                 with redirect_stdout(io.StringIO()) as first:
-                    main(["play", "--seed", "8", "--record", str(path)])
+                    main(["play", "--seed", "1", "--record", str(path)])
                 record = json.loads(path.read_text())
                 self.assertEqual(len(record["decisions"]), 3)
 
@@ -421,3 +426,58 @@ class Terminal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WinningMoves(unittest.TestCase):
+    def test_a_move_marked_as_winning_completes_your_agenda(self):
+        from succession.agendas import AGENDAS_BY_KEY, satisfied
+
+        taken = 0
+        for seed in range(60):
+            session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), seed)
+            me, rng = session.humans[0], random.Random(seed)
+            prompt = session.advance()
+            while prompt.kind != OVER:
+                if prompt.kind == TURN:
+                    options = session.prompt_json()["options"]
+                    winning = [o for o in options if o["wins"]]
+                    if winning:
+                        taken += 1
+                        blocks = session.state.stats.get("defenses_triggered", 0)
+                        prompt = session.answer(winning[0]["index"])
+                        # Met at once; the game may still ask for a hand-limit
+                        # discard before it is declared.
+                        agenda = AGENDAS_BY_KEY[session.state.agendas[me]]
+                        # ...unless a rival blocked it with a Defense.
+                        stopped = session.state.stats.get("defenses_triggered", 0) > blocks
+                        self.assertTrue(satisfied(session.state, agenda) or me in session.state.winners or stopped, seed)
+                        break
+                    prompt = session.answer(rng.randrange(len(options)))
+                else:
+                    prompt = session.answer(rng.choice(prompt.options))
+        self.assertGreater(taken, 3)
+
+
+class Blocking(unittest.TestCase):
+    def test_a_person_is_asked_to_block_and_can(self):
+        asked = blocked = 0
+        for seed in range(60):
+            session = GameSession(Config(players=(HUMAN, "naive", "greedy", "strategic")), seed)
+            rng = random.Random(seed)
+            prompt = session.advance()
+            while prompt.kind != OVER:
+                if prompt.kind == BLOCK:
+                    asked += 1
+                    self.assertEqual(prompt.options[-1], LET_IT_LAND)
+                    json_prompt = session.prompt_json()
+                    self.assertIsNotNone(json_prompt["about"])
+                    self.assertEqual(len(json_prompt["options"]), len(prompt.options) - 1)
+                    before = session.state.stats.get("defenses_triggered", 0)
+                    prompt = session.answer(prompt.options[0])
+                    blocked += session.state.stats.get("defenses_triggered", 0) > before
+                elif prompt.kind == TURN:
+                    prompt = session.answer(rng.randrange(len(prompt.options)))
+                else:
+                    prompt = session.answer(rng.choice(prompt.options))
+        self.assertGreater(asked, 0)
+        self.assertEqual(blocked, asked)

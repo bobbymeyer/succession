@@ -1,3 +1,4 @@
+import { CourtTally } from "./CourtTally";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import type { Card, Player, View } from "../protocol";
 import { useUi } from "../art";
@@ -60,9 +61,62 @@ function Agenda({ player, size }: { player: Player; size: "xxs" | "xs" | "sm" | 
 
 // A compact place at the table: who, how many cards, their agenda (a card
 // back until it is revealed). The whole row stays one line high.
-function Opponent({ view, player, act, turn }: { view: View; player: Player; act: Interaction; turn: number | null }) {
+/** Your private guesses at rivals' hidden agendas, and how to change one. */
+export interface Suspicions {
+  agendas: string[]; // every agenda's name, to guess from
+  guess: Record<number, string>; // seat -> agenda name
+  onGuess(seat: number, agenda: string | null): void;
+}
+
+function Suspect({ seat, suspicions }: { seat: number; suspicions: Suspicions }) {
+  const guess = suspicions.guess[seat];
+  return (
+    <label className={`suspect${guess ? " guessed" : ""}`} title="Your guess at their agenda: only you see it">
+      <span className="sr">Your guess at their agenda</span>
+      <select
+        data-testid={`suspect-${seat}`}
+        value={guess ?? ""}
+        onChange={(e) => suspicions.onGuess(seat, e.target.value || null)}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <option value="">?</option>
+        {suspicions.agendas.map((a) => (
+          <option key={a} value={a}>
+            {a}
+          </option>
+        ))}
+      </select>
+      <span className="suspect-face" aria-hidden="true">
+        {guess ? shortAgenda(guess) : "?"}
+      </span>
+    </label>
+  );
+}
+
+/** "Faith Ascendant: Old Gods" as "Old Gods?"; "Barbarian Conquest" as "Conquest?". */
+function shortAgenda(name: string): string {
+  const short = name.includes(":") ? name.split(":")[1].trim() : name.replace("Barbarian ", "");
+  return `${short}?`;
+}
+
+function Opponent({
+  view,
+  player,
+  act,
+  turn,
+  next,
+  suspicions,
+}: {
+  view: View;
+  player: Player;
+  act: Interaction;
+  turn: number | null;
+  next: boolean;
+  suspicions?: Suspicions;
+}) {
   const classes = ["opponent"];
   if (player.seat === turn) classes.push("current");
+  if (next) classes.push("next");
   if (view.winners.includes(player.seat)) classes.push("winner");
   const live = act.playerLive(player.seat);
   if (live) classes.push("live");
@@ -93,6 +147,8 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
             <Agenda player={player} size="xxs" />
             <span className="agenda-name">{player.agenda.name}</span>
           </>
+        ) : suspicions ? (
+          <Suspect seat={player.seat} suspicions={suspicions} />
         ) : (
           <span className="hidden-agenda" aria-label="Agenda hidden">
             ?
@@ -100,6 +156,7 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
         )}
       </span>
       {player.skips_next_turn && <span className="flag">Skips</span>}
+      {next && <span className="next-tag">next</span>}
     </div>
   );
 }
@@ -109,13 +166,31 @@ function Opponent({ view, player, act, turn }: { view: View; player: Player; act
 // `won` is the court that won the game, each courtier with its winner's
 // colour; they light up and bounce once the game is over.
 // Board courtiers are places to drop an action on; hand cards are not.
-function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = true) {
+/** Cards to mark: those serving your agenda, and those in a move that wins it. */
+export interface Marks {
+  helps: Set<number>;
+  wins: Set<number>;
+  attacked: Set<number>; // under an attack you may block
+}
+const NO_MARKS: Marks = { helps: new Set(), wins: new Set(), attacked: new Set() };
+
+/** Your agenda's courtiers: seated for it, or able to be. */
+export function marksFor(view: View, winning: Set<number> = new Set(), attacked: Set<number> = new Set()): Marks {
+  const agenda = view.you >= 0 && !view.over ? view.players[view.you].agenda : null;
+  return { helps: new Set([...(agenda?.seated ?? []), ...(agenda?.helpers ?? [])]), wins: winning, attacked };
+}
+
+function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = true, marks: Marks = NO_MARKS) {
   return (
     <CardView
       key={c.uid}
+      helps={marks.helps.has(c.uid)}
+      wins={marks.wins.has(c.uid)}
+      attacked={marks.attacked.has(c.uid)}
       card={c}
       size={size}
       caption={onBoard}
+      label={!onBoard}
       live={act.cardLive(c.uid)}
       selected={act.cardSelected(c.uid)}
       onClick={() => act.onCard(c.uid)}
@@ -129,14 +204,14 @@ function cardFor(act: Interaction, c: Card, size: "sm" | "md" | "lg", onBoard = 
 }
 
 /** Your hand. On a phone it sits in the dock, under your thumb. */
-export function Hand({ view, act }: { view: View; act: Interaction }) {
+export function Hand({ view, act, marks = NO_MARKS }: { view: View; act: Interaction; marks?: Marks }) {
   // --n: how many cards the dock's row shares its width between.
   const style = { "--n": Math.max(view.hand.length, 5) } as React.CSSProperties;
   return (
     <section className="mine" aria-label="Your hand" style={style}>
       <h2>Your hand</h2>
       <div className="row">
-        {view.hand.length ? view.hand.map((c) => cardFor(act, c, "lg", false)) : <p className="muted">No cards.</p>}
+        {view.hand.length ? view.hand.map((c) => cardFor(act, c, "lg", false, marks)) : <p className="muted">No cards.</p>}
       </div>
     </section>
   );
@@ -148,6 +223,8 @@ export function Board({
   playing = null,
   won,
   hand = true,
+  marks = NO_MARKS,
+  suspicions,
 }: {
   view: View;
   act: Interaction;
@@ -155,25 +232,44 @@ export function Board({
   won?: Map<number, string>;
   /** False when the hand is drawn elsewhere (a phone's dock). */
   hand?: boolean;
+  marks?: Marks;
+  suspicions?: Suspicions;
 }) {
   const turn = playing ?? (view.over ? null : view.current);
   const { art } = useUi();
-  const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => cardFor(act, c, size, onBoard);
-  const opponents = view.players.filter((p) => p.seat !== view.you);
+  const card = (c: Card, size: "sm" | "md" | "lg", onBoard = true) => cardFor(act, c, size, onBoard, marks);
+  // In the order they play, starting after you.
+  const n = view.players.length;
+  const from = view.you >= 0 ? view.you : 0;
+  const opponents = view.players
+    .filter((p) => p.seat !== view.you)
+    .sort((a, b) => ((a.seat - from + n) % n) - ((b.seat - from + n) % n));
+  const nextSeat = turn === null ? null : (turn + 1) % n;
   const me = view.you >= 0 ? view.players[view.you] : null;
 
   return (
     <div className="board">
       <section className="opponents" aria-label="Opponents">
         {opponents.map((p) => (
-          <Opponent key={p.seat} view={view} player={p} act={act} turn={turn} />
+          <Opponent
+            key={p.seat}
+            view={view}
+            player={p}
+            act={act}
+            turn={turn}
+            next={p.seat === nextSeat}
+            suspicions={suspicions}
+          />
         ))}
         <div className="status" aria-label="Table status">
           <span className="pile" title="Draw pile">
             <CardBack size="xxs" label="Deck" />
             {view.deck}
           </span>
-          <span className="turn">Turn {view.turn}</span>
+          <span className="turn" title={`Turn ${view.turn}`}>
+            Round {view.round}
+            {view.max_rounds ? <small> of {view.max_rounds}</small> : null}
+          </span>
           {view.removed > 0 && <span className="muted">{view.removed} out</span>}
           {view.frozen.board ? (
             <span className="seal">Siege</span>
@@ -185,6 +281,7 @@ export function Board({
 
       <section className="court" aria-label="Inner circle">
         <h2>The inner circle</h2>
+        <CourtTally view={view} />
         <div className="seats">
           {view.seats.map((s, i) => {
             const live = act.seatLive(s.seat);
@@ -245,7 +342,7 @@ export function Board({
         </div>
       </section>
 
-      {me && hand && <Hand view={view} act={act} />}
+      {me && hand && <Hand view={view} act={act} marks={marks} />}
     </div>
   );
 }

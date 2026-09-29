@@ -41,7 +41,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 
 | File | What's in it |
 |---|---|
-| `succession/courtiers.py` | The 40-courtier attribute table (estate · faith · family · origin) |
+| `succession/courtiers.py` | The 41-courtier attribute table (estate · faith · family · origin) |
 | `succession/cards.py` | Every card, deck construction, and the event-effect table |
 | `succession/enums.py` | Estates, faiths, families, origins, the six seats |
 | `succession/state.py` | `Config` (every rules knob) and `GameState` (cheap to clone) |

@@ -20,7 +20,7 @@ type Surface = Page | Frame | FrameLocator;
 
 /** Wait until the page is asking for a decision, or the game is over. */
 export async function settle(surface: Surface) {
-  const ready = "[data-testid=game-over], .all-moves";
+  const ready = "[data-testid=game-over], .all-moves, [data-testid=block]";
   // A new round opens on your agenda, and an event stops play until it has
   // been read: begin, or carry on, until the page asks for a decision. An
   // event that asks you something is announced first; it closes by itself.
@@ -47,6 +47,12 @@ export async function settle(surface: Surface) {
 export async function playFromList(surface: Surface, choose: <T>(items: T[]) => T = (items) => items[0]): Promise<boolean> {
   await settle(surface);
   if (await surface.locator("[data-testid=game-over]").isVisible()) return false;
+  // A rival attacks a courtier your Defense covers: block, or let it land.
+  const block = surface.locator("[data-testid=block]");
+  if (await block.isVisible()) {
+    await choose(await block.getByRole("button").all()).click();
+    return true;
+  }
   await surface.locator(".all-moves summary").click();
   const options = await surface.locator("[data-testid=move-option], [data-testid=pick-option]").all();
   await choose(options).click();
@@ -77,6 +83,17 @@ export async function showPanel(page: Page, which: "agenda" | "log") {
   if (await dock.isVisible()) {
     if ((await dock.getAttribute("aria-expanded")) !== "true") await dock.click();
   } else {
-    await page.getByRole("tab", { name: which === "log" ? "Log" : /Agenda/ }).click();
+    const tab = page.getByRole("tab", { name: which === "log" ? "Log" : /Agenda/ });
+    // The rail is sticky and scrolls on its own; Playwright's scrolling lands
+    // the click beside it, where a person would simply scroll the rail.
+    await tab.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await tab.click();
   }
+}
+
+/** Type a seed on the title screen: the field sits under "Custom table". */
+export async function setSeed(page: Page, seed: string | number) {
+  const custom = page.getByTestId("custom-table");
+  if (!(await custom.evaluate((d) => (d as HTMLDetailsElement).open))) await custom.locator("summary").click();
+  await page.fill("input[placeholder=random]", String(seed));
 }

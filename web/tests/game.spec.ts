@@ -1,7 +1,7 @@
 // Whole games in a real browser: Pyodide boots, the engine deals, and a
 // player gets from the first move to the end.
 import type { Page } from "@playwright/test";
-import { expect, fromMenu, openMenu, playFromList, random, settle, showPanel, test } from "./helpers";
+import { expect, fromMenu, openMenu, playFromList, random, setSeed, settle, showPanel, test } from "./helpers";
 
 async function start(page: Page, errors: string[], seed?: number) {
   page.on("pageerror", (e) => errors.push(e.message));
@@ -9,7 +9,7 @@ async function start(page: Page, errors: string[], seed?: number) {
   await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 }); // Pyodide boot
-  if (seed !== undefined) await page.fill("input[placeholder=random]", String(seed));
+  if (seed !== undefined) await setSeed(page, seed);
   await page.getByTestId("deal").click();
 }
 
@@ -21,7 +21,7 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   const mine = await briefing.locator("h2").innerText();
   // Nobody has moved: the bots wait until you begin.
   await page.waitForTimeout(1500);
-  await expect(page.locator(".status .turn")).toHaveText("Turn 0");
+  await expect(page.locator(".status .turn")).toHaveText("Round 1 of 50");
   await page.getByTestId("begin").click();
   await expect(briefing).toBeHidden();
   await settle(page);
@@ -88,9 +88,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
   await page.goto("./");
   await page.getByTestId("deal").waitFor({ timeout: 90_000 });
   await expect(page.getByTestId("first-deal")).toBeVisible();
-  await page.fill("input[placeholder=random]", "7");
+  await setSeed(page, "7");
   await expect(page.getByTestId("first-deal")).toBeHidden();
-  await page.fill("input[placeholder=random]", "");
+  await setSeed(page, "");
   await page.getByTestId("deal").click();
   // You move first, with House Rising: Mitreas.
   await expect(page.getByTestId("briefing").locator("h2")).toHaveText("House Rising: Mitreas");
@@ -98,9 +98,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 18: a bot draws Caravan before your first turn, and it plays at once.
+  // Seed 123: a bot draws Caravan before your first turn, and it plays at once.
   const errors: string[] = [];
-  await start(page, errors, 18);
+  await start(page, errors, 123);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
@@ -113,15 +113,17 @@ test("an event stops play and says what it did", async ({ page }) => {
   await page.waitForTimeout(800);
   await expect(page.locator(".status .turn")).toHaveText(turn);
   await page.getByTestId("event-continue").click();
-  await expect(event).toBeHidden();
+  // Caravan closes. (Your own first draw here is another event, which may
+  // already be up behind it.)
+  await expect(page.getByTestId("event").filter({ hasText: "Caravan" })).toHaveCount(0);
   await settle(page);
   expect(errors).toEqual([]);
 });
 
 test("an event that asks you something is announced first", async ({ page }) => {
-  // Seed 6: a bot draws Debasement of the Coinage before your first turn.
+  // Seed 104: a bot draws Debasement of the Coinage before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 6);
+  await start(page, errors, 104);
   await page.getByTestId("begin").click();
   const announce = page.getByTestId("event-announce");
   await expect(announce).toBeVisible({ timeout: 30_000 });
@@ -139,12 +141,20 @@ test("an event that asks you something is announced first", async ({ page }) => 
   expect(errors).toEqual([]);
 });
 
+// A saved game stopped at the hand limit: seed 1, three moves in, with more
+// than seven cards in hand. The record carries its own rules, so later
+// rule changes leave it where it is.
+const AT_THE_HAND_LIMIT = {"version": 4, "seed": 1, "config": {"players": ["human", "naive", "greedy", "strategic"], "starting_hand": 5, "hand_limit": 7, "max_turns": 600, "max_rounds": 50, "shuffle_seats": true, "outmaneuver_copies": 1, "save_on_even": true, "removed_courtiers_return_to_deck": true, "discard_draws": true, "hand_limit_at_end_of_turn": true, "events_on_draw": true, "events_on_draw_minor_only": false, "event_tiers": ["minor"], "caster_edge": false, "defense_requires_matching_target": false, "courtier_costs": false, "reactive_defense": true, "excommunication_godless": true, "house_rising_requires_preferred_seat": true, "faith_seats": 4, "balance_seats": 7, "balance_barbarians": 1, "conquest_barbarians": 3, "conquest_military_seats": 0, "conquest_outer_barbarians": 1, "excluded_agendas": [], "house_preferred_estates": []}, "decisions": [4, 18, 24]};
+
 test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
-  // Seed 1683: taking the first move each time, your hand passes 7 on the
-  // sixteenth decision.
   const errors: string[] = [];
-  await start(page, errors, 1683);
-  for (let i = 0; i < 15; i++) await playFromList(page);
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  await page.getByText("Load a saved game").click();
+  await page.getByLabel("Game record").fill(JSON.stringify(AT_THE_HAND_LIMIT));
+  await page.getByRole("button", { name: "Load", exact: true }).click();
   await settle(page);
   await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
   expect(await page.locator(".mine .card").count()).toBeGreaterThan(7);
@@ -178,6 +188,12 @@ test("a game played by clicking the board", async ({ page }) => {
   for (let i = 0; i < 3000; i++) {
     await settle(page);
     if (await page.getByTestId("game-over").isVisible()) break;
+    // A rival's attack you could block: block it or let it land.
+    const block = page.getByTestId("block");
+    if (await block.isVisible()) {
+      await random(await block.getByRole("button").all()).click();
+      continue;
+    }
     const buttons = await offers.all();
     if (buttons.length && Math.random() < 0.8) {
       await random(buttons).click();
@@ -409,5 +425,87 @@ test("every courtier wears a sigil of their attributes as they stand", async ({ 
   // The rules say how to read one.
   await fromMenu(page, page.getByTestId("show-rules"));
   await expect(page.getByTestId("rules")).toContainText("Faith is the shape");
+  expect(errors).toEqual([]);
+});
+
+test("the table warns of a near win, offers yours, and shows every agenda at the end", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto("./");
+  await page.getByTestId("tutorial").click({ timeout: 90_000 });
+  await settle(page);
+  // The tutorial's board: the rival's three Old Gods, and your two Mitreas.
+  const tally = page.getByTestId("court-tally");
+  await expect(tally.getByTitle("Old Gods: 3")).toBeVisible();
+  await expect(page.getByTestId("close-danger")).toContainText("Faith Ascendant: Old Gods");
+  await expect(page.getByTestId("close-yours")).toContainText("House Rising: Mitreas");
+  // Your courtiers are marked.
+  await expect(page.locator(".card.helps").first()).toBeVisible();
+  // A private guess at the rival's agenda, shown on their chip.
+  await page.getByTestId("suspect-1").selectOption("Faith Ascendant: Old Gods");
+  await expect(page.locator(".opponent .suspect-face")).toHaveText("Old Gods?");
+  // An action card in hand says what it does (the dock hides it on a phone).
+  await expect(page.locator(".mine .action-label").first()).toHaveText(/Godless|→|Shield|Kill|Unseat|Seat/);
+  // Thwart, play Buyer of Cities, and the seat is offered as a win.
+  await playFromList(page);
+  await settle(page);
+  await playFromList(page);
+  await settle(page);
+  const win = page.getByTestId("win-now");
+  await expect(win).toContainText("You can win now");
+  await expect(win.getByRole("button")).toContainText("Buyer of Cities into Master of the Market");
+  await win.getByRole("button").first().click();
+  const over = page.getByTestId("game-over");
+  await expect(over).toContainText("You win");
+  await expect(over.getByTestId("all-agendas")).toContainText("Faith Ascendant: Old Gods");
+  await expect(over.getByTestId("guesses")).toContainText("✓");
+  await expect(page.getByTestId("close-danger")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the title screen leads with Play; the table's knobs are tucked away", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.getByTestId("deal")).toHaveText("Play", { timeout: 90_000 });
+  await expect(page.getByTestId("tutorial")).toBeVisible();
+  await expect(page.getByTestId("show-rules")).toBeVisible();
+  await expect(page.locator("input[placeholder=random]")).toBeHidden();
+  await page.getByTestId("custom-table").locator("summary").click();
+  await expect(page.locator("input[placeholder=random]")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add a bot" })).toBeVisible();
+});
+
+test("the table shows the round, who plays next, and names each bot's move", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Fast"));
+  await page.goto("./");
+  await setSeed(page, 3);
+  await page.getByTestId("deal").click();
+  await page.getByTestId("begin").click();
+  await expect(page.locator(".status .turn")).toContainText("Round");
+  await expect(page.locator(".opponent.next")).toHaveCount(1);
+  // A bot's move is captioned where it lands.
+  await page.locator(".hand-caption").first().waitFor({ state: "attached", timeout: 30_000 });
+  await settle(page);
+  expect(errors).toEqual([]);
+});
+
+test("a rival's attack on a courtier your Defense covers can be blocked", async ({ page }) => {
+  // Seed 6: taking the first move each time, a bot plays Ostracism on Silver
+  // Tongue after your third, and your hand holds Patron Protection.
+  const errors: string[] = [];
+  await start(page, errors, 6);
+  const block = page.getByTestId("block");
+  for (let i = 0; i < 30 && !(await block.isVisible()); i++) {
+    await playFromList(page);
+    await settle(page);
+  }
+  await expect(block).toContainText("plays Ostracism on Silver Tongue");
+  await expect(page.locator(".card.attacked")).toHaveCount(1);
+  await block.getByTestId("block-with").first().click();
+  await settle(page);
+  await showPanel(page, "log");
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Silver Tongue is untouched");
   expect(errors).toEqual([]);
 });

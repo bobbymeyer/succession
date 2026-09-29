@@ -14,7 +14,7 @@ from succession.actions import DISCARD, MOVE, PASS, PLAY, Action, card_actions, 
 from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
-from succession.courtiers import COURTIERS, FAMILY_PREFERRED_ESTATE
+from succession.courtiers import COURTIERS, COURTIERS_BY_NAME, FAMILY_PREFERRED_ESTATE
 from succession.engine import (
     apply_action,
     check_winners,
@@ -201,14 +201,14 @@ class TestData(unittest.TestCase):
     def test_deck_composition(self):
         cards = build_cards(outmaneuver_copies=1)
         kinds = collections.Counter(c.kind for c in cards)
-        self.assertEqual(kinds[CardKind.COURTIER], 40)
+        self.assertEqual(kinds[CardKind.COURTIER], 41)
         self.assertEqual(kinds[CardKind.EVENT], 10)
         self.assertEqual(kinds[CardKind.PROMOTION], 5)
         self.assertEqual(kinds[CardKind.DEMOTION], 5)
         self.assertEqual(kinds[CardKind.REMOVAL], 6)
         self.assertEqual(kinds[CardKind.DEFENSE], 5)
         self.assertEqual(kinds[CardKind.STRIP], 2)
-        self.assertEqual(kinds[CardKind.MUTATION], 9)
+        self.assertEqual(kinds[CardKind.MUTATION], 8)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
         self.assertEqual(len(cards), 84)
@@ -222,6 +222,16 @@ class TestData(unittest.TestCase):
             ]
             self.assertEqual(len(commoners), 1)
             self.assertIn("Charioteer", commoners[0].name)
+
+    def test_the_seeress_is_the_churchs_barbarian(self):
+        seeress = COURTIERS_BY_NAME["Seeress of the Sacred Grove"]
+        self.assertEqual(
+            (seeress.estate, seeress.faith, seeress.family, seeress.origin),
+            (Estate.CHURCH, Faith.OLD_GODS, Family.NONE, Origin.BARBARIAN),
+        )
+        self.assertIn(seeress.name, {c.name for c in build_cards()})
+        self.assertNotIn(seeress.name, {c.name for c in build_cards(added_courtiers=())})
+        self.assertNotIn(seeress.name, {c.name for c in fresh(added_courtiers=()).cards})
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
@@ -342,8 +352,18 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=kill2, courtier=defended), FixedRng())
         self.assertIsNone(state.seats[Seat.ARCHPRIEST])  # second one lands
 
-    def test_defense_costs_a_matching_estate_courtier(self):
-        state = fresh()
+    def test_a_defense_costs_nothing_and_its_estate_is_whom_it_shields(self):
+        state = fresh(reactive_defense=False)
+        church = seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
+        soldier = seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        bodyguard = give(state, 0, "Bodyguard")[0]  # Military
+        self.assertEqual({a.courtier for a in card_actions(state, 0, bodyguard)}, {soldier})
+        self.assertTrue(all(a.sacrifice < 0 for a in card_actions(state, 0, bodyguard)))
+        patron = give(state, 0, "Patron Protection")[0]  # anyone
+        self.assertEqual({a.courtier for a in card_actions(state, 0, patron)}, {church, soldier})
+
+    def test_old_rules_defense_costs_a_matching_estate_courtier(self):
+        state = fresh(courtier_costs=True, reactive_defense=False)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Bodyguard")[0]  # Military
         give(state, 0, "Beloved of the Gods")  # Church: cannot pay
@@ -351,8 +371,8 @@ class TestRemovalsAndDefenses(unittest.TestCase):
         give(state, 0, "Crosser of Rivers")  # Military: can pay
         self.assertTrue(card_actions(state, 0, shield))
 
-    def test_patron_protection_accepts_any_estate(self):
-        state = fresh()
+    def test_old_rules_patron_protection_accepts_any_estate(self):
+        state = fresh(courtier_costs=True, reactive_defense=False)
         seat(state, "Hand of the Oracle", Seat.ARCHPRIEST)
         shield = give(state, 0, "Patron Protection")[0]
         give(state, 0, "Golden Thumb")
@@ -428,8 +448,19 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         apply_action(state, 0, Action(PLAY, card=strip, courtier=target), FixedRng())
         self.assertIs(state.cstate[target].faith, Faith.NONE)
 
-    def test_adoption_sacrifices_a_family_courtier(self):
-        state = fresh()
+    def test_adoption_gives_any_house_but_their_own(self):
+        state = fresh(adoption=True)
+        adopt = give(state, 0, "Adoption")[0]
+        target = outer(state, "Crosser of Rivers")[0]  # Mitreas
+        options = {a.value for a in card_actions(state, 0, adopt) if a.courtier == target}
+        self.assertEqual(options, {"Amonides", "Argaian"})
+        action = next(a for a in card_actions(state, 0, adopt) if a.courtier == target and a.value == "Argaian")
+        apply_action(state, 0, action, FixedRng())
+        self.assertIs(state.cstate[target].family, Family.ARGAIAN)
+        self.assertTrue(state.cstate[target].mutated_family)
+
+    def test_old_rules_adoption_sacrifices_a_family_courtier(self):
+        state = fresh(courtier_costs=True, adoption=True)
         adopt, donor = give(state, 0, "Adoption", "Beloved of the Gods")
         target = outer(state, "Silver Tongue")[0]  # no family
         action = next(
@@ -439,6 +470,10 @@ class TestDemotionsStripsMutations(unittest.TestCase):
         apply_action(state, 0, action, FixedRng())
         self.assertIs(state.cstate[target].family, Family.AMONIDES)
         self.assertIn(donor, state.discard)
+
+    def test_adoption_is_out_of_the_deck(self):
+        self.assertNotIn("Adoption", {c.name for c in build_cards()})
+        self.assertIn("Adoption", {c.name for c in build_cards(adoption=True)})
 
     def test_castration_clears_family(self):
         state = fresh()
@@ -1400,3 +1435,98 @@ class TestGames(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class Closeness(unittest.TestCase):
+    """How near the board stands to each agenda, for the table's warnings."""
+
+    def test_three_of_a_faith_seated_is_one_away(self):
+        from succession.agendas import count_board, distance, rules_for
+
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["faith_old_gods"]
+        seat(state, "Beloved of the Gods", Seat.ARCHPRIEST)
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 2)
+        seat(state, "Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 1)
+        seat(state, "Weigher of Grain", Seat.KEEPER_OF_THE_TREASURY)
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 0)
+
+    def test_one_courtier_can_answer_two_clauses_at_once(self):
+        # House Rising wants three seats, one in the house's own estate: two
+        # seated elsewhere, and a third into that estate, is one move.
+        from succession.agendas import count_board, distance, rules_for
+
+        state = fresh()
+        agenda = AGENDAS_BY_KEY["house_mitreas"]
+        seat(state, "Charioteer of the Seven Turns", Seat.VOICE_OF_THE_PEOPLE)  # Mitreas, Commons
+        seat(state, "Crosser of Rivers", Seat.LORD_GENERAL)  # Mitreas, Military
+        self.assertEqual(distance(count_board(state), agenda, rules_for(state)), 1)
+
+    def test_the_view_shows_the_court_and_what_is_close(self):
+        from succession.session import view
+
+        state = fresh()
+        for name, where in (
+            ("Beloved of the Gods", Seat.ARCHPRIEST),
+            ("Keeper of the Long Peace", Seat.LORD_GENERAL),
+            ("Destroyer of Walls", Seat.CAPTAIN_OF_THE_GUARD),
+        ):
+            seat(state, name, where)
+        court = view(state, 0, list(state.config.players))["court"]
+        self.assertEqual(court["filled"], 3)
+        self.assertEqual(court["faiths"]["Old Gods"], 3)
+        self.assertIn("faith_old_gods", {a["key"] for a in court["close"]})
+
+
+class ReactiveDefense(unittest.TestCase):
+    """A Defense is played from hand against an attack on a seated courtier."""
+
+    class Always:
+        def block(self, state, player, options, target, preview):
+            return options[0]
+
+    class Never:
+        def block(self, state, player, options, target, preview):
+            return None
+
+    def attack(self, deciders, where=Seat.LORD_GENERAL, defense="Bodyguard", courtier="Keeper of the Long Peace"):
+        state = fresh()
+        target = seat(state, courtier, where) if where else outer(state, courtier)[0]
+        shield = give(state, 1, defense)[0]
+        demote = give(state, 0, "Demotion")[0]
+        apply_action(state, 0, Action(PLAY, card=demote, courtier=target), FixedRng(), deciders)
+        return state, target, shield
+
+    def test_a_rival_blocks_and_both_cards_go(self):
+        state, target, shield = self.attack([self.Never(), self.Always(), self.Never(), self.Never()])
+        self.assertEqual(state.seats[Seat.LORD_GENERAL], target)  # still seated
+        self.assertIn(shield, state.discard)
+        self.assertNotIn(shield, state.hands[1])
+
+    def test_letting_it_land(self):
+        state, target, shield = self.attack([self.Never()] * 4)
+        self.assertIsNone(state.seats[Seat.LORD_GENERAL])
+        self.assertIn(shield, state.hands[1])
+
+    def test_a_defense_covers_only_its_estate(self):
+        # Bodyguard is Military; the Archpriest's courtier is Church.
+        state, target, shield = self.attack(
+            [self.Never(), self.Always(), self.Never(), self.Never()], where=Seat.ARCHPRIEST, courtier="Beloved of the Gods"
+        )
+        self.assertIsNone(state.seats[Seat.ARCHPRIEST])
+        self.assertIn(shield, state.hands[1])
+
+    def test_patron_protection_covers_anyone(self):
+        state, target, shield = self.attack(
+            [self.Never(), self.Always(), self.Never(), self.Never()],
+            where=Seat.ARCHPRIEST, courtier="Beloved of the Gods", defense="Patron Protection",
+        )
+        self.assertEqual(state.seats[Seat.ARCHPRIEST], target)
+
+    def test_a_defense_is_not_played_on_your_own_turn(self):
+        state = fresh()
+        seat(state, "Keeper of the Long Peace", Seat.LORD_GENERAL)
+        shield = give(state, 0, "Bodyguard")[0]
+        self.assertEqual(card_actions(state, 0, shield), [])

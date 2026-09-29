@@ -39,7 +39,7 @@ from dataclasses import asdict, dataclass, field, fields
 from typing import Callable, Optional
 
 from .actions import PLAY, Action, legal_actions
-from .agendas import AGENDAS_BY_KEY, conditions, contributors, count_board, rules_for
+from .agendas import AGENDAS, AGENDAS_BY_KEY, conditions, contributors, count_board, distance, helps, rules_for, satisfied
 from .bots import make_bot
 from .cards import (
     EFFECT_DISCARD_ALL,
@@ -50,8 +50,8 @@ from .cards import (
     EFFECT_REDEAL,
     EFFECT_RESHUFFLE,
 )
-from .engine import GameResult, game_result, resolve_turn, setup_game, start_turn
-from .enums import SEAT_ESTATE, SEATS, CardKind
+from .engine import EvalRng, GameResult, apply_action, game_result, resolve_turn, setup_game, start_turn
+from .enums import DEFENDABLE, FAITHS, FAMILIES, SEAT_ESTATE, SEATS, CardKind
 from . import tutorial
 from .state import Config, GameState
 
@@ -61,7 +61,10 @@ HUMAN = "human"
 TURN = "turn"            # pick one of `options`, the legal actions
 COURTIER = "courtier"    # a purge: name one of `options`, courtier uids
 DISCARD = "discard"      # a forced discard: throw away one of `options`, hand uids
+BLOCK = "block"          # someone attacks a courtier: block with one of `options`, or -1
 OVER = "over"            # nothing left to decide
+#: The answer to a BLOCK that lets the attack land.
+LET_IT_LAND = -1
 
 #: 2: Discard & Draw. A version-1 record was played before it, without the draw.
 #: 3: the hand limit is checked at the end of the turn; earlier records capped
@@ -74,11 +77,13 @@ RECORD_VERSION = 4
 class NeedChoice(Exception):
     """Raised by a human seat asked to decide mid-card with no answer ready."""
 
-    def __init__(self, kind: str, player: int, options: list[int], *, limit: bool = False) -> None:
+    def __init__(self, kind: str, player: int, options: list[int], *, limit: bool = False, about: int = -1) -> None:
         super().__init__(f"P{player} must choose a {kind}")
         self.kind = kind
         self.player = player
         self.options = options
+        #: For a BLOCK, the courtier under attack.
+        self.about = about
         #: A discard down to the hand limit, rather than one a card asks for.
         self.limit = limit
 
@@ -106,10 +111,14 @@ class HumanSeat:
     def pick_limit_discard(self, state: GameState, player: int, hand) -> int:
         return self._next(DISCARD, player, hand, limit=True)
 
-    def _next(self, kind: str, player: int, options, *, limit: bool = False) -> int:
+    def block(self, state: GameState, player: int, options, target: int, preview) -> Optional[int]:
+        choice = self._next(BLOCK, player, [*options, LET_IT_LAND], about=target)
+        return None if choice == LET_IT_LAND else choice
+
+    def _next(self, kind: str, player: int, options, *, limit: bool = False, about: int = -1) -> int:
         if self.answers:
             return self.answers.pop(0)
-        raise NeedChoice(kind, player, list(options), limit=limit)
+        raise NeedChoice(kind, player, list(options), limit=limit, about=about)
 
 
 @dataclass
@@ -124,6 +133,8 @@ class Prompt:
     card: int = -1
     #: A DISCARD down to the hand limit as the turn ends (`card` is then -1).
     limit: bool = False
+    #: For a BLOCK, the courtier under attack (`card` is the attacking card).
+    about: int = -1
 
 
 def seat_controllers(
@@ -314,7 +325,7 @@ class GameSession:
         if self.state.resolving_event >= 0:
             card = self.state.resolving_event
         card = -1 if need.limit else card
-        self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit)
+        self.prompt = Prompt(need.kind, need.player, need.options, card, limit=need.limit, about=need.about)
         # Only events that have finished are reported, and each once; the one
         # asking is reported when the answer lets it finish.
         finished = [e for e in self.last_events if e]
@@ -426,6 +437,14 @@ class GameSession:
         config.setdefault("max_rounds", None)
         # ...and before an Excommunication left a courtier godless.
         config.setdefault("excommunication_godless", False)
+        # ...and before Defenses and Adoption stopped costing a courtier.
+        config.setdefault("courtier_costs", True)
+        # ...and before a Defense was played in answer to an attack.
+        config.setdefault("reactive_defense", False)
+        # ...and before Adoption left the deck.
+        config.setdefault("adoption", True)
+        # ...and before the Seeress joined the court.
+        config.setdefault("added_courtiers", [])
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):
@@ -454,13 +473,27 @@ class GameSession:
         state = self.state
         if prompt.kind == TURN:
             options = [action_json(state, a, i) for i, a in enumerate(prompt.options)]
+            for option, action in zip(options, prompt.options):
+                option["wins"] = wins(state, prompt.player, action)
+                #: An attack on a seated courtier: a rival may block it.
+                option["blockable"] = (
+                    state.config.reactive_defense
+                    and action.kind == PLAY
+                    and state.card(action.card).kind in DEFENDABLE
+                    and action.courtier >= 0
+                    and state.seat_of(action.courtier) is not None
+                )
         else:
-            options = [card_json(state, uid) for uid in prompt.options]
+            # A BLOCK's "let it land" (-1) is not a card: the page offers it as a button.
+            options = [card_json(state, uid) for uid in prompt.options if uid >= 0]
         return {
             "kind": prompt.kind,
             "player": prompt.player,
             "options": options,
             "card": card_json(state, prompt.card) if prompt.card >= 0 else None,
+            #: For a block: the courtier under attack, and who is attacking.
+            "about": card_json(state, prompt.about) if prompt.about >= 0 else None,
+            "attacker": state.current if prompt.kind == BLOCK else None,
             #: The asking event's one-line summary, to announce it by.
             "summary": EVENT_SUMMARY.get(state.card(prompt.card).name, "") if prompt.card >= 0 else "",
             #: Cards still to go, when discarding down to the hand limit.
@@ -637,6 +670,26 @@ def card_json(state: GameState, uid: int) -> dict:
     return data
 
 
+def wins(state: GameState, player: int, action: Action) -> bool:
+    """Whether the move completes the player's own agenda, played out on a copy.
+
+    Played the way the bots look ahead (EvalRng): a save roll fails and
+    nothing hidden is drawn, so a move that leans on luck is not promised.
+    """
+
+    if action.kind == PLAY:
+        card = state.card(action.card)
+        # Luck decides these: a new agenda drawn at random, a save rolled.
+        if card.kind is CardKind.PIVOT or card.save:
+            return False
+    after = state.clone()
+    try:
+        apply_action(after, player, action, EvalRng())
+    except Exception:  # pragma: no cover - a lookahead must never cost the game
+        return False
+    return satisfied(after, AGENDAS_BY_KEY[after.agendas[player]])
+
+
 def action_json(state: GameState, action: Action, index: int) -> dict:
     def uid(value: int) -> Optional[int]:
         return value if value >= 0 else None
@@ -679,6 +732,13 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
             ],
             #: The seated courtiers that count toward it.
             "seated": contributors(state, a),
+            #: Yours only: courtiers in the outer circle or your hand who
+            #: would count if seated.
+            "helpers": (
+                [uid for uid in (*state.outer, *state.hands[p]) if state.card(uid).is_courtier and helps(state, a, uid, counts)]
+                if p == player
+                else []
+            ),
         }
 
     seats = []
@@ -693,6 +753,9 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
     return {
         "you": player,
         "turn": state.turn,
+        #: Rounds, as the game's limit counts them: every player one turn.
+        "round": state.turn // state.config.num_players + 1,
+        "max_rounds": state.config.max_rounds,
         "current": state.current,
         "over": over,
         "winners": list(state.winners),
@@ -714,11 +777,23 @@ def view(state: GameState, player: int, tiers: list[str], *, over: bool = False)
         "discard_top": card_json(state, state.discard[-1]) if state.discard else None,
         "removed": len(state.removed),
         "frozen": {"inner": state.inner_frozen, "board": state.board_frozen},
+        #: The court in the terms agendas read it, for everyone to see.
+        "court": {
+            "filled": counts.inner_filled,
+            "houses": {f.value: counts.inner_family.get(f.value, 0) for f in FAMILIES},
+            "faiths": {f.value: counts.inner_faith.get(f.value, 0) for f in FAITHS},
+            "barbarians": counts.inner_barbarians,
+            "barbarians_outside": counts.barbarians_in_play - counts.inner_barbarians,
+            #: Agendas one courtier from complete -- whoever holds them.
+            "close": [{"key": a.key, "name": a.name} for a in AGENDAS if distance(counts, a, rules) == 1],
+        },
     }
 
 
 __all__ = [
+    "BLOCK",
     "COURTIER",
+    "LET_IT_LAND",
     "DISCARD",
     "GameSession",
     "HUMAN",
