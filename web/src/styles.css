@@ -650,6 +650,7 @@ a.button:hover { border-color: var(--gold); }
 
 /* -- an event that asks you something, announced before it asks ----------- */
 .event-modal.announce { cursor: pointer; width: min(94vw, 44rem); }
+.event-modal.limit-notice { width: min(94vw, 30rem); --seat: var(--gold); }
 .event-modal.announce .event-art { width: min(200px, 34vw); }
 .event-modal.announce.closing { animation: announce-out 260ms ease forwards; }
 .event-modal.announce.closing::backdrop { opacity: 0; transition: opacity 260ms ease; }

@@ -15,7 +15,7 @@ import { warmOffline } from "./offline";
 import { Credit } from "./components/Credit";
 import { GameOver, winningCourt } from "./components/GameOver";
 import { Briefing } from "./components/Briefing";
-import { EventAnnouncement, EventModal } from "./components/EventModal";
+import { EventAnnouncement, EventModal, HandLimitNotice } from "./components/EventModal";
 import { Intro, introSeen } from "./components/Intro";
 import { Chaos } from "./components/Chaos";
 import { Rules } from "./components/Rules";
@@ -175,6 +175,8 @@ export function App() {
   const [events, setEvents] = useState<{ update: Update; left: number } | null>(null);
   // An event that stops to ask you something is announced first, once.
   const [announce, setAnnounce] = useState<Update | null>(null);
+  // The turn whose hand-limit discard has been announced (HandLimitNotice).
+  const [limitNoted, setLimitNoted] = useState<number | null>(null);
   const announced = useRef("");
   // The bot whose card is still crossing the table keeps the spotlight until
   // it lands; after that it passes to whoever is thinking next.
@@ -571,6 +573,8 @@ export function App() {
           }`
       : "";
   const pass = turnPrompt?.options.find((a) => a.kind === "pass") ?? null;
+  /** Over the hand limit at the end of your turn, and not yet told. */
+  const limitNotice = pickPrompt?.kind === "discard" && pickPrompt.card === null && limitNoted !== view.turn && !events && !briefing;
 
   const copyRecord = async () => {
     if (!result) return;
@@ -695,6 +699,14 @@ export function App() {
       <Inspect card={inspecting} hand={view.hand} moves={movesFor} onPick={setInspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
+      {limitNotice && (
+        <HandLimitNotice
+          key={view.turn}
+          hand={view.hand.length}
+          over={pickPrompt!.over}
+          onDone={() => setLimitNoted(view.turn)}
+        />
+      )}
       {announce?.prompt && (announce.prompt.kind === "courtier" || announce.prompt.kind === "discard") && (
         <EventAnnouncement
           key={announced.current}

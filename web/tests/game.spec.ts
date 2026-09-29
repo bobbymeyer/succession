@@ -155,6 +155,12 @@ test("a hand over the limit is trimmed as your turn ends", async ({ page }) => {
   await page.getByText("Load a saved game").click();
   await page.getByLabel("Game record").fill(JSON.stringify(AT_THE_HAND_LIMIT));
   await page.getByRole("button", { name: "Load", exact: true }).click();
+  // Before any card is lit for discarding, the page says why.
+  const notice = page.getByTestId("hand-limit");
+  await expect(notice).toBeVisible({ timeout: 30_000 });
+  await expect(notice).toContainText("the hand limit is 7");
+  await notice.getByTestId("limit-continue").click();
+  await expect(notice).toHaveCount(0);
   await settle(page);
   await expect(page.locator(".prompt")).toContainText("Your hand is over the limit of 7");
   expect(await page.locator(".mine .card").count()).toBeGreaterThan(7);
