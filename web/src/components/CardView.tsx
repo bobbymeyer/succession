@@ -145,11 +145,12 @@ export function CardView({
   onPress,
   popover,
 }: Props) {
-  const { inspect, hover } = useUi();
+  const { inspect, hover, looking } = useUi();
   const long = useLongPress(() => inspect(card));
   const courtier = card.kind === "Courtier";
   const changed = courtier && (card.changed?.length ?? 0) > 0;
   const classes = ["card", `size-${size}`];
+  if (looking === card.uid) classes.push("looking");
   if (live) classes.push("live");
   if (selected) classes.push("selected");
   if (draggable) classes.push("grab");

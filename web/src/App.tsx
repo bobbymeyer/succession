@@ -5,7 +5,7 @@ import { EMPTY, measure, play, type Snapshot } from "./flip";
 import { FADE, HOLD, showHand } from "./hand";
 import { clearGames, download, saveGame, savedGames } from "./history";
 import { type Selection } from "./moves";
-import { drops, settled, stage, type Stage } from "./play";
+import { discarding, drops, settled, stage, untargeted, type Stage } from "./play";
 import type { Action, Card, GameRecord, GameRequest, TableOptions, Update, View } from "./protocol";
 import { playerName, readableLog, seatColour, visibleCards } from "./names";
 import { AgendaTracker } from "./components/AgendaTracker";
@@ -144,7 +144,8 @@ export function App() {
   const [art, setArt] = useState<Art>(NO_ART);
   const [inspecting, setInspecting] = useState<Card | null>(null);
   const [hovered, setHovered] = useState<Card | null>(null);
-  const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered }), [art]);
+  const looking = inspecting?.uid ?? null;
+  const ui = useMemo<Ui>(() => ({ art, inspect: setInspecting, hover: setHovered, looking }), [art, looking]);
 
   // Once the engine and the art are in, the offline cache takes the rest.
   useEffect(() => {
@@ -375,6 +376,24 @@ export function App() {
   };
   const pick = (uid: number) => send({ type: "answer", choice: uid });
   const pickVerb = pickPrompt?.kind === "courtier" ? "Name to die" : "Discard";
+  /** What can be done with a card from the inspector; each closes it. */
+  const movesFor = (uid: number): { label: string; run(): void }[] => {
+    const close = (run: () => void) => () => {
+      setInspecting(null);
+      run();
+    };
+    if (pickPrompt) return pickPrompt.options.some((c) => c.uid === uid) ? [{ label: pickVerb, run: close(() => pick(uid)) }] : [];
+    if (!turnPrompt) return [];
+    const out: { label: string; run(): void }[] = [];
+    const play = untargeted(actions, uid);
+    if (play) out.push({ label: "Play", run: close(() => apply(play)) });
+    if (actions.some((a) => a.card === uid && a.kind === "play" && (a.courtier !== null || a.target_player !== null))) {
+      out.push({ label: "Choose a target", run: close(() => setSelection({ card: uid })) });
+    }
+    const discard = discarding(actions, uid);
+    if (discard) out.push({ label: "Discard & Draw", run: close(() => apply(discard)) });
+    return out;
+  };
 
   /** Where a card may be dragged, and what dropping it there does. */
   const targetsFor = (uid: number): Map<string, () => void> => {
@@ -637,7 +656,7 @@ export function App() {
       {result?.timeout && !waiting && chaosSeen !== result && (
         <Chaos rounds={Math.ceil(result.turns / view.players.length)} onDone={() => setChaosSeen(result)} />
       )}
-      <Inspect card={inspecting} onClose={() => setInspecting(null)} />
+      <Inspect card={inspecting} hand={view.hand} moves={movesFor} onPick={setInspecting} onClose={() => setInspecting(null)} />
       {rulesOpen && options && <Rules options={options} onClose={() => setRulesOpen(false)} />}
       {briefing && <Briefing view={view} onBegin={begin} />}
       {announce?.prompt && announce.prompt.kind !== "turn" && (
