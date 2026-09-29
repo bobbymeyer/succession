@@ -445,8 +445,8 @@ class WinningMoves(unittest.TestCase):
                         taken += 1
                         blocks = session.state.stats.get("defenses_triggered", 0)
                         prompt = session.answer(winning[0]["index"])
-                        # Met at once; the game may still ask for a hand-limit
-                        # discard before it is declared.
+                        # Met at once, and declared before any hand-limit
+                        # discard.
                         agenda = AGENDAS_BY_KEY[session.state.agendas[me]]
                         # ...unless a rival blocked it with a Defense.
                         stopped = session.state.stats.get("defenses_triggered", 0) > blocks

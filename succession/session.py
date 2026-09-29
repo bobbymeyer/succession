@@ -445,6 +445,8 @@ class GameSession:
         config.setdefault("adoption", True)
         # ...and before the Seeress joined the court.
         config.setdefault("added_courtiers", [])
+        # ...and before a winning turn skipped the hand-limit discard.
+        config.setdefault("win_before_hand_limit", False)
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):

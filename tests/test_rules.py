@@ -1107,6 +1107,25 @@ class TestDeckAndTurns(unittest.TestCase):
         self.assertEqual(len(mine.asked), 2)
         self.assertEqual(len(state.hands[1]), 4)
 
+    def test_a_winning_turn_wins_over_the_limit(self):
+        from unittest import mock
+
+        from succession import engine
+
+        class NoDiscard:
+            def pick_discard(self, state, player, hand):
+                raise AssertionError("a winning turn is not trimmed")
+
+        for before, trimmed in ((True, 4), (False, 3)):
+            state = fresh(hand_limit=3, win_before_hand_limit=before)
+            state.hands[0] = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
+            chooser = NoDiscard() if before else None
+            with mock.patch.object(engine, "check_winners", return_value=[0]):
+                over = resolve_turn(state, 0, Action(PASS, 0), random.Random(0), [chooser, None, None, None])
+            self.assertTrue(over)
+            self.assertEqual(state.winners, [0])
+            self.assertEqual(len(state.hands[0]), trimmed)
+
     def test_the_old_rule_never_discards_to_the_limit(self):
         state = fresh(hand_limit=3, hand_limit_at_end_of_turn=False)
         state.hands[0] = [uid(state, n) for n in ("Silver Tongue", "Golden Thumb", "Mender of Bones", "Horse Breaker")]
