@@ -1,6 +1,6 @@
 # The deck
 
-All 93 cards, in the order `succession/cards.py` builds them: the 78-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the cards taken out of the deck (five events and Adoption) leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
+All 94 cards, in the order `succession/cards.py` builds them: the 79-card play deck, the eight agendas and the seven seats. A card keeps the number its art was drawn under, so the cards taken out of the deck (five events and Adoption) leave gaps. Every card here is the real print file, trimmed the way the cutter leaves it.
 
 **[Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)** -- the card images plus the MPC Autofill order file, ready to order. [docs/PRINTING.md](PRINTING.md) has the steps.
 
@@ -8,7 +8,7 @@ Rebuild any of this with `python tools/mpcfill.py` -- see [docs/PRINTING.md](PRI
 
 ## Contents
 
-- [Courtier](#courtier) (40)
+- [Courtier](#courtier) (41)
 - [Event](#event) (5)
 - [Promotion](#promotion) (5)
 - [Demotion](#demotion) (5)
@@ -68,6 +68,7 @@ Forty courtiers. These four printed attributes are the whole of what an agenda r
 | <img src="cards/38-blade-for-any-banner.jpg" alt="Blade for Any Banner" width="132"> | **Blade for Any Banner**<br><sub>Card 38</sub> | Courtier · Military | Military · Mystery Cults · None · Barbarian |
 | <img src="cards/39-warlord-of-the-iron-grove.jpg" alt="Warlord of the Iron Grove" width="132"> | **Warlord of the Iron Grove**<br><sub>Card 39</sub> | Courtier · Military | Military · Old Gods · None · Barbarian |
 | <img src="cards/40-master-swordsmith.jpg" alt="Master Swordsmith" width="132"> | **Master Swordsmith**<br><sub>Card 40</sub> | Courtier · Commons | Commons · Old Gods · None · Barbarian |
+| <img src="cards/100-seeress-of-the-sacred-grove.jpg" alt="Seeress of the Sacred Grove" width="132"> | **Seeress of the Sacred Grove**<br><sub>Card 100</sub> | Courtier · Church | Church · Old Gods · None · Barbarian |
 
 ## Event
 

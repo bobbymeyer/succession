@@ -52,7 +52,7 @@ docs/
     CARDS.md                                    ...and the deck as Markdown
 ```
 
-86 cards: the 78-card play deck plus the eight agendas, and the seven seat
+87 cards: the 79-card play deck plus the eight agendas, and the seven seat
 cards of the board beside them. `--no-agendas` drops the agendas. The five
 major events and Adoption are out of the deck, so the numbering has gaps at 42,
 44, 46, 48, 50 and 82: every card keeps the number its art was drawn under.
@@ -125,9 +125,9 @@ means the file is only good on the machine that generated it -- regenerate it
 rather than copying it to another box.
 
 The tool reads the available bracket sizes off the MPC page and picks the
-smallest one the order fits. You pay by bracket, not by card: the 78 play
-cards and the eight agendas, 86 in all, fit MPC's 90 bracket, and the seven
-seat cards push the order to 93, into the next one up. If that matters more
+smallest one the order fits. You pay by bracket, not by card: the 79 play
+cards and the eight agendas, 87 in all, fit MPC's 90 bracket, and the seven
+seat cards push the order to 94, into the next one up. If that matters more
 than having the seats printed, `--no-seats` leaves them out and the board can
 be printed at home instead (`tools/boardsheet.py`).
 
@@ -190,7 +190,7 @@ crisp, since the source art is only just above 300 DPI on its own.
 | `--web-dpi 220` | Smaller web cards (546 px wide); `--web-quality` tunes the JPEG. |
 | `--stock "(M31) Linen"` | Cardstock. Also `(S27) Smooth`, `(S30) Standard Smooth`, `(S33) Superior Smooth`, `(P10) Plastic`. |
 | `--foil` | Foil fronts. Not available on plastic stock. |
-| `--no-agendas` | Leave out the 8 agenda cards: 78 play cards. |
+| `--no-agendas` | Leave out the 8 agenda cards: 79 play cards. |
 | `--panel-alpha 220` | Make the text plates more opaque (255) or more transparent (0). |
 | `--outmaneuver-copies 3` | Match a deck built with `--outmaneuver-copies 3`. |
 | `--only 26,44` | Re-render just those asset numbers, for iterating on layout. |

@@ -1,9 +1,10 @@
-"""The 40-courtier table.
+"""The courtier table: the first forty, and the Seeress added since.
 
 Every courtier is born into one of the three faiths but one: the Dog of the
 Agora, a barefoot cynic who sleeps in a wine jar and carries a lamp through the
 market at noon, looking for an honest man. He is the only Godless courtier on
-the roster, and the reason the three faiths come out even at thirteen apiece.
+the first forty, and the reason the three faiths came out even at thirteen
+apiece (the Seeress, added since, makes the Old Gods fourteen).
 Everyone else reaches godlessness the hard way, through Apostasy. Godlessness is a real faith value, not an absence:
 it has no agenda of its own, so a godless courtier in an inner seat is a seat
 neither faith can count. Only Old Gods and Mystery Cults need to be level with
@@ -104,7 +105,16 @@ COURTIERS: tuple[CourtierDef, ...] = (
     CourtierDef("Master Swordsmith", _K, _OG, _NF, _BAR, People.GERMAN),
 )
 
-COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS}
+#: Courtiers added after the first table, dealt when Config.added_courtiers
+#: names them (a game recorded before one arrived replays without it).
+#: The Seeress lifts Barbarian Conquest, the weakest agenda without her
+#: (24.2% of its games against 30.2% for the strongest): the only barbarian
+#: the Church can seat.
+ADDED_COURTIERS: tuple[CourtierDef, ...] = (
+    CourtierDef("Seeress of the Sacred Grove", _C, _OG, _NF, _BAR, People.GERMAN),
+)
+
+COURTIERS_BY_NAME: dict[str, CourtierDef] = {c.name: c for c in COURTIERS + ADDED_COURTIERS}
 
 #: Each house's affiliated estate, from the source document. House Rising asks
 #: for one of its three seats here. Every family fields two courtiers in each

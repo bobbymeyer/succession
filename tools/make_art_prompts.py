@@ -31,7 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from succession.cards import build_cards  # noqa: E402
+from succession.cards import ALL_ADDED_COURTIERS, build_cards  # noqa: E402
 from succession.enums import SEAT_ESTATE, CardKind  # noqa: E402
 from tools import card_text  # noqa: E402
 
@@ -383,6 +383,14 @@ DETAILS: dict[str, tuple[str, str, str]] = {
         "the blade drinks the forge-light and goes black, and his anvil is a fallen "
         "meteorite still faintly warm",
         "the sparks rise and stay where they stop, as a new constellation",
+    ),
+    "Seeress of the Sacred Grove": (
+        "a tall Germanic seeress in a dark cloak and white linen, a staff hung "
+        "with amber and bronze rings, casting runed lots of beech wood onto a "
+        "white cloth in an oak grove",
+        "the lots land standing on their edges, and the oaks lean in to read them",
+        "her shadow on the cloth is looking the other way, at something behind "
+        "the viewer",
     ),
     # --- Events --------------------------------------------------------------
     "Quarantine": (
@@ -806,8 +814,10 @@ def build_lines() -> tuple[list[str], list[str]]:
     filenames: list[str] = []
     seen: set[str] = set()
 
-    # Art for every card ever drawn: Adoption left the deck, its number stays.
-    for card in build_cards(adoption=True):
+    # Art for every card ever drawn, numbered as it was first drawn: Adoption
+    # left the deck and its number stays. Courtiers added since are numbered
+    # after the seats, below.
+    for card in build_cards(adoption=True, added_courtiers=()):
         if card.name in seen:
             continue  # extra Outmaneuver copies share one illustration
         seen.add(card.name)
@@ -828,6 +838,14 @@ def build_lines() -> tuple[list[str], list[str]]:
     # is numbered to match the slot it lands in. The agendas are the gap: they
     # are set type on parchment and have no illustration to generate.
     start = len(filenames) + len(card_text.AGENDA_TEXT) + 1
+
+    # Courtiers added since are numbered after the seats, but listed before
+    # them, so the seats stay last (they take their own negative).
+    for offset, name in enumerate(ALL_ADDED_COURTIERS):
+        historical, fantastic, surreal = DETAILS[name]
+        prompts.append(f"{FRAMING[KIND_FRAMING[CardKind.COURTIER]]}. {historical}. {fantastic}. {surreal}. {STYLE}")
+        filenames.append(f"{start + len(SEAT_ESTATE) + offset:02d}_courtier_{slug(name)}")
+
     for offset, seat in enumerate(SEAT_ESTATE):
         historical, fantastic, surreal = SEAT_DETAILS[seat.value]
         prompts.append(

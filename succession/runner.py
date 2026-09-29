@@ -18,6 +18,7 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Iterator
 
+from .cards import ALL_ADDED_COURTIERS
 from .agendas import AGENDA_KEYS, AGENDAS
 from .analysis import format_summary, summarize
 from .bots import BOT_TIERS, make_bot
@@ -103,6 +104,7 @@ def build_config(args: argparse.Namespace, tiers=BOT_TIERS) -> Config:
         courtier_costs=args.courtier_costs,
         reactive_defense=not args.attached_defense,
         adoption=args.adoption,
+        added_courtiers=() if args.first_forty else ALL_ADDED_COURTIERS,
         house_rising_requires_preferred_seat=not args.house_any_three,
         house_preferred_estates=parse_preferred_estates(args.house_preferred_estates),
         faith_seats=args.faith_seats,
@@ -223,6 +225,7 @@ def add_rules_arguments(parser: argparse.ArgumentParser, players: str = DEFAULT_
     parser.add_argument("--minor-events-on-draw", action="store_true", help="with --events all: only the minor events play when drawn; the majors are held")
     parser.add_argument("--removed-out-of-game", action="store_true", help="killed courtiers never return (default: they may reshuffle back as a new person)")
     parser.add_argument("--attached-defense", action="store_true", help="variant: a Defense is attached to a courtier in advance, on your own turn (the old rules)")
+    parser.add_argument("--first-forty", action="store_true", help="variant: deal only the first forty courtiers (no Seeress of the Sacred Grove)")
     parser.add_argument("--adoption", action="store_true", help="variant: put Adoption (a courtier's house becomes another) back in the deck")
     parser.add_argument("--courtier-costs", action="store_true", help="variant: Defenses and Adoption cost a courtier from your hand (the old rules)")
     parser.add_argument("--excommunication-none", action="store_true", help="variant: Excommunication leaves an empty faith (None) rather than Godless")

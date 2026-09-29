@@ -44,9 +44,9 @@ test("a new player's first game is the kind deal, unless they choose a seed", as
 });
 
 test("an event stops play and says what it did", async ({ page }) => {
-  // Seed 23: a bot draws Caravan before your first turn, and it plays at once.
+  // Seed 123: a bot draws Caravan before your first turn, and it plays at once.
   const errors: string[] = [];
-  await start(page, errors, 23);
+  await start(page, errors, 123);
   await page.getByTestId("begin").click();
   const event = page.getByTestId("event");
   await expect(event).toBeVisible({ timeout: 30_000 });
@@ -67,9 +67,9 @@ test("an event stops play and says what it did", async ({ page }) => {
 });
 
 test("an event that asks you something is announced first", async ({ page }) => {
-  // Seed 48: a bot draws Debasement of the Coinage before your first turn.
+  // Seed 104: a bot draws Debasement of the Coinage before your first turn.
   const errors: string[] = [];
-  await start(page, errors, 48);
+  await start(page, errors, 104);
   await page.getByTestId("begin").click();
   const announce = page.getByTestId("event-announce");
   await expect(announce).toBeVisible({ timeout: 30_000 });
@@ -438,20 +438,20 @@ test("the table shows the round, who plays next, and names each bot's move", asy
 });
 
 test("a rival's attack on a courtier your Defense covers can be blocked", async ({ page }) => {
-  // Seed 8: after your first move, a bot plays Heresy Accusation on Hand of
-  // the Oracle, and your hand holds Patron Protection.
+  // Seed 6: taking the first move each time, a bot plays Ostracism on Silver
+  // Tongue after your third, and your hand holds Patron Protection.
   const errors: string[] = [];
-  await start(page, errors, 8);
+  await start(page, errors, 6);
   const block = page.getByTestId("block");
   for (let i = 0; i < 30 && !(await block.isVisible()); i++) {
     await playFromList(page);
     await settle(page);
   }
-  await expect(block).toContainText("plays Heresy Accusation on Hand of the Oracle");
+  await expect(block).toContainText("plays Ostracism on Silver Tongue");
   await expect(page.locator(".card.attacked")).toHaveCount(1);
   await block.getByTestId("block-with").first().click();
   await settle(page);
   await showPanel(page, "log");
-  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Hand of the Oracle is untouched");
+  await expect(page.getByRole("list", { name: "Game log" })).toContainText("Silver Tongue is untouched");
   expect(errors).toEqual([]);
 });

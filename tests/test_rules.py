@@ -14,7 +14,7 @@ from succession.actions import DISCARD, MOVE, PASS, PLAY, Action, card_actions, 
 from succession.agendas import AGENDAS_BY_KEY, satisfied
 from succession.bots import make_bot
 from succession.cards import build_cards
-from succession.courtiers import COURTIERS, FAMILY_PREFERRED_ESTATE
+from succession.courtiers import COURTIERS, COURTIERS_BY_NAME, FAMILY_PREFERRED_ESTATE
 from succession.engine import (
     apply_action,
     check_winners,
@@ -201,7 +201,7 @@ class TestData(unittest.TestCase):
     def test_deck_composition(self):
         cards = build_cards(outmaneuver_copies=1)
         kinds = collections.Counter(c.kind for c in cards)
-        self.assertEqual(kinds[CardKind.COURTIER], 40)
+        self.assertEqual(kinds[CardKind.COURTIER], 41)
         self.assertEqual(kinds[CardKind.EVENT], 10)
         self.assertEqual(kinds[CardKind.PROMOTION], 5)
         self.assertEqual(kinds[CardKind.DEMOTION], 5)
@@ -211,7 +211,7 @@ class TestData(unittest.TestCase):
         self.assertEqual(kinds[CardKind.MUTATION], 8)
         self.assertEqual(kinds[CardKind.PIVOT], 1)
         self.assertEqual(kinds[CardKind.OUTMANEUVER], 1)
-        self.assertEqual(len(cards), 83)
+        self.assertEqual(len(cards), 84)
 
     def test_every_house_fields_one_charioteer(self):
         """A house's charioteer is its only route to the Master of the Market's seat."""
@@ -222,6 +222,16 @@ class TestData(unittest.TestCase):
             ]
             self.assertEqual(len(commoners), 1)
             self.assertIn("Charioteer", commoners[0].name)
+
+    def test_the_seeress_is_the_churchs_barbarian(self):
+        seeress = COURTIERS_BY_NAME["Seeress of the Sacred Grove"]
+        self.assertEqual(
+            (seeress.estate, seeress.faith, seeress.family, seeress.origin),
+            (Estate.CHURCH, Faith.OLD_GODS, Family.NONE, Origin.BARBARIAN),
+        )
+        self.assertIn(seeress.name, {c.name for c in build_cards()})
+        self.assertNotIn(seeress.name, {c.name for c in build_cards(added_courtiers=())})
+        self.assertNotIn(seeress.name, {c.name for c in fresh(added_courtiers=()).cards})
 
     def test_every_barbarian_people_appears_twice(self):
         peoples = collections.Counter(
@@ -1129,7 +1139,7 @@ class TestDeckAndTurns(unittest.TestCase):
         state = GameState.new(config)
         events = sorted(c.name for c in state.cards if c.kind.value == "Event")
         self.assertEqual(events, sorted(c.name for c in EVENT_CARDS if c.tier == "minor"))
-        self.assertEqual(len(state.cards), 78)
+        self.assertEqual(len(state.cards), 79)
 
     def test_either_half_of_the_events_can_be_left_out(self):
         from succession.cards import EVENT_CARDS
@@ -1137,7 +1147,7 @@ class TestDeckAndTurns(unittest.TestCase):
         for tier in ("minor", "major"):
             state = GameState.new(Config(event_tiers=(tier,)))
             names = {c.name for c in state.cards}
-            self.assertEqual(len(state.cards), 78)
+            self.assertEqual(len(state.cards), 79)
             for c in EVENT_CARDS:
                 self.assertEqual(c.name in names, c.tier == tier)
 

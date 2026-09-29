@@ -82,6 +82,7 @@
 82_mutation_adoption
 83_pivot_schismatic-event
 84_outmaneuver_outmaneuver
+100_courtier_seeress-of-the-sacred-grove
 93_seat_archpriest
 94_seat_oracle
 95_seat_lord-general

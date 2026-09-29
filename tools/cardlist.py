@@ -121,7 +121,7 @@ def render(rows: list[Row], back: Row | None, zip_link: str | None = None) -> st
         "# The deck",
         "",
         f"All {total} cards, in the order `succession/cards.py` builds them: the "
-        "78-card play deck, the eight agendas and the seven seats. A card keeps "
+        "79-card play deck, the eight agendas and the seven seats. A card keeps "
         "the number its art was drawn under, so the cards taken out of the "
         "deck (five events and Adoption) leave gaps. Every card here is the real print file, trimmed "
         "the way the cutter leaves it.",

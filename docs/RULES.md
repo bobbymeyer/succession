@@ -127,6 +127,11 @@ the other two by about a point and a half; the lead moved when the card did.
 With him it is 13 / 13 / 13 and the three faiths finish within 1.2 points of
 each other.
 
+The Seeress of the Sacred Grove, a forty-first courtier added for Barbarian
+Conquest (below), is an Old Gods barbarian of the Church, so the Old Gods now
+hold 14. Over 3,000 games Faith Ascendant: Old Gods wins 29.1% of its games
+against 26.1% and 27.4% for the other two faiths.
+
 House Amonides remains wholly Old Gods and House Mitreas wholly Mystery Cults.
 The One God is a newer faith: it has spread among the commoners and the
 frontier peoples, and House Argaian -- the mixed-faith house -- is the only one
@@ -206,7 +211,7 @@ the pool `Schismatic Event` draws from.
 
 ## Deck
 
-78 cards: 40 courtiers + 5 events + 5 promotions + 5 demotions + 6 removals +
+79 cards: 41 courtiers + 5 events + 5 promotions + 5 demotions + 6 removals +
 5 defenses + 2 strips + 8 mutations + 1 pivot + 1 Outmaneuver. When the draw
 pile empties, the discard pile is shuffled into a new deck.
 
@@ -234,6 +239,7 @@ first; the flag flips it.
 | 2c | **Faith Ascendant stayed at four seats** when the board grew to seven, so it is now a bare majority rather than two-thirds. | 4 of 7 | `--faith-seats 5` |
 | 3 | **Nothing costs a courtier.** A Defense's estate is whom it can shield (Patron Protection: anyone). The old costs -- a matching-estate courtier from hand for a Defense, a family courtier for Adoption -- left Defenses held in 45% of turns and played in 2.6%. | no costs | `--courtier-costs` |
 | 3b | **Adoption is out of the deck.** Houses change only by Castration, which is for good. Over 3,000 games the agendas' win rates narrowed from 21.3–32.1% to 24.2–30.2%: Conquest, the weakest, rose from 21.3% to 24.2%. | out | `--adoption` |
+| 3c | **A barbarian for the Church.** The Seeress of the Sacred Grove (Church, Old Gods, no house, German) joins the court, the only barbarian the Church can seat. Conquest rises from 24.2% to 26.4% and the agendas' spread narrows to 25.4–29.3%. Three new barbarians (Church, Merchant, Commons) overshot: Conquest 33.7%. | in | `--first-forty` |
 | 4 | **Starting hand is 5 cards**, one Outmaneuver copy in the deck. | 5 / 1 | `--starting-hand`, `--outmaneuver-copies` |
 | 5 | Defense is checked **before** a save roll, so a shielded courtier spends the shield rather than rolling. | — | — |
 | 6 | A courtier who leaves play loses any attachment and reverts to printed attributes, so an epithet that reshuffles back arrives on a new person. | — | — |

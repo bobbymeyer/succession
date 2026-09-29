@@ -443,6 +443,8 @@ class GameSession:
         config.setdefault("reactive_defense", False)
         # ...and before Adoption left the deck.
         config.setdefault("adoption", True)
+        # ...and before the Seeress joined the court.
+        config.setdefault("added_courtiers", [])
         if version == 1:
             config.setdefault("discard_draws", False)
         if version in (1, 2):

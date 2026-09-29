@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Optional
 
-from .cards import CardDef, build_cards
+from .cards import ALL_ADDED_COURTIERS, CardDef, build_cards
 from .courtiers import COURTIERS_BY_NAME, CourtierDef
 from .enums import SEAT_ESTATE, SEATS, Estate, Seat
 
@@ -78,6 +78,9 @@ class Config:
     #: Adoption (a courtier's house becomes another) is in the deck. Off:
     #: houses change only by Castration.
     adoption: bool = False
+    #: Courtiers added after the first forty (courtiers.ADDED_COURTIERS) that
+    #: are dealt: all of them, unless a record from before says otherwise.
+    added_courtiers: tuple[str, ...] = ALL_ADDED_COURTIERS
     #: A Defense is played from hand when a seated courtier of its estate is
     #: attacked, by any player but the attacker, and the attack fails. Off:
     #: the older rule, attached to a courtier in advance on your own turn.
@@ -192,7 +195,7 @@ class GameState:
     # -- construction -------------------------------------------------------
     @classmethod
     def new(cls, config: Config) -> "GameState":
-        cards = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption)
+        cards = build_cards(config.outmaneuver_copies, config.event_tiers, config.adoption, config.added_courtiers)
         state = cls(config=config, cards=cards)
         state.seats = {s: None for s in SEATS}
         state.hands = [[] for _ in range(config.num_players)]
