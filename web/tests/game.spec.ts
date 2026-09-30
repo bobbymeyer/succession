@@ -169,6 +169,8 @@ test("an event that asks you something is announced first", async ({ page }) => 
   const banner = page.getByTestId("event-banner");
   await expect(banner).toContainText("Debasement of the Coinage");
   await expect(banner).toContainText("Your choice");
+  // It is only a notice: the table under it still takes clicks.
+  await expect(banner).toHaveCSS("pointer-events", "none");
   await expect(page.locator("main.event-live")).toHaveCount(1);
   await expect(page.locator(".prompt")).toContainText("every player discards, all at once");
   await page.locator(".mine .card.live > button.face").first().click();
