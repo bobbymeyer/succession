@@ -1,6 +1,9 @@
 # Art
 
-Where the illustrations in `assets/` come from.
+Where the illustrations in `assets/` come from. The images themselves are not
+in git: they are files on the repository's `art` release, and
+`python tools/fetch_art.py` fetches them into `assets/`. A new or re-painted
+image is uploaded there under the name `filenames.txt` gives it.
 
 | File | What it is |
 |---|---|

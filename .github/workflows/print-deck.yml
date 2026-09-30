@@ -4,8 +4,9 @@
 # always serves the cards as main prints them.
 #
 # It runs on its own whenever main changes something that is printed on a
-# card -- the card text, the layout, the cards themselves or their art -- and
-# can be run by hand from the Actions tab.
+# card -- the card text, the layout or the cards themselves -- and can be run
+# by hand from the Actions tab: do that after uploading new art to the art
+# release, which is not in git and so starts no run of its own.
 
 name: Print deck release
 
@@ -13,7 +14,6 @@ on:
   push:
     branches: [main]
     paths:
-      - "assets/**"
       - "tools/mpcfill.py"
       - "tools/sigil.py"
       - "tools/card_text.py"
@@ -49,6 +49,10 @@ jobs:
           sudo apt-get install -y --no-install-recommends fonts-dejavu-core fonts-liberation
           sudo apt-get remove -y fonts-dejavu-extra || true
           python -c "import sys; sys.path.insert(0, 'tools'); from mpcfill import Fonts; f = Fonts(); print(f.regular, f.bold, f.italic, sep='\n')"
+      - name: The card art, from the art release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/fetch_art.py --quiet
       - name: Build the deck
         run: python tools/mpcfill.py --profile print --zip
       - name: Publish the release
