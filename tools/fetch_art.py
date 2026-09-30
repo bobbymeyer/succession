@@ -21,6 +21,8 @@ import argparse
 import json
 import os
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -29,12 +31,27 @@ REPO = "bobbymeyer/succession"
 TAG = "art"
 
 
+#: Attempts at each request: GitHub's file servers now and then answer a
+#: download with a 5xx or drop it, and a second try gets it.
+ATTEMPTS = 4
+
+
 def _get(url: str, accept: str = "application/vnd.github+json"):
     request = urllib.request.Request(url, headers={"Accept": accept, "User-Agent": "succession-fetch-art"})
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
     if token and url.startswith("https://api.github.com/"):
         request.add_header("Authorization", f"Bearer {token}")
-    return urllib.request.urlopen(request, timeout=120)
+    for attempt in range(ATTEMPTS):
+        try:
+            return urllib.request.urlopen(request, timeout=120)
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            # A 4xx is an answer (no such release, no such file); only a
+            # server error or a dropped connection is worth another try.
+            if isinstance(error, urllib.error.HTTPError) and error.code < 500:
+                raise
+            if attempt == ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** attempt)
 
 
 def release_assets(repo: str = REPO, tag: str = TAG) -> list[dict]:
@@ -53,6 +70,20 @@ def release_assets(repo: str = REPO, tag: str = TAG) -> list[dict]:
         page += 1
 
 
+def _download(url: str) -> bytes:
+    """The file's bytes, trying again if the connection drops partway."""
+
+    for attempt in range(ATTEMPTS):
+        try:
+            with _get(url, accept="application/octet-stream") as response:
+                return response.read()
+        except (ConnectionError, TimeoutError):
+            if attempt == ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** attempt)
+    raise AssertionError("unreachable")
+
+
 def fetch(dest: Path, repo: str = REPO, tag: str = TAG, *, quiet: bool = False) -> int:
     """Download what `dest` lacks or holds stale; return how many files came down."""
 
@@ -64,8 +95,7 @@ def fetch(dest: Path, repo: str = REPO, tag: str = TAG, *, quiet: bool = False) 
         path = dest / asset["name"]
         if path.exists() and path.stat().st_size == asset["size"]:
             continue
-        with _get(asset["browser_download_url"], accept="application/octet-stream") as response:
-            data = response.read()
+        data = _download(asset["browser_download_url"])
         path.write_bytes(data)
         fetched += 1
         if not quiet:
