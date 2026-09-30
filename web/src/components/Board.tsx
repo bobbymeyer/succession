@@ -267,8 +267,15 @@ export function Board({
             {view.deck}
           </span>
           <span className="turn" title={`Turn ${view.turn}`}>
-            Round {view.round}
-            {view.max_rounds ? <small> of {view.max_rounds}</small> : null}
+            <span className="long">
+              Round {view.round}
+              {view.max_rounds ? <small> of {view.max_rounds}</small> : null}
+            </span>
+            {/* A phone's top bar has room for the numbers alone. */}
+            <span className="short" aria-hidden="true">
+              R{view.round}
+              {view.max_rounds ? <small>/{view.max_rounds}</small> : null}
+            </span>
           </span>
           {view.removed > 0 && <span className="muted">{view.removed} out</span>}
           {view.frozen.board ? (

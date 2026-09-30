@@ -3,7 +3,7 @@
 // its corner, over a dock that holds the question, your hand, and tabs that
 // pull up your agenda, the log and the discard pile.
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { Card } from "../protocol";
 import type { GameFlow } from "../useGameFlow";
 import type { Play } from "../usePlay";
@@ -79,7 +79,27 @@ type Sheet = "agenda" | "log" | "discard" | null;
 export function PhoneTable({ flow, play, marks, suspicions, question, overlays, speedControl, onRules, onNewGame, orientation }: TableProps & { orientation: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sheet, setSheet] = useState<Sheet>(null);
+  // At the end, the result can be folded away to look at the court that won.
+  const [folded, setFolded] = useState(false);
   const shown = flow.shown!;
+  const over = flow.over !== null;
+  useEffect(() => {
+    if (!over) setFolded(false);
+  }, [over]);
+  // A card picked up lights what it can reach; on a small screen that may be
+  // below the fold, so bring the first of it into view.
+  const active = play.now?.active ?? null;
+  useEffect(() => {
+    if (active === null) return;
+    const board = document.querySelector(".game.phone .board");
+    const lit = board?.querySelector(".card.live:not(.selected), .seat.live, .seat-take");
+    if (!board || !lit) return;
+    const b = board.getBoundingClientRect();
+    const r = lit.getBoundingClientRect();
+    // The board alone scrolls (scrollIntoView would move the page under it too).
+    const by = r.top < b.top ? r.top - b.top - 8 : r.bottom > b.bottom ? r.bottom - b.bottom + 8 : 0;
+    if (by) board.scrollBy({ top: by, behavior: "smooth" });
+  }, [active]);
   const view = shown.view;
   const myAgenda = view.you >= 0 ? view.players[view.you].agenda : null;
   const met = myAgenda ? myAgenda.status.filter((c) => c.met).length : 0;
@@ -132,8 +152,19 @@ export function PhoneTable({ flow, play, marks, suspicions, question, overlays, 
             {sheet === "discard" && <DiscardPile view={view} dropLive={false} />}
           </div>
         )}
+        {/* Held sideways the dock has room to spare: your agenda sits in it. */}
+        {orientation === "landscape" && !sheet && myAgenda && !over && (
+          <div className="dock-agenda">
+            <AgendaTracker agenda={myAgenda} />
+          </div>
+        )}
         {shown.coach && <CoachPanel coach={shown.coach} foldable />}
-        <div className="dock-question">{question}</div>
+        {!folded && <div className="dock-question">{question}</div>}
+        {over && (
+          <button type="button" className="fold-result" data-testid="fold-result" onClick={() => setFolded(!folded)}>
+            {folded ? "Show the result" : "See the court"}
+          </button>
+        )}
         {play.holding && (
           <div className="dock-offers">
             {play.offers && <Offers offers={play.offers} />}

@@ -21,6 +21,7 @@ export function SpeedControl({ speed, onChange }: { speed: Speed; onChange(speed
 
 /** Everything that has happened, newest first. */
 export function GameLog({ log }: { log: LogLine[] }) {
+  if (!log.length) return <p className="log-empty muted">Nothing has happened yet.</p>;
   return (
     <ol className="log" reversed aria-label="Game log">
       {log
