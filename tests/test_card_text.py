@@ -24,6 +24,12 @@ from tools import assets, card_text, cardlist, gallery, make_art_prompts
 ASSETS_DIR = REPO_ROOT / "assets"
 
 
+def have_art() -> bool:
+    """The art is not in git: `python tools/fetch_art.py` fetches it into assets/."""
+
+    return any(ASSETS_DIR.glob("*.png"))
+
+
 class TestPrintedText(unittest.TestCase):
     def setUp(self) -> None:
         self.cards = build_cards()
@@ -80,8 +86,8 @@ class TestArtMapping(unittest.TestCase):
     """The art is numbered in deck order; this is what pins it there."""
 
     def setUp(self) -> None:
-        if not ASSETS_DIR.is_dir():
-            self.skipTest("no assets/ directory in this checkout")
+        if not have_art():
+            self.skipTest("no art in assets/ (python tools/fetch_art.py)")
         self.cards = tuple(make_art_prompts.art_catalogue())
         self.by_index = assets.scan(ASSETS_DIR)
 
@@ -231,8 +237,8 @@ class TestArtPrompts(unittest.TestCase):
         been written for cards nobody has generated images for yet.
         """
 
-        if not ASSETS_DIR.is_dir():
-            self.skipTest("no assets/ directory in this checkout")
+        if not have_art():
+            self.skipTest("no art in assets/ (python tools/fetch_art.py)")
         stems = {
             re.sub(r"_\d+_$", "", path.stem)
             for path in ASSETS_DIR.glob("*.png")

@@ -62,6 +62,7 @@ Roughly 150 games/second single-threaded; `--jobs N` scales linearly.
 | `tools/webbundle.py` | Zips `succession/` for the browser game to run under Pyodide |
 | `web/` | The browser game: React on top of this package running in Pyodide |
 | `web/public/cards/` | The game's card pictures and `manifest.json`, from `mpcfill.py --profile game` |
+| `tools/fetch_art.py` | Fetches the card art from the `art` release into `assets/` (it is not in git) |
 | `tools/make_art_prompts.py` | Generates the image prompts the art in `assets/` was made from |
 | `tools/card_text.py` | What each card prints: type line and rules text |
 | `docs/RULES.md` | **The rules as implemented, every assumption, and the open questions** |
@@ -75,7 +76,13 @@ open, what the code assumed, and which flag flips each assumption.
 
 ## Printing a deck
 
-`assets/` holds an illustration for every card and the back. The art carries no
+`assets/` holds an illustration for every card and the back -- once fetched.
+The art is too big to keep in git (about 137 MB); it lives as files on the
+repository's [`art` release](https://github.com/bobbymeyer/succession/releases/tag/art),
+and `python tools/fetch_art.py` downloads whatever `assets/` is missing or holds
+stale. New or re-painted art is uploaded to that release, named as
+`art/filenames.txt` says; then run **Print deck release** from the Actions tab.
+The art carries no
 name, no attributes and no rules text, so `tools/mpcfill.py` composes those
 over it and writes the XML order file that
 [MPC Autofill](https://github.com/chilli-axe/mpc-autofill) feeds to

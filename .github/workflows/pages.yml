@@ -38,6 +38,11 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Pillow, for the print-tooling tests
         run: pip install pillow
+      # The art is not in git; the tests that pair it with the deck need it.
+      - name: The card art, from the art release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/fetch_art.py --quiet
       - name: Unit tests
         run: python -m unittest discover -s tests -v
 

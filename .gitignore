@@ -5,3 +5,6 @@ __pycache__/
 *.sqlite3
 .venv/
 build/
+
+# The card art: files on the `art` release, fetched by tools/fetch_art.py.
+assets/*.png

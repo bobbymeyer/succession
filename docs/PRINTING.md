@@ -1,8 +1,12 @@
 # Printing a playtest deck
 
-`tools/mpcfill.py` turns the art in `assets/` into a deck. It composes each card
-front -- name, type line, and either the courtier's attributes or the card's
-rules text -- over the illustration, and writes two renditions of the result:
+`tools/mpcfill.py` turns the art in `assets/` into a deck. The art is not in
+git: fetch it first with `python tools/fetch_art.py`, which downloads it from
+the repository's `art` release.
+
+The script composes each card front -- name, type line, and either the
+courtier's attributes or the card's rules text -- over the illustration, and
+writes two renditions of the result:
 
 * **print**, full bleed, plus the XML order file that
   [MPC Autofill](https://github.com/chilli-axe/mpc-autofill)'s desktop tool
