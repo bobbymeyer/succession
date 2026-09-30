@@ -1,0 +1,29 @@
+# One-off: publish the card art in assets/ as files on the `art` release,
+# where tools/fetch_art.py fetches it from once assets/ leaves git.
+name: Publish the card art
+
+on:
+  push:
+    paths:
+      - ".github/workflows/art-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Upload the art
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls assets/*.png | wc -l
+          gh release view art >/dev/null 2>&1 || gh release create art \
+            --title "Card art" \
+            --latest=false \
+            --notes "The illustration for every card, named as art/filenames.txt says. Not kept in git: python tools/fetch_art.py fetches them into assets/. New or re-painted art is uploaded here."
+          gh release upload art assets/*.png --clobber
+          gh release view art --json assets --jq '.assets | length'
