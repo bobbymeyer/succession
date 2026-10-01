@@ -197,3 +197,36 @@ test("a phone draws its cards from the small copies", async ({ page }) => {
   expect(await page.locator("dialog.inspect[open] img.detail-image").getAttribute("src")).not.toContain("/sm/");
   expect(errors).toEqual([]);
 });
+
+test("every rival fits the top bar beside the menu", async ({ page }) => {
+  const errors: string[] = [];
+  await page.setViewportSize({ width: 360, height: 664 });
+  await deal(page, errors);
+  const bar = page.locator(".opponents");
+  const [width, scroll] = await bar.evaluate((el) => [el.clientWidth, el.scrollWidth]);
+  expect(scroll).toBeLessThanOrEqual(width);
+  await expect(page.locator(".opponent")).toHaveCount(3);
+  expect(errors).toEqual([]);
+});
+
+test("an event in effect takes one line, and leaves the seats in view", async ({ page }) => {
+  const errors: string[] = [];
+  const stacked = { first: 1, deck: ["Poisoning at the Feast"], seats: { Archpriest: "Beloved of the Gods" } };
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.addInitScript(() => localStorage.setItem("succession.speed", "Instant"));
+  await page.goto(`./?deal=${encodeURIComponent(JSON.stringify(stacked))}`);
+  await page.getByTestId("deal").waitFor({ timeout: 90_000 });
+  await setSeed(page, "1");
+  await page.getByTestId("deal").tap();
+  await page.getByTestId("begin").tap();
+  const banner = page.getByTestId("event-banner");
+  await expect(banner).toContainText("Poisoning at the Feast");
+  const box = (await banner.boundingBox())!;
+  expect(box.height).toBeLessThan(70);
+  // The courtier to name sits below it, lit and not dimmed.
+  const target = page.locator(".court .card.live").first();
+  await expect(target).toBeVisible();
+  expect((await target.boundingBox())!.y).toBeGreaterThan(box.y + box.height);
+  await expect(target).toHaveCSS("opacity", "1");
+  expect(errors).toEqual([]);
+});

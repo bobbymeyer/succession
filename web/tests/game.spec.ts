@@ -56,7 +56,7 @@ test("a round opens on your agenda and waits for you to begin", async ({ page })
   const mine = await briefing.locator("h2").innerText();
   // Nobody has moved: the bots wait until you begin.
   await page.waitForTimeout(1500);
-  await expect(page.locator(".status .turn")).toHaveText("Round 1 of 50");
+  await expect(page.locator(".status .turn .long")).toHaveText("Round 1 of 50");
   await page.getByTestId("begin").click();
   await expect(briefing).toBeHidden();
   await settle(page);
@@ -144,9 +144,9 @@ test("an event stops play and says what it did", async ({ page }) => {
   await expect(event.locator(".event-effects li")).toHaveCount(4);
   await expect(event.locator(".event-effects")).toContainText("You draw");
   // Nothing moves on behind it until it has been read.
-  const turn = await page.locator(".status .turn").innerText();
+  const turn = await page.locator(".status .turn .long").textContent();
   await page.waitForTimeout(800);
-  await expect(page.locator(".status .turn")).toHaveText(turn);
+  await expect(page.locator(".status .turn .long")).toHaveText(turn!);
   await page.getByTestId("event-continue").click();
   await expect(page.getByTestId("event")).toHaveCount(0);
   await settle(page);
@@ -522,7 +522,7 @@ test("the table shows the round, who plays next, and names each bot's move", asy
   await setSeed(page, 3);
   await page.getByTestId("deal").click();
   await page.getByTestId("begin").click();
-  await expect(page.locator(".status .turn")).toContainText("Round");
+  await expect(page.locator(".status .turn .long")).toContainText("Round");
   await expect(page.locator(".opponent.next")).toHaveCount(1);
   // A bot's move is captioned where it lands.
   await page.locator(".hand-caption").first().waitFor({ state: "attached", timeout: 30_000 });

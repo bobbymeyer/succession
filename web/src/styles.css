@@ -402,6 +402,7 @@ a.button:hover { border-color: var(--gold); }
 .their-agenda .agenda-name { max-width: 10rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
 .status { margin-left: auto; border-style: dashed; }
 .status .turn { color: var(--muted); }
+.status .turn .short { display: none; }
 .status .seal { padding: 1px 8px; font-size: 0.75rem; }
 .card.size-xxs .face { border-radius: 2px; box-shadow: none; }
 .card.size-xxs .attrs, .card.size-xxs .changed-flag, .card.size-xxs .look { display: none; }
@@ -658,12 +659,23 @@ a.button:hover { border-color: var(--gold); }
 .event-banner .event-banner-status { margin-top: 4px; color: var(--ink); }
 @keyframes banner-in { from { opacity: 0; translate: -50% -12px; } }
 /* While an event is in effect the court is on hold: only your hand answers it. */
-.game.event-live .opponents, .game.event-live .court, .game.event-live .outer { opacity: 0.45; filter: saturate(0.6); transition: opacity 300ms ease, filter 300ms ease; }
+.game.event-live .opponents,
+.game.event-live .court .card:not(.live),
+.game.event-live .court .seat.vacant,
+.game.event-live .outer .card:not(.live) { opacity: 0.45; filter: saturate(0.6); transition: opacity 300ms ease, filter 300ms ease; }
 .game.event-live .opponents { visibility: hidden; }
-.game.phone .event-banner { left: 10px; translate: 0 0; width: calc(100vw - 84px); padding: 8px 10px; gap: 10px; animation-name: banner-in-phone; }
-.game.phone .event-banner img { width: 40px; }
-.game.phone .event-banner strong { font-size: 1rem; }
-.game.phone .event-banner p { font-size: 0.78rem; }
+/* On a phone it takes the opponents' strip (hidden while an event is in
+   effect) and no more: one line, so the seats under it stay in view. The
+   dock's question already says what to do. */
+.game.phone .event-banner {
+  top: calc(4px + env(safe-area-inset-top)); left: 8px; translate: 0 0; width: calc(100vw - 64px);
+  padding: 4px 10px 4px 6px; gap: 8px; border-left-width: 4px; border-radius: 10px; animation-name: banner-in-phone;
+}
+.game.phone .event-banner img { width: 26px; border-radius: 3px; }
+.game.phone .event-banner .kicker { font-size: 0.56rem; letter-spacing: 0.1em; }
+.game.phone .event-banner strong { font-size: 0.95rem; line-height: 1.15; }
+.game.phone .event-banner .kicker, .game.phone .event-banner strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.game.phone .event-banner p { display: none; }
 @keyframes banner-in-phone { from { opacity: 0; translate: 0 -12px; } }
 @media (prefers-reduced-motion: reduce) { .event-banner { animation: none; } }
 .event-modal.limit-notice { width: min(94vw, 30rem); --seat: var(--gold); }
@@ -942,6 +954,19 @@ a.button:hover { border-color: var(--gold); }
 .game.phone .opponent .hand-count .card { display: none; }
 .game.phone .opponent .hand-count::before { content: ""; width: 7px; height: 10px; border-radius: 1.5px; border: 1.5px solid var(--seat); margin-right: 1px; }
 .game.phone .status { font-size: 0.7rem; }
+/* Room for every rival beside the menu: tighter pills, the round as numbers,
+   and a small stack for the draw pile (a hand is a single card). */
+.game.phone .opponent, .game.phone .status { padding: 2px 5px; gap: 3px; }
+.game.phone .opponents { gap: 3px; }
+.game.phone .opponent .seat-dot { display: none; } /* the name is in the seat's colour */
+.game.phone .opponents { margin-right: 42px; }
+.game.phone .status .turn .long { display: none; }
+.game.phone .status .turn .short { display: inline; }
+.game.phone .status .pile { display: inline-flex; align-items: center; gap: 3px; }
+.game.phone .status .pile::before {
+  content: ""; width: 7px; height: 9px; border-radius: 1.5px; border: 1.5px solid var(--muted);
+  box-shadow: 2px -2px 0 -0.5px var(--rail), 2px -2px 0 1px var(--muted);
+}
 /* A card's two faces share the name "side" with the rail's panel; narrow
    screens give that panel margins and a border, which the faces must not take. */
 .revealed-agenda .side, .agenda-flip .side { margin: 0; padding: 0; border: none; max-height: none; }
@@ -1146,3 +1171,10 @@ a.button:hover { border-color: var(--gold); }
 .block-prompt { border-color: var(--pick); box-shadow: 0 0 0 1px var(--pick), 0 6px 24px rgba(226, 91, 69, 0.25); }
 .block-prompt p { margin: 0 0 4px; }
 .block-prompt .buttons { margin-top: 6px; }
+
+/* Phone: the result folds away to show the court that won. */
+.game.phone .fold-result { align-self: center; margin: 4px 0; font-size: 0.8rem; padding: 0.3rem 0.9rem; }
+/* Landscape phone: your agenda fills the dock's spare room above the question. */
+.game.phone.landscape .dock-agenda { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 2px; }
+.game.phone.landscape .dock-agenda .tracker { margin: 0; }
+.log-empty { margin: 8px 4px; font-size: 0.85rem; }
