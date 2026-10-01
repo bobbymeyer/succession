@@ -1125,6 +1125,9 @@ a.button:hover { border-color: var(--gold); }
 }
 /* On a phone the hand has no room below a card, so the label lies across the
    bottom of the face, over printed text too small to read there anyway. */
+.action-label .short { display: none; }
+.game.phone .action-label .long { display: none; }
+.game.phone .action-label .short { display: inline; }
 .game.phone .action-label {
   position: absolute; left: 3px; right: 3px; bottom: 3px; z-index: 2; max-width: none;
   padding: 3px 4px; border-radius: 4px; font-size: 0.6rem; font-weight: 600; line-height: 1.15;
@@ -1178,3 +1181,18 @@ a.button:hover { border-color: var(--gold); }
 .game.phone.landscape .dock-agenda { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 2px; }
 .game.phone.landscape .dock-agenda .tracker { margin: 0; }
 .log-empty { margin: 8px 4px; font-size: 0.85rem; }
+
+/* Phone: the board scrolls, and its edges say when there is more. A sticky
+   strip at the foot fades the board out with a chevron while more lies below;
+   a fade at the top once it has scrolled down. */
+.scroll-hint { display: none; }
+.game.phone .scroll-hint {
+  display: block; position: sticky; bottom: -10px; margin-top: -34px; height: 34px; flex-shrink: 0;
+  pointer-events: none; opacity: 0; transition: opacity 200ms ease; text-align: center;
+  background: linear-gradient(to bottom, transparent, var(--cloth-deep, #0b1220) 85%);
+}
+.game.phone .scroll-hint.below { opacity: 1; }
+.game.phone .scroll-hint .chevron { position: relative; top: 10px; color: var(--gold-bright); font-size: 0.9rem; animation: hint-bob 1.6s ease-in-out infinite; }
+@keyframes hint-bob { 50% { transform: translateY(3px); } }
+.game.phone .board:has(.scroll-hint.above) { mask-image: linear-gradient(to bottom, transparent 0, #000 22px); }
+@media (prefers-reduced-motion: reduce) { .game.phone .scroll-hint .chevron { animation: none; } }
