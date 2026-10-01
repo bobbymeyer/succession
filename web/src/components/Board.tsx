@@ -225,6 +225,7 @@ export function Board({
   hand = true,
   marks = NO_MARKS,
   suspicions,
+  after,
 }: {
   view: View;
   act: Interaction;
@@ -234,6 +235,8 @@ export function Board({
   hand?: boolean;
   marks?: Marks;
   suspicions?: Suspicions;
+  /** Drawn last inside the board (a phone's scroll hint). */
+  after?: React.ReactNode;
 }) {
   const turn = playing ?? (view.over ? null : view.current);
   const { art } = useUi();
@@ -350,6 +353,7 @@ export function Board({
       </section>
 
       {me && hand && <Hand view={view} act={act} marks={marks} />}
+      {after}
     </div>
   );
 }

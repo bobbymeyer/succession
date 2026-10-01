@@ -230,3 +230,26 @@ test("an event in effect takes one line, and leaves the seats in view", async ({
   await expect(target).toHaveCSS("opacity", "1");
   expect(errors).toEqual([]);
 });
+
+test("hand cards carry a short label, and the board says when it scrolls", async ({ page }) => {
+  const errors: string[] = [];
+  const stacked = {
+    first: 0,
+    hands: { "0": ["Bodyguard", "Promotion", "Golden Thumb", "Outmaneuver", "Demotion"] },
+    seats: { Archpriest: "Beloved of the Gods", "Master of the Market": "Buyer of Cities" },
+    outer: ["Silver Tongue", "Seeress of the Sacred Grove", "Horse Breaker"],
+  };
+  await page.setViewportSize({ width: 375, height: 667 });
+  await deal(page, errors, "1", stacked);
+  const shield = page.locator(".mine .action-label").first();
+  await expect(shield.locator(".short")).toBeVisible();
+  await expect(shield.locator(".short")).toHaveText("Shield · Military");
+  await expect(shield.locator(".long")).toBeHidden();
+  // More board below the fold: the hint shows, and goes once scrolled to the end.
+  const hint = page.getByTestId("scroll-hint");
+  await expect(hint).toHaveClass(/below/);
+  await page.locator(".board").evaluate((b) => b.scrollTo({ top: b.scrollHeight }));
+  await expect(hint).not.toHaveClass(/below/);
+  await expect(hint).toHaveClass(/above/);
+  expect(errors).toEqual([]);
+});

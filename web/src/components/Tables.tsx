@@ -86,6 +86,26 @@ export function PhoneTable({ flow, play, marks, suspicions, question, overlays, 
   useEffect(() => {
     if (!over) setFolded(false);
   }, [over]);
+  // The board scrolls on a phone; say so when there is more of it out of view.
+  const [more, setMore] = useState({ above: false, below: false });
+  useEffect(() => {
+    const board = document.querySelector<HTMLElement>(".game.phone .board");
+    if (!board) return;
+    const check = () => {
+      const above = board.scrollTop > 4;
+      const below = board.scrollTop + board.clientHeight < board.scrollHeight - 4;
+      setMore((m) => (m.above === above && m.below === below ? m : { above, below }));
+    };
+    check();
+    board.addEventListener("scroll", check, { passive: true });
+    const resized = new ResizeObserver(check);
+    resized.observe(board);
+    for (const child of board.children) resized.observe(child);
+    return () => {
+      board.removeEventListener("scroll", check);
+      resized.disconnect();
+    };
+  }, [shown]);
   // A card picked up lights what it can reach; on a small screen that may be
   // below the fold, so bring the first of it into view.
   const active = play.now?.active ?? null;
@@ -113,7 +133,20 @@ export function PhoneTable({ flow, play, marks, suspicions, question, overlays, 
   );
   return (
     <main className={`app game phone ${orientation}${play.holding ? " holding" : ""}${flow.liveEvent ? " event-live" : ""}`}>
-      <Board view={view} act={act} playing={flow.playing} won={flow.over ? winningCourt(view) : undefined} hand={false} marks={marks} suspicions={suspicions} />
+      <Board
+        view={view}
+        act={act}
+        playing={flow.playing}
+        won={flow.over ? winningCourt(view) : undefined}
+        hand={false}
+        marks={marks}
+        suspicions={suspicions}
+        after={
+          <div className={`scroll-hint${more.above ? " above" : ""}${more.below ? " below" : ""}`} aria-hidden="true" data-testid="scroll-hint">
+            <span className="chevron">▾</span>
+          </div>
+        }
+      />
       {(menuOpen || sheet) && (
         <div
           className="scrim"

@@ -129,6 +129,33 @@ export function ACTION_LABEL(card: Card): string {
   }
 }
 
+/** The same reminder in two or three words, for a phone's narrow cards. */
+const SHORT_BY_NAME: Record<string, string> = {
+  "Targeted Poisoning": "Kill\u00a0· save roll",
+  "Schismatic Event": "New agenda",
+  Outmaneuver: "Skip a turn",
+  Conversion: "Faith → any",
+  "Go Native": "→ Barbarian",
+  Assimilate: "→ Imperial",
+};
+export function SHORT_LABEL(card: Card): string {
+  if (SHORT_BY_NAME[card.name]) return SHORT_BY_NAME[card.name];
+  if (BY_NAME[card.name]) return BY_NAME[card.name].replace("Estate → ", "→ ");
+  const estate = card.estate ?? "any";
+  switch (card.kind) {
+    case "Promotion":
+      return `Seat\u00a0· ${estate}`;
+    case "Demotion":
+      return `Unseat\u00a0· ${estate}`;
+    case "Removal":
+      return `Kill\u00a0· ${estate}`;
+    case "Defense":
+      return `Shield\u00a0· ${estate}`;
+    default:
+      return "";
+  }
+}
+
 /** How long a finger rests on a card before it opens to be read. */
 export const LONG_PRESS_MS = 480;
 
@@ -254,7 +281,14 @@ export function CardView({
         </button>
       )}
       {caption && courtier && <Attributes card={card} />}
-      {label && !courtier && ACTION_LABEL(card) && <span className="action-label">{ACTION_LABEL(card)}</span>}
+      {label && !courtier && ACTION_LABEL(card) && (
+        <span className="action-label" title={ACTION_LABEL(card)}>
+          <span className="long">{ACTION_LABEL(card)}</span>
+          <span className="short" aria-hidden="true">
+            {SHORT_LABEL(card)}
+          </span>
+        </span>
+      )}
     </div>
   );
 }
