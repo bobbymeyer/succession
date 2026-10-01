@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Play the game
+    url: https://bobbymeyer.github.io/succession/
+    about: The browser game, against bots, on a phone or a computer.

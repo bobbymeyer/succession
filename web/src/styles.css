@@ -359,6 +359,8 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
   .briefing[open] { flex-direction: column; text-align: center; }
   .briefing-clauses { list-style: none; padding: 0; }
 }
+.prompt.over .feedback { margin: 12px 0 0; }
+.prompt.over .feedback a { color: var(--gold-bright); font-weight: 600; }
 .export { margin-top: 12px; color: var(--muted); }
 .export summary { cursor: pointer; }
 code { font-family: ui-monospace, monospace; font-size: 0.85em; color: var(--ink); }
@@ -471,7 +473,8 @@ a.button:hover { border-color: var(--gold); }
 .tabpanel .log { margin: 0; padding: 0; list-style: none; max-height: 24rem; overflow: auto; font-size: 0.84rem; }
 
 /* -- the credit, at the foot of every screen -------------------------------- */
-.credit { grid-column: 1 / -1; margin: 28px 0 4px; text-align: center; font-size: 0.8rem; }
+.credit { grid-column: 1 / -1; margin: 28px 0 4px; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 0.8rem; }
+.credit .build { color: var(--muted); opacity: 0.7; font-variant-numeric: tabular-nums; }
 .credit a { color: var(--muted); text-decoration: none; letter-spacing: 0.02em; }
 .credit a:hover, .credit a:focus-visible { color: var(--gold-bright); text-decoration: underline; text-underline-offset: 3px; }
 

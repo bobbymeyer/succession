@@ -1,0 +1,66 @@
+name: Playtest report
+description: You played a game, in the browser or at a table. Tell us how it went.
+title: "Playtest: "
+labels: ["playtest"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for playing. Short answers are fine, and every field but the first is optional.
+        From the browser game, "Tell us how it went" on the end screen fills in the top of this form for you.
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: At the foot of the game's page. Leave blank for a printed deck.
+  - type: input
+    id: table
+    attributes:
+      label: The table
+      description: How many players, and who (bots or people).
+      placeholder: "4 players: you, two strategic bots, a greedy bot"
+  - type: input
+    id: agenda
+    attributes:
+      label: Your agenda
+  - type: input
+    id: result
+    attributes:
+      label: Who won
+  - type: input
+    id: length
+    attributes:
+      label: How long it took
+      placeholder: "40 turns, or about 45 minutes"
+  - type: dropdown
+    id: fair
+    attributes:
+      label: Did the result feel fair?
+      options:
+        - "Yes"
+        - Mostly
+        - "No"
+  - type: dropdown
+    id: again
+    attributes:
+      label: Would you play again?
+      options:
+        - "Yes"
+        - Maybe
+        - "No"
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing?
+      description: A card, a rule, something on screen. Anything you had to look up or guess at.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: The moment you enjoyed most, the one you didn't, what you'd change.
+  - type: textarea
+    id: record
+    attributes:
+      label: Game record
+      description: From the browser game. It replays your game move for move, so we can see what you saw.
+      render: json
