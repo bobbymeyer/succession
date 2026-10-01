@@ -39,6 +39,26 @@ MIN_PLAYERS = 2
 MAX_PLAYERS = len(AGENDAS)
 
 
+#: What each kind of card does, said for a player: the in-game rules and the
+#: printed rulebook (tools/rulebook.py) both read this list.
+CARD_KINDS: tuple[tuple[str, str], ...] = (
+    ("Courtier", "Enters the outer circle, where anyone may seat them."),
+    ("Promotion", "Moves an outer courtier into an occupied seat of their estate; the sitter is bumped to the outer circle."),
+    ("Demotion", "Sends a seated courtier back to the outer circle, leaving the seat empty."),
+    ("Removal", "A courtier leaves play. Targeted Poisoning allows a saving roll."),
+    (
+        "Defense",
+        "Kept in hand, never played on your own turn. When anyone else plays a removal, demotion, strip or "
+        "mutation on a seated courtier of its estate (Patron Protection: anyone), you may block it: both cards "
+        "are thrown away and nothing happens. It does not stop events.",
+    ),
+    ("Strip", "Takes away a courtier's house (Castration), or their faith, leaving them godless (Excommunication)."),
+    ("Mutation", "Changes one of a courtier's attributes. Each attribute can be changed only once."),
+    ("Outmaneuver", "The player you name skips their next turn."),
+    ("Schismatic Event", "Swap your agenda for a new secret one."),
+)
+
+
 class Table:
     def __init__(self) -> None:
         self.session: Optional[GameSession] = None
@@ -187,6 +207,7 @@ def options() -> str:
                 {"name": a.name, "clauses": [c.label for c in conditions(empty, a, rules)]}
                 for a in AGENDAS
             ],
+            "cards": [{"name": name, "text": text} for name, text in CARD_KINDS],
             "events": [
                 {"name": c.name, "summary": EVENT_SUMMARY.get(c.name, "")}
                 for c in deck

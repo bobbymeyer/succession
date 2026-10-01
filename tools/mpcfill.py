@@ -8,6 +8,7 @@ that MPC Autofill's desktop tool feeds to MakePlayingCards.
     python tools/mpcfill.py                       # both renditions into build/
     python tools/mpcfill.py --profile web         # just the browsable one
     python tools/mpcfill.py --profile game        # the browser game's cards
+    python tools/mpcfill.py --profile sheets      # print-and-play PDFs and the rulebook
     python tools/mpcfill.py --no-agendas          # 79 cards instead of 87
     python tools/mpcfill.py --only 26,41          # re-render two cards while tweaking
 
@@ -46,7 +47,7 @@ from succession.cards import CardDef, build_cards  # noqa: E402
 from succession.state import Config  # noqa: E402
 from succession.courtiers import COURTIERS_BY_NAME  # noqa: E402
 from succession.enums import SEAT_ESTATE, Family, Seat  # noqa: E402
-from tools import boardsheet, card_text, cardlist, gallery  # noqa: E402
+from tools import boardsheet, card_text, cardlist, cardsheet, gallery, rulebook  # noqa: E402
 from tools.sigil import SIGIL_CENTRE_X_IN, SIGIL_CENTRE_Y_IN, SIGIL_SIZE_IN, draw_sigil  # noqa: E402
 from tools.assets import AssetMismatch  # noqa: E402
 from tools.assets import map_to_deck, scan  # noqa: E402
@@ -1007,7 +1008,8 @@ def main(argv: list[str] | None = None) -> int:
             "comma-separated renditions to build: print (full bleed for MPC), "
             "web (trimmed, browsable), docs (thumbnails and docs/CARDS.md), "
             "board (a print-at-home PDF of the seat cards), game (the browser "
-            "game's cards, into web/public/cards). 'all' builds every one. "
+            "game's cards, into web/public/cards), sheets (print-and-play PDFs: "
+            "the rulebook and every card, nine to a page). 'all' builds every one. "
             "Default print,web"
         ),
     )
@@ -1063,6 +1065,9 @@ def main(argv: list[str] | None = None) -> int:
         "--board-dpi", type=int, default=300, help="resolution of the printable board PDF"
     )
     parser.add_argument(
+        "--sheets-dpi", type=int, default=300, help="resolution of the print-and-play PDFs"
+    )
+    parser.add_argument(
         "--no-seats",
         dest="include_seats",
         action="store_false",
@@ -1079,7 +1084,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--font-dir", action="append", default=[], help="extra directory to search for fonts")
     args = parser.parse_args(argv)
 
-    known = {"print", "web", "docs", "board", "game"}
+    known = {"print", "web", "docs", "board", "game", "sheets"}
     chosen = known if args.profile == "all" else {p.strip() for p in args.profile.split(",") if p.strip()}
     if args.profile == "both":  # the spelling this flag used to take
         chosen = {"print", "web"}
@@ -1088,6 +1093,9 @@ def main(argv: list[str] | None = None) -> int:
     want_print, want_web, want_docs = ("print" in chosen), ("web" in chosen), ("docs" in chosen)
     want_board = "board" in chosen
     want_game = "game" in chosen
+    want_sheets = "sheets" in chosen
+    if want_sheets and args.only:
+        parser.error("--profile sheets lays out the whole deck; it cannot be used with --only")
     if want_board and not args.include_seats:
         parser.error("--profile board is the seat cards; it cannot be used with --no-seats")
     if not chosen:
@@ -1112,6 +1120,7 @@ def main(argv: list[str] | None = None) -> int:
             args.docs_dpi if want_docs else 0,
             args.board_dpi if want_board else 0,
             args.game_dpi if want_game else 0,
+            args.sheets_dpi if want_sheets else 0,
         )
     )
     fonts = Fonts(tuple(args.font_dir))
@@ -1181,6 +1190,12 @@ def main(argv: list[str] | None = None) -> int:
     entries: list[gallery.Entry] = []
     rows: list[cardlist.Row] = []
     seat_images: list[Image.Image] = []
+    #: Every card for the print-and-play sheets, in deck order, then agendas and seats.
+    sheet_cards = cardsheet.Cards()
+
+    def to_sheets(image: Image.Image | None) -> None:
+        if want_sheets and image is not None:
+            sheet_cards.add(trimmed(image, layout, args.sheets_dpi))
     alternates: list[str] = []
     for slot, (card, asset) in enumerate(zip(cards, chosen)):
         stem = f"{asset.index:02d} {card.name}"
@@ -1189,6 +1204,7 @@ def main(argv: list[str] | None = None) -> int:
         plain = render_front(card, asset.path, layout, fonts, args.panel_alpha) if wanted else None
         image = with_sigil(plain, card, layout) if plain is not None else None
         printed, web_name, doc_name = emit(image, stem, slug, game_image=plain)
+        to_sheets(image)
         if wanted:
             print(f"  [{slot:>2}] {stem}")
         if len(by_index[asset.index]) > 1:
@@ -1228,6 +1244,7 @@ def main(argv: list[str] | None = None) -> int:
             wanted = only is None or i in only
             image = render_agenda(name, subtitle, text, layout, fonts) if wanted else None
             printed, web_name, doc_name = emit(image, stem, slug)
+            to_sheets(image)
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
             slots.append((printed, name.lower()))
@@ -1276,6 +1293,7 @@ def main(argv: list[str] | None = None) -> int:
             printed, web_name, doc_name = emit(image, stem, slug)
             if wanted:
                 print(f"  [{len(slots):>2}] {stem}")
+            to_sheets(image)
             if image is not None:
                 seat_images.append(trimmed(image, layout, args.board_dpi))
             slots.append((printed, seat.value.lower()))
@@ -1350,6 +1368,18 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\nBoard: {paper.upper()}, {pages} page{'s' if pages > 1 else ''} -> {sheet}")
     elif want_board:
         print("\nBoard: skipped -- no seat cards were rendered (--only excluded them?)")
+
+    if want_sheets and back_image is not None:
+        back = trimmed(back_image, layout, args.sheets_dpi)
+        for paper in ("a4", "letter"):
+            rules = rulebook.pages(paper, args.sheets_dpi, fonts)
+            rules_pdf = cardsheet.write(args.out / f"succession-rules-{paper}.pdf", rules, [], args.sheets_dpi)
+            body = cardsheet.pages(sheet_cards, back, paper, args.sheets_dpi, fonts)
+            kit = cardsheet.write(args.out / f"succession-print-and-play-{paper}.pdf", rules, body, args.sheets_dpi)
+            print(
+                f"\nSheets: {paper.upper()}, {len(rules)} pages of rules + {len(body)} of cards "
+                f"({kit.stat().st_size / 1e6:.0f} MB) -> {kit}\n        rules alone -> {rules_pdf}"
+            )
 
     if want_docs and only is None:
         # A rename leaves the old thumbnail behind, and nothing downstream

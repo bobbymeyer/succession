@@ -374,6 +374,9 @@ test("the rules open from the setup screen and from the table", async ({ page })
   await expect(rules).toContainText("7 of 7 seats filled");
   await expect(rules).toContainText("Poisoning at the Feast");
   await expect(rules).not.toContainText("Plague");
+  // So are the kinds of card, which the printed rulebook says the same way.
+  await expect(rules).toContainText("The player you name skips their next turn.");
+  await expect(rules.getByRole("link", { name: "The rules for a table" })).toHaveAttribute("href", /docs\/HOW_TO_PLAY\.md$/);
   await page.keyboard.press("Escape");
   await expect(rules).toBeHidden();
 

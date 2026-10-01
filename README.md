@@ -19,12 +19,19 @@ hand, and **Rules** in the game has the whole of how to play.
 
 **Print it** for a real table:
 
+- **[How to play](docs/HOW_TO_PLAY.md)** — the rules for a table, two pages;
+  as a PDF for [Letter](https://github.com/bobbymeyer/succession/releases/latest/download/succession-rules-letter.pdf) or
+  [A4](https://github.com/bobbymeyer/succession/releases/latest/download/succession-rules-a4.pdf).
+- **Print and play at home** — the rules and every card, nine to a page, with a
+  page of backs: [Letter](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-and-play-letter.pdf) or
+  [A4](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-and-play-a4.pdf). Print at actual size, cut on the
+  lines, and sleeve the cards in front of ordinary playing cards if you can't
+  print both sides. Bring a six-sided die.
+- **Order a real deck** — [the print-ready zip](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)
+  is sized and bled for MakePlayingCards, with an order file that fills itself
+  in. [docs/PRINTING.md](docs/PRINTING.md) walks through it. The board prints
+  at home: [A4](docs/board-a4.pdf) or [Letter](docs/board-letter.pdf).
 - [The deck](docs/CARDS.md) — every card, with its picture and rules text.
-- [Download the print-ready deck](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip)
-  — sized and bled for MakePlayingCards, with an order file that fills
-  itself in. [docs/PRINTING.md](docs/PRINTING.md) walks through it.
-- The board prints at home: [A4](docs/board-a4.pdf) or
-  [Letter](docs/board-letter.pdf), two pages; cut out the seven seats.
 
 ## Tell us how it went
 
