@@ -211,6 +211,14 @@ test("a game played from the move list", async ({ page }) => {
   await start(page, errors);
   for (let i = 0; i < 400 && (await playFromList(page, random)); i++);
   await expect(page.getByTestId("game-over")).toBeVisible();
+  // The playtest form, with this game filled in.
+  const feedback = new URL((await page.getByTestId("feedback").getAttribute("href"))!);
+  expect(feedback.pathname).toBe("/bobbymeyer/succession/issues/new");
+  expect(feedback.searchParams.get("template")).toBe("playtest.yml");
+  expect(feedback.searchParams.get("build")).toMatch(/^[0-9a-f]{7,}/);
+  expect(feedback.searchParams.get("agenda")).toBeTruthy();
+  expect(feedback.searchParams.get("length")).toMatch(/turns/);
+  expect(JSON.parse(feedback.searchParams.get("record")!).decisions.length).toBeGreaterThan(0);
   expect(errors).toEqual([]);
 });
 
@@ -415,6 +423,10 @@ test("every screen credits bobbymeyer.com", async ({ page }) => {
   await expect(credit).toBeVisible({ timeout: 90_000 });
   await expect(credit).toHaveAttribute("href", "https://bobbymeyer.com");
   await expect(credit).toHaveAttribute("target", "_top");
+  // Which build this is, and where to report a problem with it.
+  await expect(page.getByTestId("build")).toHaveText(/^build [0-9a-f]{7,} \(\d{4}-\d\d-\d\d\)$/);
+  const bug = new URL((await page.getByRole("link", { name: "report a problem" }).getAttribute("href"))!);
+  expect(bug.searchParams.get("template")).toBe("bug.yml");
   await page.getByTestId("deal").click();
   await settle(page);
   await openMenu(page); // a phone keeps it in the menu

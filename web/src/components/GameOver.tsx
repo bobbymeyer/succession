@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Result, View } from "../protocol";
 import { useUi } from "../art";
+import { playtestReport } from "../feedback";
 import { playerName, seatColour } from "../names";
 
 interface Props {
@@ -44,6 +45,7 @@ export function GameOver(props: Props) {
   const { view, result, saved, copied } = props;
   const { art } = useUi();
   const rounds = Math.ceil(result.turns / view.players.length);
+  const report = playtestReport(view, result);
 
   return (
     <section className="prompt over" data-testid="game-over" aria-labelledby="over-title">
@@ -96,6 +98,20 @@ export function GameOver(props: Props) {
           Change the table
         </button>
       </div>
+
+      <p className="feedback">
+        <a
+          href={report.url}
+          target="_blank"
+          rel="noopener"
+          data-testid="feedback"
+          // A record too long for the address goes on the clipboard, to paste into the form.
+          onClick={() => !report.fits && navigator.clipboard?.writeText(JSON.stringify(result.record)).catch(() => {})}
+        >
+          Tell us how it went
+        </a>{" "}
+        <span className="muted">-- a short playtest form, with this game already filled in.</span>
+      </p>
 
       <details className="export">
         <summary>Save this game</summary>

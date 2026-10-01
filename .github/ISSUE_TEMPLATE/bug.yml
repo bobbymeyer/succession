@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in the game broke, or didn't follow the rules.
+title: "Bug: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen again
+      description: If you know. The game record below is often enough on its own.
+  - type: input
+    id: build
+    attributes:
+      label: Build
+      description: At the foot of the game's page.
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      placeholder: "iPhone 15, Safari"
+  - type: textarea
+    id: record
+    attributes:
+      label: Game record
+      description: |
+        On the end screen, "Save this game" → "Copy game record". It replays the game move for move.
+        For a game still in progress, a screenshot helps instead.
+      render: json
