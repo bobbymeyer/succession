@@ -269,7 +269,7 @@ button.selected, button[aria-pressed="true"] { border-color: var(--pick); box-sh
 
 /* -- narrower screens ----------------------------------------------------- */
 @media (max-width: 1180px) {
-  :root { --w-md: 100px; --w-lg: 112px; }
+  :root { --w-md: 100px; --w-lg: 112px; --w-md-max: 100px; }
   .court .seats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
@@ -663,7 +663,7 @@ a.button:hover { border-color: var(--gold); }
 .game.event-live .court .card:not(.live),
 .game.event-live .court .seat.vacant,
 .game.event-live .outer .card:not(.live) { opacity: 0.45; filter: saturate(0.6); transition: opacity 300ms ease, filter 300ms ease; }
-.game.event-live .opponents { visibility: hidden; }
+.game.phone.event-live .opponents { visibility: hidden; }
 /* On a phone it takes the opponents' strip (hidden while an event is in
    effect) and no more: one line, so the seats under it stay in view. The
    dock's question already says what to do. */
@@ -1196,3 +1196,39 @@ a.button:hover { border-color: var(--gold); }
 @keyframes hint-bob { 50% { transform: translateY(3px); } }
 .game.phone .board:has(.scroll-hint.above) { mask-image: linear-gradient(to bottom, transparent 0, #000 22px); }
 @media (prefers-reduced-motion: reduce) { .game.phone .scroll-hint .chevron { animation: none; } }
+
+/* -- desktop: the table fits the window ------------------------------------ */
+/* The court, the outer circle and your hand stack about four card-heights
+   and some 380px of labels; on a laptop 720-900px tall that overflowed, so
+   the cards size to the window's height as well as its width. */
+@media (min-width: 901px) {
+  .game:not(.phone) {
+    /* About 465px of labels and padding, and 4.35 card-heights (court,
+       outer circle, a hand card a little larger); and seven seats abreast in
+       the board's width. */
+    --w-md: clamp(56px, min(calc((100dvh - 440px) / 4.35), calc((100vw - 350px) / 7 - 14px)), 104px);
+    --w-lg: calc(var(--w-md) * 1.12);
+  }
+  /* The hover preview yields room to your agenda and the log below it. */
+  .rail .preview { max-height: 40dvh; overflow: hidden; flex-shrink: 1; }
+  .rail .preview .detail-image { max-height: 30dvh; width: auto; max-width: 100%; display: block; margin: 0 auto; }
+  /* The discard pile is a count and the top card, not a panel. */
+  .rail .discard-pile { padding: 8px 12px; gap: 12px; }
+  .rail .discard-pile .card { --w: 44px; }
+  .rail .discard-pile .card.empty-slot { width: 44px; height: calc(44px * 692 / 496); }
+  .rail .discard-pile .pile-text h2 { font-size: 0.7rem; }
+  /* The rail stops short of the credit line under it, and scrolls inside
+     itself when an event and the question fill it. */
+  .game:not(.phone) .rail { max-height: calc(100dvh - 110px); }
+  /* Seven seats abreast: the cards are sized to fit them. */
+  .game:not(.phone) .court .seats { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+@media (min-width: 901px) and (max-height: 820px) {
+  .game:not(.phone) .board { gap: 8px; }
+  .game:not(.phone) .board > section { padding: 7px 10px; }
+}
+
+/* Desktop: the event banner heads the rail, in its flow, instead of lying
+   over the board's seats. */
+.event-banner.in-rail { position: static; translate: none; width: auto; z-index: auto; animation-name: banner-in-rail; }
+@keyframes banner-in-rail { from { opacity: 0; transform: translateY(-8px); } }

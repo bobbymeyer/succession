@@ -186,12 +186,15 @@ export function EventBanner({
   actor,
   view,
   yours,
+  inRail = false,
 }: {
   prompt: Prompt & { kind: "courtier" | "discard" };
   actor: number;
   view: View;
   /** Whether the choice is still yours to make. */
   yours: boolean;
+  /** Drawn in a desktop's rail rather than laid over the board. */
+  inRail?: boolean;
 }) {
   const { art } = useUi();
   const card = prompt.card!;
@@ -200,7 +203,7 @@ export function EventBanner({
   const ask = prompt.kind === "courtier" ? "name a courtier to die" : "choose a card to discard";
   return (
     <aside
-      className="event-banner"
+      className={`event-banner${inRail ? " in-rail" : ""}`}
       data-testid="event-banner"
       aria-live="polite"
       style={{ "--seat": seatColour(Math.max(actor, 0)) } as React.CSSProperties}

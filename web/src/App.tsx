@@ -175,6 +175,7 @@ export function App() {
         onCloseRules={() => setRulesOpen(false)}
         inspecting={inspecting}
         onInspect={setInspecting}
+        phone={phone !== null}
       />
     ),
     speedControl: <SpeedControl speed={flow.speed} onChange={flow.changeSpeed} />,

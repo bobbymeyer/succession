@@ -17,6 +17,7 @@ import { CardDetail } from "./Inspect";
 import { Offers } from "./Offers";
 import { AgendaAndLog, GameLog } from "./SidePanels";
 import { DiscardPile } from "./Status";
+import { EventBanner } from "./EventModal";
 
 export interface TableProps {
   flow: GameFlow;
@@ -56,6 +57,8 @@ export function DesktopTable({ flow, play, marks, suspicions, question, overlays
           </div>
 
           {shown.coach && <CoachPanel coach={shown.coach} />}
+          {/* An event in effect heads the rail, over the question it asks. */}
+          {flow.liveEvent && <EventBanner prompt={flow.liveEvent} actor={shown.actor} view={view} yours={flow.pick !== null} inRail />}
           {question}
           {/* Once the game is over the pile says nothing; the reveal takes its room. */}
           {!flow.over && <DiscardPile view={view} dropLive={dropLive("discard")} />}

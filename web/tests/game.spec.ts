@@ -547,3 +547,19 @@ test("a rival's attack on a courtier your Defense covers can be blocked", async 
   await expect(page.getByRole("list", { name: "Game log" })).toContainText("Silver Tongue is untouched");
   expect(errors).toEqual([]);
 });
+
+test("on a laptop screen the table fits the window, agenda and all", async ({ page }, info) => {
+  test.skip(info.project.name !== "desktop", "a desktop layout");
+  const errors: string[] = [];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await start(page, errors, 1, { first: 1, deck: ["Poisoning at the Feast"], seats: { Archpriest: "Beloved of the Gods" } });
+  await page.getByTestId("begin").click();
+  // The event's banner heads the rail, not the board's seats.
+  const banner = page.getByTestId("event-banner");
+  await expect(banner).toBeVisible();
+  await expect(banner).toHaveCSS("position", "static");
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(720);
+  const tabs = (await page.locator(".tabbed").boundingBox())!;
+  expect(tabs.y + 40).toBeLessThan(720);
+  expect(errors).toEqual([]);
+});
