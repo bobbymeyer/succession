@@ -16,13 +16,23 @@ writes two renditions of the result:
 
 * **docs**, the thumbnails and the Markdown in [CARDS.md](CARDS.md);
 * **board**, the seven seat cards as a PDF to print at home and cut out.
+* **sheets**, the print-and-play PDFs: the rulebook (`tools/rulebook.py`)
+  and then every card -- deck, agendas and seats -- nine to a page at true
+  size, with a page of backs (`tools/cardsheet.py`). One for A4 and one for
+  Letter, plus the rulebook on its own, into `build/`. Too big for git; the
+  print-deck release carries them.
 * **game**, the cards for the browser game in `web/` -- trimmed, 496px WebP,
   with a `manifest.json` the game looks each card up in. Committed, so re-run
   `python tools/mpcfill.py --profile game` after changing a card.
 
 Each card is composed once and the other renditions are a trim and a downscale
 of the print one, so they cannot drift apart. `--profile` takes a comma-separated
-list (`print`, `web`, `docs`, `board`, `game`, or `all`) and defaults to `print,web`.
+list (`print`, `web`, `docs`, `board`, `game`, `sheets`, or `all`) and defaults to `print,web`.
+
+**If you only want to print at home**, you do not need any of this either:
+[Letter](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-and-play-letter.pdf) or
+[A4](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-and-play-a4.pdf) is the rules and every card,
+ready to print at actual size and cut out.
 
 **If you only want to order a deck, you do not need any of this.**
 [Download the print-ready zip](https://github.com/bobbymeyer/succession/releases/latest/download/succession-print-deck.zip),

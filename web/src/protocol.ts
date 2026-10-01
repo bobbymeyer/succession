@@ -170,6 +170,8 @@ export interface TableOptions {
     /** Rounds before chaos takes the empire; null for no limit. */
     max_rounds: number | null;
     agendas: { name: string; clauses: string[] }[];
+    /** What each kind of card does. */
+    cards: { name: string; text: string }[];
     events: { name: string; summary: string }[];
   };
 }

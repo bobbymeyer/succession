@@ -2,9 +2,11 @@ import { useEffect, useRef } from "react";
 import type { TableOptions } from "../protocol";
 import { SigilKey } from "./Sigil";
 
-// How to play, in a modal. The agendas and the events come from the engine
-// (webapi `options`), so their numbers are the ones the game actually plays
-// by; the rest is the turn as docs/RULES.md has it, said for a player.
+// How to play, in a modal. The agendas, the events and what each kind of
+// card does come from the engine (webapi `options`), so their numbers are the
+// ones the game actually plays by and the printed rulebook says the same
+// (tools/rulebook.py); the rest is the turn as docs/RULES.md has it, said for
+// a player.
 
 const SEATS: [string, string][] = [
   ["Archpriest", "Church"],
@@ -14,18 +16,6 @@ const SEATS: [string, string][] = [
   ["Keeper of the Treasury", "Merchant"],
   ["Master of the Market", "Merchant"],
   ["Voice of the People", "Commons"],
-];
-
-const CARDS: [string, string][] = [
-  ["Courtier", "Enters the outer circle, where anyone may seat them."],
-  ["Promotion", "Moves an outer courtier into an occupied seat of their estate; the sitter is bumped to the outer circle."],
-  ["Demotion", "Sends a seated courtier back to the outer circle, leaving the seat empty."],
-  ["Removal", "A courtier leaves play. Targeted Poisoning allows a saving roll."],
-  ["Defense", "Kept in hand, never played on your own turn. When anyone else plays a removal, demotion, strip or mutation on a seated courtier of its estate (Patron Protection: anyone), you may block it: both cards are thrown away and nothing happens. It does not stop events."],
-  ["Strip", "Takes away a courtier's house (Castration), or their faith, leaving them godless (Excommunication)."],
-  ["Mutation", "Changes one of a courtier's attributes. Each attribute can be changed only once."],
-  ["Outmaneuver", "The player you name skips their next turn."],
-  ["Schismatic Event", "Swap your agenda for a new secret one."],
 ];
 
 export function Rules({ options, onClose }: { options: TableOptions; onClose(): void }) {
@@ -126,10 +116,10 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
         <section>
           <h3>Cards</h3>
           <dl className="rules-cards">
-            {CARDS.map(([name, text]) => (
-              <div key={name}>
-                <dt>{name}</dt>
-                <dd>{text}</dd>
+            {rules.cards.map((c) => (
+              <div key={c.name}>
+                <dt>{c.name}</dt>
+                <dd>{c.text}</dd>
               </div>
             ))}
           </dl>
@@ -170,6 +160,14 @@ export function Rules({ options, onClose }: { options: TableOptions; onClose(): 
             ))}
           </dl>
         </section>
+
+        <p className="rules-print muted">
+          Playing with cards in your hands?{" "}
+          <a href="https://github.com/bobbymeyer/succession/blob/main/docs/HOW_TO_PLAY.md" target="_blank" rel="noopener">
+            The rules for a table
+          </a>
+          , and the whole game to print at home.
+        </p>
       </div>
     </dialog>
   );
